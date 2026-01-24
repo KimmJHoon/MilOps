@@ -11,24 +11,33 @@
     <vm:MainViewModel />
   </Design.DataContext>
 
-  <Grid Background="#000000">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-      <RowDefinition Height="Auto"/>
-    </Grid.RowDefinitions>
+  <Panel>
+    <!-- 메인 컨텐츠 -->
+    <Grid Background="#000000">
+      <Grid.RowDefinitions>
+        <RowDefinition Height="Auto"/>
+        <RowDefinition Height="*"/>
+        <RowDefinition Height="Auto"/>
+      </Grid.RowDefinitions>
 
-    <!-- 상단 헤더 -->
-    <Border Grid.Row="0" Background="#333333" Padding="12">
-      <TextBlock Text="{Binding CurrentPageTitle}"
-                 FontSize="18"
-                 Foreground="White"
-                 HorizontalAlignment="Center"/>
-    </Border>
+      <!-- 상단 헤더 -->
+      <Border Grid.Row="0" Background="#333333" Padding="12">
+        <Grid>
+          <Button Command="{Binding ToggleDrawerCommand}"
+                  Background="Transparent" BorderThickness="0"
+                  HorizontalAlignment="Left" Padding="5,0">
+            <TextBlock Text="☰" FontSize="22" Foreground="White"/>
+          </Button>
+          <TextBlock Text="{Binding CurrentPageTitle}"
+                     FontSize="18"
+                     Foreground="White"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"/>
+        </Grid>
+      </Border>
 
     <!-- 중앙 콘텐츠 영역 -->
     <Grid Grid.Row="1">
-      <views:HomeView IsVisible="{Binding IsHomeSelected}"/>
       <views:CalendarView IsVisible="{Binding IsCalendarSelected}"/>
       <views:ScheduleView IsVisible="{Binding IsScheduleSelected}"/>
       <views:NotificationView IsVisible="{Binding IsNotificationSelected}"/>
@@ -43,25 +52,10 @@
           <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- 홈 탭 -->
-        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="0"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="🏠" FontSize="16" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="홈" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsHomeSelected}"/>
-              <TextBlock Text="홈" FontSize="15" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsHomeSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
-
         <!-- 캘린더 탭 -->
-        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="1"
+        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="0"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
             <TextBlock Text="📅" FontSize="16" HorizontalAlignment="Center"/>
@@ -75,7 +69,7 @@
         </Button>
 
         <!-- 일정 탭 -->
-        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="2"
+        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="1"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
             <TextBlock Text="📋" FontSize="16" HorizontalAlignment="Center"/>
@@ -89,7 +83,7 @@
         </Button>
 
         <!-- 알림 탭 -->
-        <Button Grid.Column="3" Command="{Binding SelectTabCommand}" CommandParameter="3"
+        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="2"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
             <TextBlock Text="🔔" FontSize="16" HorizontalAlignment="Center"/>
@@ -103,7 +97,7 @@
         </Button>
 
         <!-- 설정 탭 -->
-        <Button Grid.Column="4" Command="{Binding SelectTabCommand}" CommandParameter="4"
+        <Button Grid.Column="3" Command="{Binding SelectTabCommand}" CommandParameter="3"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
             <TextBlock Text="⚙️" FontSize="16" HorizontalAlignment="Center"/>
@@ -117,5 +111,44 @@
         </Button>
       </Grid>
     </Border>
-  </Grid>
+    </Grid>
+
+    <!-- 드로어 오버레이 (반투명 배경) -->
+    <Button Command="{Binding CloseDrawerCommand}"
+            Background="#80000000"
+            BorderThickness="0"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            IsVisible="{Binding IsDrawerOpen}"/>
+
+    <!-- 사이드 드로어 -->
+    <Border Background="#222222"
+            Width="250"
+            HorizontalAlignment="Left"
+            IsVisible="{Binding IsDrawerOpen}">
+      <Grid RowDefinitions="Auto,*,Auto">
+        <!-- 드로어 헤더 -->
+        <Border Grid.Row="0" Background="#333333" Padding="20">
+          <StackPanel Spacing="10">
+            <TextBlock Text="사용자 정보" FontSize="18" Foreground="White"/>
+            <TextBlock Text="{Binding CurrentUserId}" FontSize="16" Foreground="#00FF00"/>
+          </StackPanel>
+        </Border>
+
+        <!-- 빈 공간 -->
+        <Grid Grid.Row="1"/>
+
+        <!-- 로그아웃 버튼 -->
+        <Border Grid.Row="2" Padding="20">
+          <Button Command="{Binding LogoutCommand}"
+                  Background="#AA0000"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  Padding="15">
+            <TextBlock Text="로그아웃" FontSize="16" Foreground="White"/>
+          </Button>
+        </Border>
+      </Grid>
+    </Border>
+  </Panel>
 </UserControl>
