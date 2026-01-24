@@ -42,7 +42,8 @@
           <Button Command="{Binding OpenNewInviteDialogCommand}"
                   Background="#2196F3"
                   HorizontalAlignment="Right"
-                  Padding="12,8">
+                  Padding="12,8"
+                  IsVisible="{Binding TargetRole, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
             <TextBlock Text="+ 새 초대" FontSize="14" Foreground="White"/>
           </Button>
         </Grid>
@@ -58,20 +59,39 @@
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="models:Invitation">
               <Border Background="#1A1A1A" CornerRadius="8" Padding="15" Margin="0,5">
-                <Grid RowDefinitions="Auto,Auto,Auto">
+                <Grid RowDefinitions="Auto,Auto,Auto,Auto">
                   <!-- 초대코드 + 상태 배지 -->
                   <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
                     <TextBlock Text="{Binding InviteCode}" FontSize="16" Foreground="#2196F3" FontFamily="Consolas"/>
                     <Border Background="{Binding StatusColor}" CornerRadius="4" Padding="8,2">
                       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="White"/>
                     </Border>
+                    <!-- 코드 복사 버튼 (대기중일 때만) -->
+                    <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).CopyInviteCodeCommand}"
+                            CommandParameter="{Binding}"
+                            Background="Transparent"
+                            Padding="5,0"
+                            IsVisible="{Binding IsValid}">
+                      <TextBlock Text="📋" FontSize="14"/>
+                    </Button>
                   </StackPanel>
 
-                  <!-- 역할 -->
-                  <TextBlock Grid.Row="1" Text="{Binding RoleDisplayName}" FontSize="14" Foreground="White" Margin="0,5,0,0"/>
+                  <!-- 이름 + 계급 + 소속 + 역할 -->
+                  <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,5,0,0">
+                    <TextBlock Text="{Binding Name}" FontSize="14" Foreground="White"/>
+                    <TextBlock Text="{Binding MilitaryRank}" FontSize="14" Foreground="#FF9800"
+                               IsVisible="{Binding MilitaryRank, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding DisplayAffiliation}" FontSize="14" Foreground="#888888"
+                               IsVisible="{Binding DisplayAffiliation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                    <TextBlock Text="{Binding RoleDisplayName}" FontSize="13" Foreground="#666666"/>
+                  </StackPanel>
+
+                  <!-- 연락처 -->
+                  <TextBlock Grid.Row="2" Text="{Binding Phone}" FontSize="13" Foreground="#888888" Margin="0,3,0,0"
+                             IsVisible="{Binding Phone, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
 
                   <!-- 생성일/만료일 + 액션 버튼 -->
-                  <Grid Grid.Row="2" Margin="0,5,0,0">
+                  <Grid Grid.Row="3" Margin="0,5,0,0">
                     <StackPanel Orientation="Horizontal" Spacing="10">
                       <TextBlock Text="{Binding CreatedAtText}" FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
                       <TextBlock Text="{Binding ExpiresAtText}" FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
@@ -126,39 +146,70 @@
     <Border Background="#222222"
             CornerRadius="10"
             Padding="20"
-            Width="300"
+            Width="320"
             VerticalAlignment="Center"
             HorizontalAlignment="Center"
             IsVisible="{Binding IsNewInviteDialogOpen}">
       <StackPanel Spacing="15">
-        <TextBlock Text="새 담당자 초대" FontSize="18" Foreground="White" HorizontalAlignment="Center"/>
+        <!-- 동적 타이틀 -->
+        <TextBlock Text="{Binding InviteFormTitle}" FontSize="18" Foreground="White" HorizontalAlignment="Center"/>
 
+        <!-- 소속 (동적 라벨) -->
         <StackPanel Spacing="5">
-          <TextBlock Text="역할 선택" Foreground="White" FontSize="14"/>
-          <ComboBox ItemsSource="{Binding AvailableRoles}"
-                    SelectedValue="{Binding NewInviteRole}"
-                    SelectedValueBinding="{Binding Value}"
+          <TextBlock Text="{Binding AffiliationLabel}" Foreground="#AAAAAA" FontSize="13"/>
+          <ComboBox ItemsSource="{Binding AffiliationOptions}"
+                    SelectedItem="{Binding SelectedAffiliation}"
                     Background="#333333"
                     Foreground="White"
-                    HorizontalAlignment="Stretch">
-            <ComboBox.ItemTemplate>
-              <DataTemplate>
-                <TextBlock Text="{Binding DisplayName}" Foreground="White"/>
-              </DataTemplate>
-            </ComboBox.ItemTemplate>
-          </ComboBox>
+                    HorizontalAlignment="Stretch"/>
         </StackPanel>
 
-        <TextBlock Text="초대 코드가 자동 생성됩니다." Foreground="#888888" FontSize="12"/>
+        <!-- 이름 -->
+        <StackPanel Spacing="5">
+          <TextBlock Text="이름" Foreground="#AAAAAA" FontSize="13"/>
+          <TextBox Text="{Binding NewInviteName}"
+                   Watermark="이름 입력"
+                   Background="#333333"
+                   Foreground="White"
+                   Padding="10"/>
+        </StackPanel>
 
-        <Grid ColumnDefinitions="*,*" Margin="0,10,0,0">
+        <!-- 연락처 -->
+        <StackPanel Spacing="5">
+          <TextBlock Text="연락처" Foreground="#AAAAAA" FontSize="13"/>
+          <TextBox Text="{Binding NewInvitePhone}"
+                   Watermark="010-0000-0000"
+                   Background="#333333"
+                   Foreground="White"
+                   Padding="10"/>
+        </StackPanel>
+
+        <!-- 계급 (군부대용만 표시) -->
+        <StackPanel Spacing="5" IsVisible="{Binding ShowRankField}">
+          <TextBlock Text="계급" Foreground="#AAAAAA" FontSize="13"/>
+          <ComboBox ItemsSource="{Binding RankOptions}"
+                    SelectedItem="{Binding NewInviteRank}"
+                    Background="#333333"
+                    Foreground="White"
+                    HorizontalAlignment="Stretch"/>
+        </StackPanel>
+
+        <!-- 복사 완료 메시지 -->
+        <TextBlock Text="{Binding CopiedMessage}"
+                   Foreground="#4CAF50"
+                   FontSize="13"
+                   HorizontalAlignment="Center"
+                   IsVisible="{Binding CopiedMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+        <!-- 버튼들 -->
+        <Grid ColumnDefinitions="*,*" Margin="0,5,0,0">
           <Button Grid.Column="0" Command="{Binding CloseNewInviteDialogCommand}"
-                  Background="#555555" Margin="0,0,5,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10">
-            <TextBlock Text="취소" Foreground="White"/>
+                  Background="#555555" Margin="0,0,5,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="12">
+            <TextBlock Text="닫기" Foreground="White"/>
           </Button>
           <Button Grid.Column="1" Command="{Binding SendInviteCommand}"
-                  Background="#2196F3" Margin="5,0,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10">
-            <TextBlock Text="초대" Foreground="White"/>
+                  Background="#2196F3" Margin="5,0,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="12">
+            <TextBlock Text="초대 발송" Foreground="White"/>
           </Button>
         </Grid>
       </StackPanel>
