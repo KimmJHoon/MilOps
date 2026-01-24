@@ -100,7 +100,8 @@ public partial class InviteCodeViewModel : ViewModelBase
                 return;
             }
 
-            // 유효한 초대코드
+            // 유효한 초대코드 - 소속 정보 조회
+            await LoadAffiliationInfoAsync(response);
             ValidatedInvitation = response;
             CodeValidated?.Invoke(response);
         }
@@ -113,6 +114,59 @@ public partial class InviteCodeViewModel : ViewModelBase
         finally
         {
             IsLoading = false;
+        }
+    }
+
+    /// <summary>
+    /// 초대 정보에서 소속명을 조회하여 DisplayAffiliation에 설정
+    /// </summary>
+    private async Task LoadAffiliationInfoAsync(Invitation invitation)
+    {
+        try
+        {
+            string? affiliationName = null;
+
+            // 우선순위: battalion > division > district > region
+            if (invitation.BattalionId.HasValue)
+            {
+                var battalion = await SupabaseService.Client
+                    .From<Battalion>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, invitation.BattalionId.Value.ToString())
+                    .Single();
+                affiliationName = battalion?.Name;
+            }
+            else if (invitation.DivisionId.HasValue)
+            {
+                var division = await SupabaseService.Client
+                    .From<Division>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, invitation.DivisionId.Value.ToString())
+                    .Single();
+                affiliationName = division?.Name;
+            }
+            else if (invitation.DistrictId.HasValue)
+            {
+                var district = await SupabaseService.Client
+                    .From<District>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, invitation.DistrictId.Value.ToString())
+                    .Single();
+                affiliationName = district?.Name;
+            }
+            else if (invitation.RegionId.HasValue)
+            {
+                var region = await SupabaseService.Client
+                    .From<Region>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, invitation.RegionId.Value.ToString())
+                    .Single();
+                affiliationName = region?.Name;
+            }
+
+            invitation.DisplayAffiliation = affiliationName ?? "";
+            System.Diagnostics.Debug.WriteLine($"[InviteCodeVM] Loaded affiliation: {affiliationName}");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[InviteCodeVM] Failed to load affiliation: {ex.Message}");
+            invitation.DisplayAffiliation = "";
         }
     }
 }
