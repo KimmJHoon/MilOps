@@ -55,6 +55,7 @@ public partial class MainWindow : Window
 
     private void OnLogout()
     {
+        System.Diagnostics.Debug.WriteLine("[MainWindow] OnLogout called");
         MainViewControl.IsVisible = false;
         LoginViewControl.IsVisible = true;
 
@@ -66,5 +67,6 @@ public partial class MainWindow : Window
             loginVm.ErrorMessage = "";
             loginVm.HasError = false;
         }
+        System.Diagnostics.Debug.WriteLine("[MainWindow] OnLogout completed");
     }
 }

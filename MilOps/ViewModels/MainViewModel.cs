@@ -119,8 +119,11 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void Logout()
     {
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command started");
         AuthService.Logout();
         IsDrawerOpen = false;
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] LogoutRequested has listeners: {LogoutRequested != null}");
         LogoutRequested?.Invoke();
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command completed");
     }
 }

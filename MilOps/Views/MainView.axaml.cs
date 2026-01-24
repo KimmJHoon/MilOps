@@ -19,11 +19,18 @@ public partial class MainView : UserControl
     {
         InitializeComponent();
         _viewModel = new MainViewModel();
-        _viewModel.LogoutRequested += () => LogoutRequested?.Invoke();
+        _viewModel.LogoutRequested += OnViewModelLogoutRequested;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         DataContext = _viewModel;
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
+    }
+
+    private void OnViewModelLogoutRequested()
+    {
+        System.Diagnostics.Debug.WriteLine($"[MainView] OnViewModelLogoutRequested - LogoutRequested has listeners: {LogoutRequested != null}");
+        LogoutRequested?.Invoke();
+        System.Diagnostics.Debug.WriteLine("[MainView] LogoutRequested invoked");
     }
 
     /// <summary>

@@ -164,14 +164,21 @@ public static class AuthService
 
     public static void Logout()
     {
-        try
+        // UI 스레드 데드락 방지를 위해 동기적으로 처리
+        CurrentUser = null;
+        CurrentUserRole = UserRole.None;
+
+        // 백그라운드에서 Supabase 로그아웃 처리
+        _ = Task.Run(async () =>
         {
-            LogoutAsync().GetAwaiter().GetResult();
-        }
-        catch
-        {
-            CurrentUser = null;
-            CurrentUserRole = UserRole.None;
-        }
+            try
+            {
+                await SupabaseService.Client.Auth.SignOut();
+            }
+            catch
+            {
+                // Ignore errors
+            }
+        });
     }
 }
