@@ -88,13 +88,26 @@ public static class SupabaseService
         var options = new SupabaseOptions
         {
             AutoRefreshToken = true,
-            AutoConnectRealtime = false
+            AutoConnectRealtime = true  // Realtime 활성화
         };
 
         _client = new Supabase.Client(supabaseUrl, supabaseKey, options);
         await _client.InitializeAsync();
 
         _initialized = true;
+        System.Diagnostics.Debug.WriteLine("[SupabaseService] Initialized with Realtime enabled");
+    }
+
+    /// <summary>
+    /// Realtime 연결
+    /// </summary>
+    public static async Task ConnectRealtimeAsync()
+    {
+        if (_client?.Realtime != null)
+        {
+            await _client.Realtime.ConnectAsync();
+            System.Diagnostics.Debug.WriteLine("[SupabaseService] Realtime connected");
+        }
     }
 
     /// <summary>
