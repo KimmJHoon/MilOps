@@ -38,10 +38,21 @@
 
     <!-- 중앙 콘텐츠 영역 -->
     <Grid Grid.Row="1">
-      <views:CalendarView IsVisible="{Binding IsCalendarSelected}"/>
-      <views:ScheduleView IsVisible="{Binding IsScheduleSelected}"/>
-      <views:NotificationView IsVisible="{Binding IsNotificationSelected}"/>
-      <views:SettingsView IsVisible="{Binding IsSettingsSelected}"/>
+      <Border IsVisible="{Binding IsCalendarSelected}">
+        <views:CalendarView/>
+      </Border>
+      <Border IsVisible="{Binding IsScheduleSelected}">
+        <views:ScheduleView/>
+      </Border>
+      <Border IsVisible="{Binding IsManagerSelected}">
+        <views:ManagerView/>
+      </Border>
+      <Border IsVisible="{Binding IsNotificationSelected}">
+        <views:NotificationView/>
+      </Border>
+      <Border IsVisible="{Binding IsSettingsSelected}">
+        <views:SettingsView/>
+      </Border>
     </Grid>
 
     <!-- 하단 네비게이션 바 -->
@@ -68,17 +79,30 @@
           </StackPanel>
         </Button>
 
-        <!-- 일정 탭 -->
+        <!-- 일정/담당자 탭 (역할에 따라 다름) -->
         <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="1"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📋" FontSize="16" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsScheduleSelected}"/>
-              <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsScheduleSelected}"/>
-            </Panel>
+            <!-- 일반 사용자: 일정 -->
+            <StackPanel IsVisible="{Binding !IsSuperAdmin}">
+              <TextBlock Text="📋" FontSize="16" HorizontalAlignment="Center"/>
+              <Panel>
+                <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                           IsVisible="{Binding IsScheduleSelected}"/>
+                <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                           IsVisible="{Binding !IsScheduleSelected}"/>
+              </Panel>
+            </StackPanel>
+            <!-- 최종관리자: 담당자 -->
+            <StackPanel IsVisible="{Binding IsSuperAdmin}">
+              <TextBlock Text="👥" FontSize="16" HorizontalAlignment="Center"/>
+              <Panel>
+                <TextBlock Text="담당자" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                           IsVisible="{Binding IsManagerSelected}"/>
+                <TextBlock Text="담당자" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                           IsVisible="{Binding !IsManagerSelected}"/>
+              </Panel>
+            </StackPanel>
           </StackPanel>
         </Button>
 
@@ -114,18 +138,23 @@
     </Grid>
 
     <!-- 드로어 오버레이 (반투명 배경) -->
-    <Button Command="{Binding CloseDrawerCommand}"
-            Background="#80000000"
-            BorderThickness="0"
+    <Border x:Name="DrawerOverlay"
+            Background="#000000"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
-            IsVisible="{Binding IsDrawerOpen}"/>
+            IsVisible="False"
+            Opacity="0"
+            PointerPressed="OnOverlayPressed"/>
 
     <!-- 사이드 드로어 -->
-    <Border Background="#222222"
+    <Border x:Name="DrawerPanel"
+            Background="#222222"
             Width="250"
             HorizontalAlignment="Left"
-            IsVisible="{Binding IsDrawerOpen}">
+            IsVisible="False">
+      <Border.RenderTransform>
+        <TranslateTransform X="-250"/>
+      </Border.RenderTransform>
       <Grid RowDefinitions="Auto,*,Auto">
         <!-- 드로어 헤더 -->
         <Border Grid.Row="0" Background="#333333" Padding="20">

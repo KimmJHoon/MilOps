@@ -20,6 +20,9 @@ public partial class MainViewModel : ViewModelBase
     private bool _isScheduleSelected = false;
 
     [ObservableProperty]
+    private bool _isManagerSelected = false;
+
+    [ObservableProperty]
     private bool _isNotificationSelected = false;
 
     [ObservableProperty]
@@ -28,9 +31,17 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isDrawerOpen = false;
 
+    [ObservableProperty]
+    private bool _isSuperAdmin = false;
+
     public string CurrentUserId => AuthService.CurrentUserId ?? "";
 
     public event Action? LogoutRequested;
+
+    public MainViewModel()
+    {
+        _isSuperAdmin = AuthService.IsSuperAdmin;
+    }
 
     [RelayCommand]
     private void SelectTab(string tabIndex)
@@ -41,6 +52,7 @@ public partial class MainViewModel : ViewModelBase
 
             IsCalendarSelected = false;
             IsScheduleSelected = false;
+            IsManagerSelected = false;
             IsNotificationSelected = false;
             IsSettingsSelected = false;
 
@@ -51,8 +63,16 @@ public partial class MainViewModel : ViewModelBase
                     CurrentPageTitle = "캘린더";
                     break;
                 case 1:
-                    IsScheduleSelected = true;
-                    CurrentPageTitle = "일정";
+                    if (IsSuperAdmin)
+                    {
+                        IsManagerSelected = true;
+                        CurrentPageTitle = "담당자 관리";
+                    }
+                    else
+                    {
+                        IsScheduleSelected = true;
+                        CurrentPageTitle = "일정";
+                    }
                     break;
                 case 2:
                     IsNotificationSelected = true;

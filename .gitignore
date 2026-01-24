@@ -500,3 +500,5 @@ service-account*.json
 .claude/
 /*.html
 /*.md
+/nul
+/담당자관리.png

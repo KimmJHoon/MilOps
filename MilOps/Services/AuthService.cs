@@ -3,6 +3,13 @@ using System.IO;
 
 namespace MilOps.Services;
 
+public enum UserRole
+{
+    None,
+    SuperAdmin,  // 최종관리자 (SW0001)
+    Manager      // 일반 담당자
+}
+
 public static class AuthService
 {
     private static readonly string AuthFilePath = Path.Combine(
@@ -12,18 +19,22 @@ public static class AuthService
     );
 
     public static string? CurrentUserId { get; private set; }
+    public static UserRole CurrentUserRole { get; private set; } = UserRole.None;
 
     public static bool IsLoggedIn => !string.IsNullOrEmpty(CurrentUserId);
+    public static bool IsSuperAdmin => CurrentUserRole == UserRole.SuperAdmin;
 
     public static void Login(string userId)
     {
         CurrentUserId = userId;
+        CurrentUserRole = userId == "SW0001" ? UserRole.SuperAdmin : UserRole.Manager;
         SaveAuthState();
     }
 
     public static void Logout()
     {
         CurrentUserId = null;
+        CurrentUserRole = UserRole.None;
         DeleteAuthState();
     }
 
@@ -33,8 +44,13 @@ public static class AuthService
         {
             if (File.Exists(AuthFilePath))
             {
-                CurrentUserId = File.ReadAllText(AuthFilePath).Trim();
-                return !string.IsNullOrEmpty(CurrentUserId);
+                var userId = File.ReadAllText(AuthFilePath).Trim();
+                if (!string.IsNullOrEmpty(userId))
+                {
+                    CurrentUserId = userId;
+                    CurrentUserRole = userId == "SW0001" ? UserRole.SuperAdmin : UserRole.Manager;
+                    return true;
+                }
             }
         }
         catch

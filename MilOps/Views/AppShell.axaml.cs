@@ -19,8 +19,8 @@ public partial class AppShell : UserControl
         // 로그아웃 이벤트 연결
         MainViewControl.LogoutRequested += OnLogout;
 
-        // 기존 로그인 세션 확인
-        if (AuthService.TryRestoreSession())
+        // 이미 로그인된 상태인지 확인 (App.axaml.cs에서 세션 복원됨)
+        if (AuthService.IsLoggedIn)
         {
             OnLoginSuccess();
         }
