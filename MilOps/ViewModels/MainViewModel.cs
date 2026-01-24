@@ -8,7 +8,7 @@ namespace MilOps.ViewModels;
 public partial class MainViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private int _selectedTabIndex = 0;
+    private string _selectedTab = "calendar";
 
     [ObservableProperty]
     private string _currentPageTitle = "캘린더";
@@ -31,8 +31,15 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isDrawerOpen = false;
 
+    // 역할별 플래그
     [ObservableProperty]
     private bool _isSuperAdmin = false;
+
+    [ObservableProperty]
+    private bool _isMiddleAdmin = false;
+
+    [ObservableProperty]
+    private bool _isUser = false;
 
     [ObservableProperty]
     private string _currentUserId = "";
@@ -40,67 +47,84 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _currentUserName = "";
 
+    // 메뉴 표시 여부 (역할별)
+    public bool ShowScheduleTab => IsUser || IsMiddleAdmin;  // 사용자, 중간관리자
+    public bool ShowManagerTab => IsMiddleAdmin || IsSuperAdmin;  // 중간관리자, 최종관리자
+
     public event Action? LogoutRequested;
 
     public MainViewModel()
     {
-        // AuthService에서 현재 사용자 역할 확인
-        _isSuperAdmin = AuthService.IsSuperAdmin;
-
-        // 디버그 로그
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] IsSuperAdmin: {_isSuperAdmin}");
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] CurrentUserRole: {AuthService.CurrentUserRole}");
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] CurrentUser: {AuthService.CurrentUser?.LoginId}");
+        UpdateUserRole();
     }
 
     public void RefreshUserRole()
     {
-        IsSuperAdmin = AuthService.IsSuperAdmin;
+        UpdateUserRole();
         CurrentUserId = AuthService.CurrentUserId ?? "";
         CurrentUserName = AuthService.CurrentUser?.Name ?? "";
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] RefreshUserRole - IsSuperAdmin: {IsSuperAdmin}, UserId: {CurrentUserId}");
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] RefreshUserRole - IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
+    }
+
+    private void UpdateUserRole()
+    {
+        var role = AuthService.CurrentUserRole;
+        var roleString = AuthService.CurrentUser?.Role ?? "null";
+
+        IsSuperAdmin = AuthService.IsSuperAdmin;
+        IsMiddleAdmin = role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary;
+        IsUser = role == UserRole.UserLocal || role == UserRole.UserMilitary;
+
+        // 역할이 None인 경우 기본값으로 사용자 처리 (담당자 메뉴 숨김)
+        if (role == UserRole.None && AuthService.IsLoggedIn)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] WARNING: Role is None but user is logged in. DB role string: {roleString}");
+            // 기본적으로 가장 낮은 권한으로 처리
+            IsUser = true;
+        }
+
+        // 속성 변경 알림 (메뉴 표시 여부 갱신)
+        OnPropertyChanged(nameof(ShowScheduleTab));
+        OnPropertyChanged(nameof(ShowManagerTab));
+
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] UpdateUserRole - DBRole: {roleString}, ParsedRole: {role}, IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
     }
 
     [RelayCommand]
-    private void SelectTab(string tabIndex)
+    private void SelectTab(string tabName)
     {
-        if (int.TryParse(tabIndex, out int index))
+        SelectedTab = tabName;
+
+        // 모든 탭 선택 해제
+        IsCalendarSelected = false;
+        IsScheduleSelected = false;
+        IsManagerSelected = false;
+        IsNotificationSelected = false;
+        IsSettingsSelected = false;
+
+        // 선택된 탭 활성화
+        switch (tabName)
         {
-            SelectedTabIndex = index;
-
-            IsCalendarSelected = false;
-            IsScheduleSelected = false;
-            IsManagerSelected = false;
-            IsNotificationSelected = false;
-            IsSettingsSelected = false;
-
-            switch (index)
-            {
-                case 0:
-                    IsCalendarSelected = true;
-                    CurrentPageTitle = "캘린더";
-                    break;
-                case 1:
-                    if (IsSuperAdmin)
-                    {
-                        IsManagerSelected = true;
-                        CurrentPageTitle = "담당자 관리";
-                    }
-                    else
-                    {
-                        IsScheduleSelected = true;
-                        CurrentPageTitle = "일정";
-                    }
-                    break;
-                case 2:
-                    IsNotificationSelected = true;
-                    CurrentPageTitle = "알림";
-                    break;
-                case 3:
-                    IsSettingsSelected = true;
-                    CurrentPageTitle = "설정";
-                    break;
-            }
+            case "calendar":
+                IsCalendarSelected = true;
+                CurrentPageTitle = "캘린더";
+                break;
+            case "schedule":
+                IsScheduleSelected = true;
+                CurrentPageTitle = "일정";
+                break;
+            case "notification":
+                IsNotificationSelected = true;
+                CurrentPageTitle = "알림";
+                break;
+            case "manager":
+                IsManagerSelected = true;
+                CurrentPageTitle = "담당자 관리";
+                break;
+            case "settings":
+                IsSettingsSelected = true;
+                CurrentPageTitle = "설정";
+                break;
         }
     }
 

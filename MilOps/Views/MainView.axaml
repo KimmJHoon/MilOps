@@ -57,16 +57,17 @@
 
     <!-- 하단 네비게이션 바 -->
     <Border Grid.Row="2" Background="#333333" Padding="4,2">
-      <Grid>
+      <Panel>
+      <!-- 사용자용 메뉴: 캘린더 - 일정 - 알림 (3개) -->
+      <Grid IsVisible="{Binding IsUser}">
         <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="*"/>
           <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- 캘린더 탭 -->
-        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="0"
+        <!-- 캘린더 -->
+        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
             <TextBlock Text="📅" FontSize="16" HorizontalAlignment="Center"/>
@@ -79,35 +80,74 @@
           </StackPanel>
         </Button>
 
-        <!-- 일정/담당자 탭 (역할에 따라 다름) -->
-        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="1"
+        <!-- 일정 -->
+        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="schedule"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <!-- 일반 사용자: 일정 -->
-            <StackPanel IsVisible="{Binding !IsSuperAdmin}">
-              <TextBlock Text="📋" FontSize="16" HorizontalAlignment="Center"/>
-              <Panel>
-                <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
-                           IsVisible="{Binding IsScheduleSelected}"/>
-                <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="White"
-                           IsVisible="{Binding !IsScheduleSelected}"/>
-              </Panel>
-            </StackPanel>
-            <!-- 최종관리자: 담당자 -->
-            <StackPanel IsVisible="{Binding IsSuperAdmin}">
-              <TextBlock Text="👥" FontSize="16" HorizontalAlignment="Center"/>
-              <Panel>
-                <TextBlock Text="담당자" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
-                           IsVisible="{Binding IsManagerSelected}"/>
-                <TextBlock Text="담당자" FontSize="15" HorizontalAlignment="Center" Foreground="White"
-                           IsVisible="{Binding !IsManagerSelected}"/>
-              </Panel>
-            </StackPanel>
+            <TextBlock Text="📋" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsScheduleSelected}"/>
+              <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsScheduleSelected}"/>
+            </Panel>
           </StackPanel>
         </Button>
 
-        <!-- 알림 탭 -->
-        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="2"
+        <!-- 알림 -->
+        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="notification"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="🔔" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="알림" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsNotificationSelected}"/>
+              <TextBlock Text="알림" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsNotificationSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+      </Grid>
+
+      <!-- 중간관리자용 메뉴: 캘린더 - 일정 - 알림 - 담당자 (4개) -->
+      <Grid IsVisible="{Binding IsMiddleAdmin}">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 캘린더 -->
+        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="📅" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="캘린더" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsCalendarSelected}"/>
+              <TextBlock Text="캘린더" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsCalendarSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+
+        <!-- 일정 -->
+        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="schedule"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="📋" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsScheduleSelected}"/>
+              <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsScheduleSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+
+        <!-- 알림 -->
+        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="notification"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
             <TextBlock Text="🔔" FontSize="16" HorizontalAlignment="Center"/>
@@ -120,20 +160,72 @@
           </StackPanel>
         </Button>
 
-        <!-- 설정 탭 -->
-        <Button Grid.Column="3" Command="{Binding SelectTabCommand}" CommandParameter="3"
+        <!-- 담당자 -->
+        <Button Grid.Column="3" Command="{Binding SelectTabCommand}" CommandParameter="manager"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="⚙️" FontSize="16" HorizontalAlignment="Center"/>
+            <TextBlock Text="👥" FontSize="16" HorizontalAlignment="Center"/>
             <Panel>
-              <TextBlock Text="설정" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsSettingsSelected}"/>
-              <TextBlock Text="설정" FontSize="15" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsSettingsSelected}"/>
+              <TextBlock Text="담당자" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsManagerSelected}"/>
+              <TextBlock Text="담당자" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsManagerSelected}"/>
             </Panel>
           </StackPanel>
         </Button>
       </Grid>
+
+      <!-- 최종관리자용 메뉴: 캘린더 - 알림 - 담당자관리 (3개) -->
+      <Grid IsVisible="{Binding IsSuperAdmin}">
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 캘린더 -->
+        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="📅" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="캘린더" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsCalendarSelected}"/>
+              <TextBlock Text="캘린더" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsCalendarSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+
+        <!-- 알림 -->
+        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="notification"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="🔔" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="알림" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsNotificationSelected}"/>
+              <TextBlock Text="알림" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsNotificationSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+
+        <!-- 담당자관리 -->
+        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="manager"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="👥" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="담당자관리" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsManagerSelected}"/>
+              <TextBlock Text="담당자관리" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsManagerSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+      </Grid>
+      </Panel>
     </Border>
     </Grid>
 
