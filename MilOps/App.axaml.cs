@@ -19,9 +19,6 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
-        // 세션 복원을 먼저 수행 (ViewModel 생성 전에)
-        AuthService.TryRestoreSession();
-
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Avoid duplicate validations from both Avalonia and the CommunityToolkit.

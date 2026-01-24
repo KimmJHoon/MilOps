@@ -63,6 +63,12 @@ public static class AuthService
             CurrentUserRole = ParseRole(userInfo.Role);
             System.Diagnostics.Debug.WriteLine($"[AuthService] LoginAsync: ParsedRole={CurrentUserRole}, IsSuperAdmin={IsSuperAdmin}");
 
+            // 4. 세션 토큰 저장 (자동 로그인용)
+            if (session.AccessToken != null && session.RefreshToken != null)
+            {
+                await SessionStorageService.SaveSessionAsync(session.AccessToken, session.RefreshToken, loginId);
+            }
+
             return (true, null);
         }
         catch (GotrueException ex)
@@ -107,30 +113,68 @@ public static class AuthService
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: Starting...");
+
             if (!SupabaseService.IsInitialized)
             {
                 await SupabaseService.InitializeAsync();
             }
 
-            var session = SupabaseService.Client.Auth.CurrentSession;
-            if (session?.User == null)
+            // 1. 저장된 세션 토큰 로드
+            var (accessToken, refreshToken, loginId) = await SessionStorageService.LoadSessionAsync();
+
+            if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(loginId))
             {
+                System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: No saved session");
                 return false;
             }
 
-            // 세션이 있으면 프로필 조회
-            var userProfile = await SupabaseService.GetCurrentUserProfileAsync();
+            System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Found saved session for {loginId}");
+
+            // 2. 토큰으로 세션 복원 시도
+            try
+            {
+                var session = await SupabaseService.Client.Auth.SetSession(accessToken, refreshToken);
+                if (session?.User == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: SetSession failed");
+                    SessionStorageService.ClearSession();
+                    return false;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Session restored, User ID={session.User.Id}");
+
+                // 3. 새 토큰 저장 (리프레시된 경우)
+                if (session.AccessToken != null && session.RefreshToken != null)
+                {
+                    await SessionStorageService.SaveSessionAsync(session.AccessToken, session.RefreshToken, loginId);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: SetSession error - {ex.Message}");
+                SessionStorageService.ClearSession();
+                return false;
+            }
+
+            // 4. 사용자 프로필 조회
+            var userProfile = await SupabaseService.GetUserByLoginIdAsync(loginId);
             if (userProfile == null)
             {
+                System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: User profile not found");
+                SessionStorageService.ClearSession();
                 return false;
             }
 
             CurrentUser = userProfile;
             CurrentUserRole = ParseRole(userProfile.Role);
+            System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Success - {loginId}, Role={CurrentUserRole}");
             return true;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Error - {ex.Message}");
+            SessionStorageService.ClearSession();
             return false;
         }
     }
@@ -167,6 +211,9 @@ public static class AuthService
         // UI 스레드 데드락 방지를 위해 동기적으로 처리
         CurrentUser = null;
         CurrentUserRole = UserRole.None;
+
+        // 저장된 세션 삭제
+        SessionStorageService.ClearSession();
 
         // 백그라운드에서 Supabase 로그아웃 처리
         _ = Task.Run(async () =>
