@@ -2,14 +2,19 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Input.Platform;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MilOps.Models;
 using MilOps.Services;
+using Supabase.Realtime;
+using Supabase.Realtime.PostgresChanges;
+using EventType = Supabase.Realtime.Constants.EventType;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace MilOps.ViewModels;
@@ -54,9 +59,8 @@ public partial class ManagerViewModel : ViewModelBase
     [ObservableProperty]
     private string _newInvitePhone = "";
 
-    // 계급 (군부대용)
-    [ObservableProperty]
-    private string _newInviteRank = "";
+    // 전화번호 포맷팅 플래그 (무한 루프 방지)
+    private bool _isFormattingPhone = false;
 
     [ObservableProperty]
     private bool _isLoading = false;
@@ -71,19 +75,72 @@ public partial class ManagerViewModel : ViewModelBase
     [ObservableProperty]
     private AffiliationOption? _selectedAffiliation;
 
-    // 계급 옵션 (군부대용)
+    // 계급 옵션 (군부대용 - 카테고리 포함)
     [ObservableProperty]
-    private ObservableCollection<string> _rankOptions = new();
+    private ObservableCollection<RankOption> _rankOptions = new();
+
+    // 선택된 계급
+    private RankOption? _selectedRankOption;
+    public RankOption? SelectedRankOption
+    {
+        get => _selectedRankOption;
+        set
+        {
+            // 카테고리가 선택되면 다음 실제 계급으로 자동 선택
+            if (value != null && value.IsCategory)
+            {
+                var index = RankOptions.IndexOf(value);
+                if (index >= 0 && index < RankOptions.Count - 1)
+                {
+                    var nextItem = RankOptions[index + 1];
+                    if (!nextItem.IsCategory)
+                    {
+                        SetProperty(ref _selectedRankOption, nextItem);
+                        return;
+                    }
+                }
+                return; // 카테고리는 선택 불가
+            }
+            SetProperty(ref _selectedRankOption, value);
+        }
+    }
 
     // UI 표시 조건
     [ObservableProperty]
     private bool _showRankField = false;
+
+    // 대대 텍스트 입력 (middle_military용)
+    [ObservableProperty]
+    private bool _showBattalionTextInput = false;
+
+    [ObservableProperty]
+    private string _newBattalionName = "";
+
+    // 소속 선택 드롭다운 표시 여부
+    [ObservableProperty]
+    private bool _showAffiliationComboBox = true;
 
     // 캐시된 조직 데이터
     private List<Region> _regions = new();
     private List<District> _districts = new();
     private List<Division> _divisions = new();
     private List<Battalion> _battalions = new();
+
+    // 빠른 조회를 위한 딕셔너리 캐시
+    private Dictionary<Guid, string> _regionNames = new();
+    private Dictionary<Guid, string> _districtNames = new();
+    private Dictionary<Guid, string> _divisionNames = new();
+    private Dictionary<Guid, string> _battalionNames = new();
+
+    // 초기화 완료 플래그
+    private bool _isOrganizationDataLoaded = false;
+
+    // Realtime 채널
+    private RealtimeChannel? _invitationsChannel;
+
+    // 주기적 새로고침 타이머 (10초)
+    private Timer? _refreshTimer;
+    private const int RefreshIntervalMs = 10000; // 10초
 
     public ManagerViewModel()
     {
@@ -93,9 +150,217 @@ public partial class ManagerViewModel : ViewModelBase
 
     private async Task InitializeAsync()
     {
-        await LoadOrganizationDataAsync();
+        if (!_isOrganizationDataLoaded)
+        {
+            await LoadOrganizationDataAsync();
+        }
         DetermineUserTypeAndRole();
         await LoadInvitationsAsync();
+        await SubscribeToRealtimeAsync();
+        StartPeriodicRefresh();
+    }
+
+    /// <summary>
+    /// 주기적 새로고침 타이머 시작 (30초마다)
+    /// Realtime이 실패할 경우를 대비한 백업 메커니즘
+    /// </summary>
+    private void StartPeriodicRefresh()
+    {
+        _refreshTimer = new Timer(
+            async _ =>
+            {
+                try
+                {
+                    System.Diagnostics.Debug.WriteLine("[ManagerVM] Periodic refresh triggered");
+                    await Dispatcher.UIThread.InvokeAsync(async () =>
+                    {
+                        await LoadInvitationsAsync();
+                    });
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ManagerVM] Periodic refresh error: {ex.Message}");
+                }
+            },
+            null,
+            RefreshIntervalMs,  // 최초 실행까지 대기 시간
+            RefreshIntervalMs   // 반복 간격
+        );
+        System.Diagnostics.Debug.WriteLine($"[ManagerVM] Periodic refresh started (interval: {RefreshIntervalMs}ms)");
+    }
+
+    /// <summary>
+    /// 주기적 새로고침 타이머 중지
+    /// </summary>
+    private void StopPeriodicRefresh()
+    {
+        _refreshTimer?.Dispose();
+        _refreshTimer = null;
+        System.Diagnostics.Debug.WriteLine("[ManagerVM] Periodic refresh stopped");
+    }
+
+    /// <summary>
+    /// Realtime 구독 설정
+    /// </summary>
+    private async Task SubscribeToRealtimeAsync()
+    {
+        try
+        {
+            if (!SupabaseService.IsInitialized) return;
+            if (AuthService.CurrentUser == null) return;
+
+            var currentUserId = AuthService.CurrentUser.Id.ToString();
+
+            // Realtime 연결
+            await SupabaseService.ConnectRealtimeAsync();
+
+            // invitations 테이블 변경 구독
+            _invitationsChannel = SupabaseService.Client.Realtime.Channel("invitations-changes");
+
+            _invitationsChannel.Register(new PostgresChangesOptions("public", "invitations"));
+
+            _invitationsChannel.AddPostgresChangeHandler(PostgresChangesOptions.ListenType.All, (sender, change) =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[ManagerVM] Realtime change received: {change.Event}");
+
+                // UI 스레드에서 처리
+                Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    await HandleRealtimeChangeAsync(change, currentUserId);
+                });
+            });
+
+            await _invitationsChannel.Subscribe();
+            System.Diagnostics.Debug.WriteLine("[ManagerVM] Subscribed to invitations realtime changes");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Failed to subscribe to realtime: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Realtime 변경 처리
+    /// </summary>
+    private async Task HandleRealtimeChangeAsync(PostgresChangesResponse change, string currentUserId)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Handling change event: {change.Event}");
+
+            // Model/OldModel로 데이터 가져오기
+            Invitation? model = null;
+            Invitation? oldModel = null;
+
+            try { model = change.Model<Invitation>(); } catch { }
+            try { oldModel = change.OldModel<Invitation>(); } catch { }
+
+            // invited_by 확인
+            var invitedBy = model?.InvitedBy.ToString() ?? oldModel?.InvitedBy.ToString();
+
+            // 현재 사용자가 초대한 것만 처리
+            if (invitedBy != currentUserId)
+            {
+                System.Diagnostics.Debug.WriteLine($"[ManagerVM] Ignoring change - not my invitation (invitedBy: {invitedBy})");
+                return;
+            }
+
+            switch (change.Event)
+            {
+                case EventType.Update:
+                    // 상태 업데이트 (예: pending → accepted)
+                    await LoadInvitationsAsync();
+                    break;
+
+                case EventType.Delete:
+                    // 삭제됨
+                    if (oldModel != null)
+                    {
+                        var toRemove = Invitations.FirstOrDefault(i => i.Id == oldModel.Id);
+                        if (toRemove != null)
+                        {
+                            Invitations.Remove(toRemove);
+                            UpdateCounts();
+                        }
+                    }
+                    break;
+
+                case EventType.Insert:
+                    // 새 초대 (다른 기기에서 추가된 경우)
+                    await LoadInvitationsAsync();
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Error handling realtime change: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// ViewModel 정리 (Realtime 구독 해제 및 타이머 중지)
+    /// </summary>
+    public void Cleanup()
+    {
+        try
+        {
+            // 타이머 중지
+            StopPeriodicRefresh();
+
+            // Realtime 구독 해제
+            if (_invitationsChannel != null)
+            {
+                _invitationsChannel.Unsubscribe();
+                _invitationsChannel = null;
+                System.Diagnostics.Debug.WriteLine("[ManagerVM] Unsubscribed from realtime");
+            }
+
+            // 캐시 및 데이터 비우기
+            ClearCache();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Error during cleanup: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 캐시 및 데이터 비우기 (로그아웃 시 호출)
+    /// </summary>
+    public void ClearCache()
+    {
+        Invitations.Clear();
+        AffiliationOptions.Clear();
+
+        _regions.Clear();
+        _districts.Clear();
+        _divisions.Clear();
+        _battalions.Clear();
+
+        _regionNames.Clear();
+        _districtNames.Clear();
+        _divisionNames.Clear();
+        _battalionNames.Clear();
+
+        _isOrganizationDataLoaded = false;
+
+        TotalCount = 0;
+        ActiveCount = 0;
+        PendingCount = 0;
+
+        // UI 상태 초기화
+        CurrentUserType = "local";
+        TargetRole = "";
+        InviteFormTitle = "";
+        AffiliationLabel = "";
+        ShowRankField = false;
+        ShowBattalionTextInput = false;
+        ShowAffiliationComboBox = true;
+        NewBattalionName = "";
+        NewInviteName = "";
+        NewInvitePhone = "";
+
+        System.Diagnostics.Debug.WriteLine("[ManagerVM] Cache cleared");
     }
 
     /// <summary>
@@ -123,6 +388,13 @@ public partial class ManagerViewModel : ViewModelBase
             _divisions = divisionsTask.Result.Models;
             _battalions = battalionsTask.Result.Models;
 
+            // 빠른 조회를 위한 딕셔너리 캐시 생성
+            _regionNames = _regions.ToDictionary(r => r.Id, r => r.Name);
+            _districtNames = _districts.ToDictionary(d => d.Id, d => d.Name);
+            _divisionNames = _divisions.ToDictionary(d => d.Id, d => d.Name);
+            _battalionNames = _battalions.ToDictionary(b => b.Id, b => b.Name);
+
+            _isOrganizationDataLoaded = true;
             System.Diagnostics.Debug.WriteLine($"[ManagerVM] Loaded: {_regions.Count} regions, {_districts.Count} districts, {_divisions.Count} divisions, {_battalions.Count} battalions");
         }
         catch (Exception ex)
@@ -184,7 +456,9 @@ public partial class ManagerViewModel : ViewModelBase
             InviteFormTitle = "대대담당자 초대";
             AffiliationLabel = "소속 (대대)";
             ShowRankField = true;
-            InitializeBattalionOptionsForMiddleMilitary();
+            // 대대는 텍스트 입력으로 변경
+            ShowBattalionTextInput = true;
+            ShowAffiliationComboBox = false;
             System.Diagnostics.Debug.WriteLine($"[ManagerVM] Set as MiddleMilitary, TargetRole={TargetRole}");
         }
         else
@@ -193,6 +467,8 @@ public partial class ManagerViewModel : ViewModelBase
             CurrentUserType = "none";
             TargetRole = "";
             InviteFormTitle = "";
+            ShowBattalionTextInput = false;
+            ShowAffiliationComboBox = true;
             System.Diagnostics.Debug.WriteLine($"[ManagerVM] No invite permission, dbRole={dbRole}");
         }
     }
@@ -246,12 +522,18 @@ public partial class ManagerViewModel : ViewModelBase
 
         // 현재 사용자의 region_id로 필터링
         var userRegionId = currentUser?.RegionId;
+        System.Diagnostics.Debug.WriteLine($"[ManagerVM] InitializeDistrictOptionsForMiddleLocal - UserRegionId: {userRegionId}, Total districts: {_districts.Count}");
+
         var filteredDistricts = userRegionId.HasValue
             ? _districts.Where(d => d.RegionId == userRegionId.Value)
             : _districts;
 
-        foreach (var district in filteredDistricts.OrderBy(d => d.Name))
+        var filteredList = filteredDistricts.OrderBy(d => d.Name).ToList();
+        System.Diagnostics.Debug.WriteLine($"[ManagerVM] Filtered districts count: {filteredList.Count}");
+
+        foreach (var district in filteredList)
         {
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Adding district: {district.Name} (RegionId: {district.RegionId})");
             AffiliationOptions.Add(new AffiliationOption(
                 district.Id,
                 district.Name,
@@ -294,28 +576,34 @@ public partial class ManagerViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 계급 목록 (부사관-준사관-장교)
+    /// 계급 목록 (부사관-준사관-장교) 카테고리별 분류
     /// </summary>
     private void InitializeRankOptions()
     {
         RankOptions.Clear();
-        // 부사관
-        RankOptions.Add("하사");
-        RankOptions.Add("중사");
-        RankOptions.Add("상사");
-        RankOptions.Add("원사");
-        // 준사관
-        RankOptions.Add("준위");
-        // 장교
-        RankOptions.Add("소위");
-        RankOptions.Add("중위");
-        RankOptions.Add("대위");
-        RankOptions.Add("소령");
-        RankOptions.Add("중령");
-        RankOptions.Add("대령");
 
-        if (RankOptions.Count > 0)
-            NewInviteRank = RankOptions[0];
+        // 부사관 카테고리
+        RankOptions.Add(new RankOption("부사관", null, true));
+        RankOptions.Add(new RankOption("    하사", "하사"));
+        RankOptions.Add(new RankOption("    중사", "중사"));
+        RankOptions.Add(new RankOption("    상사", "상사"));
+        RankOptions.Add(new RankOption("    원사", "원사"));
+
+        // 준사관 카테고리
+        RankOptions.Add(new RankOption("준사관", null, true));
+        RankOptions.Add(new RankOption("    준위", "준위"));
+
+        // 장교 카테고리
+        RankOptions.Add(new RankOption("장교", null, true));
+        RankOptions.Add(new RankOption("    소위", "소위"));
+        RankOptions.Add(new RankOption("    중위", "중위"));
+        RankOptions.Add(new RankOption("    대위", "대위"));
+        RankOptions.Add(new RankOption("    소령", "소령"));
+        RankOptions.Add(new RankOption("    중령", "중령"));
+        RankOptions.Add(new RankOption("    대령", "대령"));
+
+        // 첫 번째 실제 계급 선택 (카테고리가 아닌 것)
+        SelectedRankOption = RankOptions.FirstOrDefault(r => !r.IsCategory);
     }
 
     private async Task LoadInvitationsAsync()
@@ -327,9 +615,19 @@ public partial class ManagerViewModel : ViewModelBase
         try
         {
             var currentUserId = AuthService.CurrentUser.Id;
-            var response = await SupabaseService.Client
+
+            // 현재 사용자가 초대한 것만 조회
+            var query = SupabaseService.Client
                 .From<Invitation>()
-                .Filter("invited_by", Supabase.Postgrest.Constants.Operator.Equals, currentUserId.ToString())
+                .Filter("invited_by", Supabase.Postgrest.Constants.Operator.Equals, currentUserId.ToString());
+
+            // TargetRole이 설정되어 있으면 해당 역할의 초대만 필터링
+            if (!string.IsNullOrEmpty(TargetRole))
+            {
+                query = query.Filter("role", Supabase.Postgrest.Constants.Operator.Equals, TargetRole);
+            }
+
+            var response = await query
                 .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
                 .Get();
 
@@ -341,6 +639,7 @@ public partial class ManagerViewModel : ViewModelBase
                 Invitations.Add(invitation);
             }
             UpdateCounts();
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Loaded {Invitations.Count} invitations for role: {TargetRole}");
         }
         catch (Exception ex)
         {
@@ -354,27 +653,19 @@ public partial class ManagerViewModel : ViewModelBase
 
     private string? GetDisplayAffiliation(Invitation invitation)
     {
-        // region_id, district_id, division_id, battalion_id로 실제 이름 조회
-        if (invitation.BattalionId.HasValue)
-        {
-            var battalion = _battalions.FirstOrDefault(b => b.Id == invitation.BattalionId.Value);
-            return battalion?.Name;
-        }
-        if (invitation.DivisionId.HasValue)
-        {
-            var division = _divisions.FirstOrDefault(d => d.Id == invitation.DivisionId.Value);
-            return division?.Name;
-        }
-        if (invitation.DistrictId.HasValue)
-        {
-            var district = _districts.FirstOrDefault(d => d.Id == invitation.DistrictId.Value);
-            return district?.Name;
-        }
-        if (invitation.RegionId.HasValue)
-        {
-            var region = _regions.FirstOrDefault(r => r.Id == invitation.RegionId.Value);
-            return region?.Name;
-        }
+        // 딕셔너리를 사용한 O(1) 조회
+        if (invitation.BattalionId.HasValue && _battalionNames.TryGetValue(invitation.BattalionId.Value, out var battalionName))
+            return battalionName;
+
+        if (invitation.DivisionId.HasValue && _divisionNames.TryGetValue(invitation.DivisionId.Value, out var divisionName))
+            return divisionName;
+
+        if (invitation.DistrictId.HasValue && _districtNames.TryGetValue(invitation.DistrictId.Value, out var districtName))
+            return districtName;
+
+        if (invitation.RegionId.HasValue && _regionNames.TryGetValue(invitation.RegionId.Value, out var regionName))
+            return regionName;
+
         return null;
     }
 
@@ -397,13 +688,14 @@ public partial class ManagerViewModel : ViewModelBase
         // 입력 필드 초기화
         NewInviteName = "";
         NewInvitePhone = "";
+        NewBattalionName = "";
         CopiedMessage = "";
 
         if (AffiliationOptions.Count > 0)
             SelectedAffiliation = AffiliationOptions[0];
 
-        if (RankOptions.Count > 0)
-            NewInviteRank = RankOptions[0];
+        // 첫 번째 실제 계급 선택 (카테고리가 아닌 것)
+        SelectedRankOption = RankOptions.FirstOrDefault(r => !r.IsCategory);
 
         IsNewInviteDialogOpen = true;
     }
@@ -433,7 +725,16 @@ public partial class ManagerViewModel : ViewModelBase
             return;
         }
 
-        if (SelectedAffiliation == null)
+        // 대대 텍스트 입력 모드일 때 검증
+        if (ShowBattalionTextInput)
+        {
+            if (string.IsNullOrWhiteSpace(NewBattalionName))
+            {
+                CopiedMessage = "대대명을 입력해주세요";
+                return;
+            }
+        }
+        else if (SelectedAffiliation == null)
         {
             CopiedMessage = "소속을 선택해주세요";
             return;
@@ -452,32 +753,73 @@ public partial class ManagerViewModel : ViewModelBase
                 Role = TargetRole,
                 Name = NewInviteName,
                 Phone = NewInvitePhone,
-                MilitaryRank = ShowRankField ? NewInviteRank : null,
+                MilitaryRank = ShowRankField ? SelectedRankOption?.Value : null,
                 InvitedBy = AuthService.CurrentUser.Id,
                 Status = "pending",
                 ExpiresAt = DateTime.UtcNow.AddDays(7),
                 CreatedAt = DateTime.UtcNow
             };
 
-            // 선택된 소속 타입에 따라 적절한 ID 설정
-            switch (SelectedAffiliation.Type)
+            string displayAffiliation = "";
+
+            // 대대 텍스트 입력 모드 (middle_military → user_military)
+            if (ShowBattalionTextInput)
             {
-                case AffiliationType.Region:
-                    newInvite.RegionId = SelectedAffiliation.Id;
-                    break;
-                case AffiliationType.District:
-                    newInvite.DistrictId = SelectedAffiliation.Id;
-                    // district의 region_id도 설정
-                    newInvite.RegionId = SelectedAffiliation.ParentId;
-                    break;
-                case AffiliationType.Division:
-                    newInvite.DivisionId = SelectedAffiliation.Id;
-                    break;
-                case AffiliationType.Battalion:
-                    newInvite.BattalionId = SelectedAffiliation.Id;
-                    // battalion의 division_id도 설정
-                    newInvite.DivisionId = SelectedAffiliation.ParentId;
-                    break;
+                // 현재 사용자의 division_id 가져오기
+                var userDivisionId = AuthService.CurrentUser.DivisionId;
+                if (!userDivisionId.HasValue)
+                {
+                    CopiedMessage = "사용자의 사단 정보가 없습니다";
+                    return;
+                }
+
+                // 대대명 형식: "[입력값] 대대"
+                var battalionName = $"{NewBattalionName} 대대";
+
+                // battalions 테이블에 새 대대 생성
+                var newBattalion = new Battalion
+                {
+                    Id = Guid.NewGuid(),
+                    DivisionId = userDivisionId.Value,
+                    Name = battalionName,
+                    CreatedAt = DateTime.UtcNow
+                };
+
+                await SupabaseService.Client
+                    .From<Battalion>()
+                    .Insert(newBattalion);
+
+                System.Diagnostics.Debug.WriteLine($"[ManagerVM] Created new battalion: {battalionName} (ID: {newBattalion.Id})");
+
+                // 초대에 대대 ID 설정
+                newInvite.BattalionId = newBattalion.Id;
+                newInvite.DivisionId = userDivisionId.Value;
+                displayAffiliation = battalionName;
+
+                // 캐시 업데이트
+                _battalionNames[newBattalion.Id] = battalionName;
+            }
+            else
+            {
+                // 기존 ComboBox 선택 모드
+                switch (SelectedAffiliation!.Type)
+                {
+                    case AffiliationType.Region:
+                        newInvite.RegionId = SelectedAffiliation.Id;
+                        break;
+                    case AffiliationType.District:
+                        newInvite.DistrictId = SelectedAffiliation.Id;
+                        newInvite.RegionId = SelectedAffiliation.ParentId;
+                        break;
+                    case AffiliationType.Division:
+                        newInvite.DivisionId = SelectedAffiliation.Id;
+                        break;
+                    case AffiliationType.Battalion:
+                        newInvite.BattalionId = SelectedAffiliation.Id;
+                        newInvite.DivisionId = SelectedAffiliation.ParentId;
+                        break;
+                }
+                displayAffiliation = SelectedAffiliation.Name;
             }
 
             await SupabaseService.Client
@@ -485,7 +827,7 @@ public partial class ManagerViewModel : ViewModelBase
                 .Insert(newInvite);
 
             // UI 표시용 소속 설정
-            newInvite.DisplayAffiliation = SelectedAffiliation.Name;
+            newInvite.DisplayAffiliation = displayAffiliation;
             Invitations.Insert(0, newInvite);
             UpdateCounts();
 
@@ -544,17 +886,23 @@ public partial class ManagerViewModel : ViewModelBase
     {
         try
         {
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Deleting invitation: {invitation.Id}, Code: {invitation.InviteCode}");
+
             await SupabaseService.Client
                 .From<Invitation>()
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, invitation.Id.ToString())
                 .Delete();
+
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Delete completed");
 
             Invitations.Remove(invitation);
             UpdateCounts();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"Failed to delete invitation: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Failed to delete invitation: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Exception: {ex}");
+            CopiedMessage = "삭제 실패: 권한이 없거나 오류가 발생했습니다";
         }
     }
 
@@ -607,8 +955,8 @@ public partial class ManagerViewModel : ViewModelBase
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        await LoadOrganizationDataAsync();
-        DetermineUserTypeAndRole();
+        // 조직 데이터는 이미 로드되어 있으면 다시 로드하지 않음
+        // 초대 목록만 새로고침
         await LoadInvitationsAsync();
     }
 
@@ -618,6 +966,57 @@ public partial class ManagerViewModel : ViewModelBase
         var random = new Random();
         return new string(Enumerable.Repeat(chars, 8)
             .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
+
+    /// <summary>
+    /// 전화번호 변경 시 자동 포맷팅 (CommunityToolkit.Mvvm partial method)
+    /// </summary>
+    partial void OnNewInvitePhoneChanged(string value)
+    {
+        if (_isFormattingPhone) return;
+
+        _isFormattingPhone = true;
+        try
+        {
+            var formatted = FormatPhoneNumber(value);
+            if (formatted != value)
+            {
+                NewInvitePhone = formatted;
+            }
+        }
+        finally
+        {
+            _isFormattingPhone = false;
+        }
+    }
+
+    /// <summary>
+    /// 전화번호 포맷팅: 숫자만 추출하여 010-0000-0000 형식으로 변환
+    /// </summary>
+    private static string FormatPhoneNumber(string input)
+    {
+        if (string.IsNullOrEmpty(input)) return "";
+
+        // 숫자만 추출
+        var digits = new string(input.Where(char.IsDigit).ToArray());
+
+        // 최대 11자리로 제한
+        if (digits.Length > 11)
+            digits = digits.Substring(0, 11);
+
+        // 포맷팅
+        if (digits.Length <= 3)
+        {
+            return digits;
+        }
+        else if (digits.Length <= 7)
+        {
+            return $"{digits.Substring(0, 3)}-{digits.Substring(3)}";
+        }
+        else
+        {
+            return $"{digits.Substring(0, 3)}-{digits.Substring(3, 4)}-{digits.Substring(7)}";
+        }
     }
 }
 
@@ -645,4 +1044,23 @@ public class AffiliationOption
     }
 
     public override string ToString() => Name;
+}
+
+/// <summary>
+/// 계급 옵션 (카테고리 헤더 또는 실제 계급)
+/// </summary>
+public class RankOption
+{
+    public string DisplayName { get; }
+    public string? Value { get; }
+    public bool IsCategory { get; }
+
+    public RankOption(string displayName, string? value = null, bool isCategory = false)
+    {
+        DisplayName = displayName;
+        Value = value;
+        IsCategory = isCategory;
+    }
+
+    public override string ToString() => DisplayName;
 }

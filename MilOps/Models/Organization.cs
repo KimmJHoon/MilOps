@@ -83,9 +83,6 @@ public class Battalion : BaseModel
     [Column("name")]
     public string Name { get; set; } = "";
 
-    [Column("code")]
-    public string? Code { get; set; }
-
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 }

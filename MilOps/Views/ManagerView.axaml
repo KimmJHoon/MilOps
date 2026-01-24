@@ -154,14 +154,33 @@
         <!-- 동적 타이틀 -->
         <TextBlock Text="{Binding InviteFormTitle}" FontSize="18" Foreground="White" HorizontalAlignment="Center"/>
 
-        <!-- 소속 (동적 라벨) -->
-        <StackPanel Spacing="5">
+        <!-- 소속 (ComboBox - 기본 모드) -->
+        <StackPanel Spacing="5" IsVisible="{Binding ShowAffiliationComboBox}">
           <TextBlock Text="{Binding AffiliationLabel}" Foreground="#AAAAAA" FontSize="13"/>
           <ComboBox ItemsSource="{Binding AffiliationOptions}"
                     SelectedItem="{Binding SelectedAffiliation}"
                     Background="#333333"
                     Foreground="White"
                     HorizontalAlignment="Stretch"/>
+        </StackPanel>
+
+        <!-- 소속 (텍스트 입력 - 대대담당자 초대 모드) -->
+        <StackPanel Spacing="5" IsVisible="{Binding ShowBattalionTextInput}">
+          <TextBlock Text="{Binding AffiliationLabel}" Foreground="#AAAAAA" FontSize="13"/>
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBox Grid.Column="0"
+                     Text="{Binding NewBattalionName}"
+                     Watermark="예: 101"
+                     Background="#333333"
+                     Foreground="White"
+                     Padding="10"/>
+            <TextBlock Grid.Column="1"
+                       Text=" 대대"
+                       Foreground="White"
+                       FontSize="14"
+                       VerticalAlignment="Center"
+                       Margin="8,0,0,0"/>
+          </Grid>
         </StackPanel>
 
         <!-- 이름 -->
@@ -188,7 +207,7 @@
         <StackPanel Spacing="5" IsVisible="{Binding ShowRankField}">
           <TextBlock Text="계급" Foreground="#AAAAAA" FontSize="13"/>
           <ComboBox ItemsSource="{Binding RankOptions}"
-                    SelectedItem="{Binding NewInviteRank}"
+                    SelectedItem="{Binding SelectedRankOption}"
                     Background="#333333"
                     Foreground="White"
                     HorizontalAlignment="Stretch"/>
