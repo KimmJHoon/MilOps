@@ -188,18 +188,23 @@ serve(async (req) => {
     }
 
     // 6. 초대 상태 업데이트
-    const { error: invUpdateError } = await supabaseAdmin
+    console.log(`Updating invitation ${invitation.id} to accepted status`);
+    const { data: updatedInv, error: invUpdateError } = await supabaseAdmin
       .from("invitations")
       .update({
         status: "accepted",
         accepted_user_id: authData.user.id,
         accepted_at: new Date().toISOString(),
       })
-      .eq("id", invitation.id);
+      .eq("id", invitation.id)
+      .select();
 
     if (invUpdateError) {
       console.error("Invitation update error:", invUpdateError);
+      console.error("Invitation ID:", invitation.id);
       // 이미 사용자는 생성됨, 에러 로그만 남김
+    } else {
+      console.log("Invitation updated successfully:", updatedInv);
     }
 
     // 7. 알림 생성 (초대자에게)
