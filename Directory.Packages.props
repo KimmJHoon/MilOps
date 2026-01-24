@@ -21,5 +21,9 @@
         <PackageVersion Include="DotNetEnv" Version="3.1.1" />
 
         <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
+
+        <!-- Firebase Cloud Messaging -->
+        <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.0.3.1" />
+        <PackageVersion Include="Xamarin.GooglePlayServices.Base" Version="118.5.0.3" />
     </ItemGroup>
 </Project>

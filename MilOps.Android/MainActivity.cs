@@ -1,12 +1,19 @@
-﻿using Android.App;
+﻿using Android;
+using Android.App;
+using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Android.Util;
+using AndroidX.Core.App;
+using AndroidX.Core.Content;
 using Avalonia;
 using Avalonia.Android;
+using Firebase;
+using Firebase.Messaging;
 using MilOps.Config;
 using System;
 using System.IO;
+using System.Threading.Tasks;
 
 namespace MilOps.Android;
 
@@ -15,9 +22,17 @@ namespace MilOps.Android;
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@drawable/icon",
     MainLauncher = true,
+    LaunchMode = LaunchMode.SingleTop,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
+[IntentFilter(
+    new[] { Intent.ActionView },
+    Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable },
+    DataScheme = "milops",
+    DataHost = "invite")]
 public class MainActivity : AvaloniaMainActivity<App>
 {
+    private const string TAG = "MilOps";
+
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         try
@@ -25,13 +40,99 @@ public class MainActivity : AvaloniaMainActivity<App>
             // Android Assets에서 .env 파일 읽어서 SupabaseConfig에 설정
             LoadSupabaseConfig();
 
+            // Firebase 초기화
+            InitializeFirebase();
+
             base.OnCreate(savedInstanceState);
+
+            // Android 13+ 알림 권한 요청
+            RequestNotificationPermission();
+
+            // 딥링크 처리 (앱이 시작될 때)
+            HandleIntent(Intent);
         }
         catch (Exception ex)
         {
-            Log.Error("MilOps", $"OnCreate Error: {ex.Message}");
-            Log.Error("MilOps", $"StackTrace: {ex.StackTrace}");
+            Log.Error(TAG, $"OnCreate Error: {ex.Message}");
+            Log.Error(TAG, $"StackTrace: {ex.StackTrace}");
             throw;
+        }
+    }
+
+    /// <summary>
+    /// 앱이 이미 실행 중일 때 새 인텐트 수신 (딥링크)
+    /// </summary>
+    protected override void OnNewIntent(Intent? intent)
+    {
+        base.OnNewIntent(intent);
+        HandleIntent(intent);
+    }
+
+    /// <summary>
+    /// Firebase 초기화
+    /// </summary>
+    private void InitializeFirebase()
+    {
+        try
+        {
+            FirebaseApp.InitializeApp(this);
+            Log.Info(TAG, "Firebase initialized successfully");
+
+            // FCM 토큰 가져오기 (비동기)
+            Task.Run(async () =>
+            {
+                var token = await FcmTokenHolder.GetTokenAsync();
+                if (!string.IsNullOrEmpty(token))
+                {
+                    Log.Info(TAG, $"FCM Token: {token.Substring(0, Math.Min(20, token.Length))}...");
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Log.Error(TAG, $"Firebase initialization failed: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Android 13+ 알림 권한 요청
+    /// </summary>
+    private void RequestNotificationPermission()
+    {
+        if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
+        {
+            if (ContextCompat.CheckSelfPermission(this, Manifest.Permission.PostNotifications)
+                != Permission.Granted)
+            {
+                ActivityCompat.RequestPermissions(
+                    this,
+                    new[] { Manifest.Permission.PostNotifications },
+                    1001);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 딥링크 인텐트 처리
+    /// </summary>
+    private void HandleIntent(Intent? intent)
+    {
+        if (intent?.Data == null)
+            return;
+
+        var uri = intent.Data;
+        Log.Info(TAG, $"Deep link received: {uri}");
+
+        // milops://invite/{code} 형식 처리
+        if (uri.Scheme == "milops" && uri.Host == "invite")
+        {
+            var inviteCode = uri.LastPathSegment;
+            if (!string.IsNullOrEmpty(inviteCode))
+            {
+                Log.Info(TAG, $"Invite code: {inviteCode}");
+                // 초대 코드를 앱에 전달 (정적 변수 또는 이벤트 사용)
+                DeepLinkHandler.PendingInviteCode = inviteCode;
+            }
         }
     }
 
@@ -82,4 +183,31 @@ public class MainActivity : AvaloniaMainActivity<App>
         return base.CustomizeAppBuilder(builder)
             .LogToTrace();
     }
+}
+
+/// <summary>
+/// 딥링크 처리를 위한 정적 클래스
+/// </summary>
+public static class DeepLinkHandler
+{
+    /// <summary>
+    /// 처리 대기 중인 초대 코드
+    /// 앱이 초대 링크로 실행된 경우 설정됨
+    /// </summary>
+    public static string? PendingInviteCode { get; set; }
+
+    /// <summary>
+    /// 초대 코드 소비 (한 번 읽으면 null로 리셋)
+    /// </summary>
+    public static string? ConsumePendingInviteCode()
+    {
+        var code = PendingInviteCode;
+        PendingInviteCode = null;
+        return code;
+    }
+
+    /// <summary>
+    /// 초대 코드가 있는지 확인
+    /// </summary>
+    public static bool HasPendingInvite => !string.IsNullOrEmpty(PendingInviteCode);
 }

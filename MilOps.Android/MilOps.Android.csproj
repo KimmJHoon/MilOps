@@ -31,9 +31,16 @@
     <AndroidAsset Include="Assets\config.env" />
   </ItemGroup>
 
+  <!-- google-services.json (Firebase 설정) -->
+  <ItemGroup>
+    <GoogleServicesJson Include="google-services.json" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia.Android" />
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
+    <PackageReference Include="Xamarin.Firebase.Messaging" />
+    <PackageReference Include="Xamarin.GooglePlayServices.Base" />
   </ItemGroup>
 
   <ItemGroup>
