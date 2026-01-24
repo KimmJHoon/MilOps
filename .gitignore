@@ -495,3 +495,8 @@ build/
 # Credentials
 credentials.json
 service-account*.json
+
+# Claude Code
+.claude/
+/*.html
+/*.md

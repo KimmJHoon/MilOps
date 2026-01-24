@@ -1,0 +1,121 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:MilOps.ViewModels"
+             xmlns:views="using:MilOps.Views"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+             x:Class="MilOps.Views.MainView"
+             x:DataType="vm:MainViewModel">
+  <Design.DataContext>
+    <vm:MainViewModel />
+  </Design.DataContext>
+
+  <Grid Background="#000000">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+
+    <!-- 상단 헤더 -->
+    <Border Grid.Row="0" Background="#333333" Padding="12">
+      <TextBlock Text="{Binding CurrentPageTitle}"
+                 FontSize="18"
+                 Foreground="White"
+                 HorizontalAlignment="Center"/>
+    </Border>
+
+    <!-- 중앙 콘텐츠 영역 -->
+    <Grid Grid.Row="1">
+      <views:HomeView IsVisible="{Binding IsHomeSelected}"/>
+      <views:CalendarView IsVisible="{Binding IsCalendarSelected}"/>
+      <views:ScheduleView IsVisible="{Binding IsScheduleSelected}"/>
+      <views:NotificationView IsVisible="{Binding IsNotificationSelected}"/>
+      <views:SettingsView IsVisible="{Binding IsSettingsSelected}"/>
+    </Grid>
+
+    <!-- 하단 네비게이션 바 -->
+    <Border Grid.Row="2" Background="#333333" Padding="4,2">
+      <Grid>
+        <Grid.ColumnDefinitions>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+          <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- 홈 탭 -->
+        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="0"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="🏠" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="홈" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsHomeSelected}"/>
+              <TextBlock Text="홈" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsHomeSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+
+        <!-- 캘린더 탭 -->
+        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="1"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="📅" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="캘린더" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsCalendarSelected}"/>
+              <TextBlock Text="캘린더" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsCalendarSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+
+        <!-- 일정 탭 -->
+        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="2"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="📋" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsScheduleSelected}"/>
+              <TextBlock Text="일정" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsScheduleSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+
+        <!-- 알림 탭 -->
+        <Button Grid.Column="3" Command="{Binding SelectTabCommand}" CommandParameter="3"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="🔔" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="알림" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsNotificationSelected}"/>
+              <TextBlock Text="알림" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsNotificationSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+
+        <!-- 설정 탭 -->
+        <Button Grid.Column="4" Command="{Binding SelectTabCommand}" CommandParameter="4"
+                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
+          <StackPanel HorizontalAlignment="Center" Spacing="0">
+            <TextBlock Text="⚙️" FontSize="16" HorizontalAlignment="Center"/>
+            <Panel>
+              <TextBlock Text="설정" FontSize="15" HorizontalAlignment="Center" Foreground="#00FF00"
+                         IsVisible="{Binding IsSettingsSelected}"/>
+              <TextBlock Text="설정" FontSize="15" HorizontalAlignment="Center" Foreground="White"
+                         IsVisible="{Binding !IsSettingsSelected}"/>
+            </Panel>
+          </StackPanel>
+        </Button>
+      </Grid>
+    </Border>
+  </Grid>
+</UserControl>
