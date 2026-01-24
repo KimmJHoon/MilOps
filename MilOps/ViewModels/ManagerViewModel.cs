@@ -1,9 +1,11 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MilOps.Models;
+using MilOps.Services;
 using System;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace MilOps.ViewModels;
 
@@ -25,28 +27,57 @@ public partial class ManagerViewModel : ViewModelBase
     private bool _isNewInviteDialogOpen = false;
 
     [ObservableProperty]
-    private string _newInviteName = "";
+    private string _newInviteRole = "middle_local";
 
     [ObservableProperty]
-    private string _newInviteRegion = "";
+    private bool _isLoading = false;
 
     public ManagerViewModel()
     {
-        UpdateCounts();
+        _ = LoadInvitationsAsync();
+    }
+
+    private async Task LoadInvitationsAsync()
+    {
+        if (!SupabaseService.IsInitialized) return;
+
+        IsLoading = true;
+        try
+        {
+            var response = await SupabaseService.Client
+                .From<Invitation>()
+                .Where(i => i.CreatedBy == AuthService.CurrentUser!.Id)
+                .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
+                .Get();
+
+            Invitations.Clear();
+            foreach (var invitation in response.Models)
+            {
+                Invitations.Add(invitation);
+            }
+            UpdateCounts();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to load invitations: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     private void UpdateCounts()
     {
         TotalCount = Invitations.Count;
-        ActiveCount = Invitations.Count(i => i.Status == InvitationStatus.Active);
-        PendingCount = Invitations.Count(i => i.Status == InvitationStatus.Pending);
+        ActiveCount = Invitations.Count(i => i.IsUsed);
+        PendingCount = Invitations.Count(i => i.IsValid);
     }
 
     [RelayCommand]
     private void OpenNewInviteDialog()
     {
-        NewInviteName = "";
-        NewInviteRegion = "";
+        NewInviteRole = "middle_local";
         IsNewInviteDialogOpen = true;
     }
 
@@ -57,44 +88,101 @@ public partial class ManagerViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void SendInvite()
+    private async Task SendInviteAsync()
     {
-        if (string.IsNullOrWhiteSpace(NewInviteName) || string.IsNullOrWhiteSpace(NewInviteRegion))
+        if (string.IsNullOrWhiteSpace(NewInviteRole))
             return;
 
-        var newInvite = new Invitation
+        if (AuthService.CurrentUser == null) return;
+
+        IsLoading = true;
+        try
         {
-            Id = Guid.NewGuid().ToString(),
-            Name = NewInviteName,
-            Region = NewInviteRegion,
-            RegisteredDate = DateTime.Today,
-            ExpiryDate = DateTime.Today.AddDays(7),
-            Status = InvitationStatus.Pending
-        };
+            var newInvite = new Invitation
+            {
+                Id = Guid.NewGuid(),
+                InviteCode = GenerateInviteCode(),
+                Role = NewInviteRole,
+                CreatedBy = AuthService.CurrentUser.Id,
+                ExpiresAt = DateTime.UtcNow.AddDays(7),
+                CreatedAt = DateTime.UtcNow
+            };
 
-        Invitations.Insert(0, newInvite);
-        UpdateCounts();
-        IsNewInviteDialogOpen = false;
+            await SupabaseService.Client
+                .From<Invitation>()
+                .Insert(newInvite);
+
+            Invitations.Insert(0, newInvite);
+            UpdateCounts();
+            IsNewInviteDialogOpen = false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to create invitation: {ex.Message}");
+        }
+        finally
+        {
+            IsLoading = false;
+        }
     }
 
     [RelayCommand]
-    private void DeleteInvitation(Invitation invitation)
+    private async Task DeleteInvitationAsync(Invitation invitation)
     {
-        Invitations.Remove(invitation);
-        UpdateCounts();
+        try
+        {
+            await SupabaseService.Client
+                .From<Invitation>()
+                .Where(i => i.Id == invitation.Id)
+                .Delete();
+
+            Invitations.Remove(invitation);
+            UpdateCounts();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to delete invitation: {ex.Message}");
+        }
     }
 
     [RelayCommand]
-    private void ResendInvitation(Invitation invitation)
+    private async Task ResendInvitationAsync(Invitation invitation)
     {
-        invitation.ExpiryDate = DateTime.Today.AddDays(7);
-        // 실제로는 초대 이메일/SMS 재발송 로직
+        try
+        {
+            invitation.ExpiresAt = DateTime.UtcNow.AddDays(7);
+
+            await SupabaseService.Client
+                .From<Invitation>()
+                .Where(i => i.Id == invitation.Id)
+                .Set(i => i.ExpiresAt, invitation.ExpiresAt)
+                .Update();
+
+            UpdateCounts();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Failed to resend invitation: {ex.Message}");
+        }
     }
 
     [RelayCommand]
-    private void CancelInvitation(Invitation invitation)
+    private async Task CancelInvitationAsync(Invitation invitation)
     {
-        Invitations.Remove(invitation);
-        UpdateCounts();
+        await DeleteInvitationAsync(invitation);
+    }
+
+    [RelayCommand]
+    private async Task RefreshAsync()
+    {
+        await LoadInvitationsAsync();
+    }
+
+    private static string GenerateInviteCode()
+    {
+        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, 8)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
     }
 }

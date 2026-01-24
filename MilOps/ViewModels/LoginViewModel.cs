@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MilOps.Services;
 using System;
+using System.Threading.Tasks;
 
 namespace MilOps.ViewModels;
 
@@ -19,10 +20,13 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasError = false;
 
+    [ObservableProperty]
+    private bool _isLoading = false;
+
     public event Action? LoginSuccessful;
 
     [RelayCommand]
-    private void Login()
+    private async Task LoginAsync()
     {
         HasError = false;
         ErrorMessage = "";
@@ -41,16 +45,37 @@ public partial class LoginViewModel : ViewModelBase
             return;
         }
 
-        // 하드코딩된 최종관리자 계정
-        if (UserId == "SW0001" && Password == "qwer1234")
+        IsLoading = true;
+
+        try
         {
-            AuthService.Login(UserId);
-            LoginSuccessful?.Invoke();
+            // Supabase 초기화
+            if (!SupabaseService.IsInitialized)
+            {
+                await SupabaseService.InitializeAsync();
+            }
+
+            // Supabase Auth로 로그인
+            var (success, errorMessage) = await AuthService.LoginAsync(UserId, Password);
+
+            if (success)
+            {
+                LoginSuccessful?.Invoke();
+            }
+            else
+            {
+                ErrorMessage = errorMessage ?? "로그인에 실패했습니다";
+                HasError = true;
+            }
         }
-        else
+        catch (Exception ex)
         {
-            ErrorMessage = "아이디 또는 비밀번호가 일치하지 않습니다";
+            ErrorMessage = $"오류가 발생했습니다: {ex.Message}";
             HasError = true;
+        }
+        finally
+        {
+            IsLoading = false;
         }
     }
 }

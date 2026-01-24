@@ -19,26 +19,26 @@
             </StackPanel>
           </Border>
 
-          <!-- 활성 -->
+          <!-- 활성 (사용됨) -->
           <Border Grid.Column="1" Background="#1A1A1A" CornerRadius="8" Padding="15" Margin="5,0,5,0">
             <StackPanel HorizontalAlignment="Center">
               <TextBlock Text="{Binding ActiveCount}" FontSize="28" Foreground="#4CAF50" HorizontalAlignment="Center"/>
-              <TextBlock Text="활성" FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
+              <TextBlock Text="사용됨" FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
             </StackPanel>
           </Border>
 
-          <!-- 초대중 -->
+          <!-- 초대중 (대기) -->
           <Border Grid.Column="2" Background="#1A1A1A" CornerRadius="8" Padding="15" Margin="5,0,0,0">
             <StackPanel HorizontalAlignment="Center">
               <TextBlock Text="{Binding PendingCount}" FontSize="28" Foreground="#FF9800" HorizontalAlignment="Center"/>
-              <TextBlock Text="초대중" FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
+              <TextBlock Text="대기중" FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
             </StackPanel>
           </Border>
         </Grid>
 
         <!-- 목록 헤더 -->
         <Grid Margin="0,10,0,5">
-          <TextBlock Text="지자체(도) 목록" FontSize="16" Foreground="White" VerticalAlignment="Center"/>
+          <TextBlock Text="초대 코드 목록" FontSize="16" Foreground="White" VerticalAlignment="Center"/>
           <Button Command="{Binding OpenNewInviteDialogCommand}"
                   Background="#2196F3"
                   HorizontalAlignment="Right"
@@ -47,43 +47,52 @@
           </Button>
         </Grid>
 
+        <!-- 로딩 표시 -->
+        <TextBlock Text="로딩중..."
+                   IsVisible="{Binding IsLoading}"
+                   Foreground="#888888"
+                   HorizontalAlignment="Center"/>
+
         <!-- 초대 목록 -->
         <ItemsControl ItemsSource="{Binding Invitations}">
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="models:Invitation">
               <Border Background="#1A1A1A" CornerRadius="8" Padding="15" Margin="0,5">
                 <Grid RowDefinitions="Auto,Auto,Auto">
-                  <!-- 이름 + 상태 배지 -->
+                  <!-- 초대코드 + 상태 배지 -->
                   <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
-                    <TextBlock Text="{Binding Name}" FontSize="16" Foreground="#2196F3"/>
+                    <TextBlock Text="{Binding InviteCode}" FontSize="16" Foreground="#2196F3" FontFamily="Consolas"/>
                     <Border Background="{Binding StatusColor}" CornerRadius="4" Padding="8,2">
                       <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="White"/>
                     </Border>
                   </StackPanel>
 
-                  <!-- 지역 -->
-                  <TextBlock Grid.Row="1" Text="{Binding Region}" FontSize="14" Foreground="White" Margin="0,5,0,0"/>
+                  <!-- 역할 -->
+                  <TextBlock Grid.Row="1" Text="{Binding RoleDisplayName}" FontSize="14" Foreground="White" Margin="0,5,0,0"/>
 
-                  <!-- 등록일 + 액션 버튼 -->
+                  <!-- 생성일/만료일 + 액션 버튼 -->
                   <Grid Grid.Row="2" Margin="0,5,0,0">
-                    <TextBlock Text="{Binding RegisteredDateText}" FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                      <TextBlock Text="{Binding CreatedAtText}" FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
+                      <TextBlock Text="{Binding ExpiresAtText}" FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
+                    </StackPanel>
 
-                    <!-- 활성 상태: 삭제 버튼 -->
+                    <!-- 사용됨: 삭제 버튼 -->
                     <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).DeleteInvitationCommand}"
                             CommandParameter="{Binding}"
                             Background="Transparent"
                             HorizontalAlignment="Right"
-                            IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:InvitationStatus.Active}}">
+                            IsVisible="{Binding IsUsed}">
                       <TextBlock Text="삭제" FontSize="14" Foreground="#F44336"/>
                     </Button>
 
-                    <!-- 초대중 상태: 재발송/취소 버튼 -->
+                    <!-- 대기중: 재발송/취소 버튼 -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15"
-                                IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:InvitationStatus.Pending}}">
+                                IsVisible="{Binding IsValid}">
                       <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).ResendInvitationCommand}"
                               CommandParameter="{Binding}"
                               Background="Transparent">
-                        <TextBlock Text="재발송" FontSize="14" Foreground="#4CAF50"/>
+                        <TextBlock Text="연장" FontSize="14" Foreground="#4CAF50"/>
                       </Button>
                       <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).CancelInvitationCommand}"
                               CommandParameter="{Binding}"
@@ -92,13 +101,13 @@
                       </Button>
                     </StackPanel>
 
-                    <!-- 만료 상태: 재발송 버튼 -->
+                    <!-- 만료됨: 재발송 버튼 -->
                     <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).ResendInvitationCommand}"
                             CommandParameter="{Binding}"
                             Background="Transparent"
                             HorizontalAlignment="Right"
-                            IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:InvitationStatus.Expired}}">
-                      <TextBlock Text="재발송" FontSize="14" Foreground="#4CAF50"/>
+                            IsVisible="{Binding IsExpired}">
+                      <TextBlock Text="연장" FontSize="14" Foreground="#4CAF50"/>
                     </Button>
                   </Grid>
                 </Grid>
@@ -125,20 +134,19 @@
         <TextBlock Text="새 담당자 초대" FontSize="18" Foreground="White" HorizontalAlignment="Center"/>
 
         <StackPanel Spacing="5">
-          <TextBlock Text="이름" Foreground="White" FontSize="14"/>
-          <TextBox Text="{Binding NewInviteName}"
-                   Background="#333333"
-                   Foreground="White"
-                   Padding="10"/>
+          <TextBlock Text="역할 선택" Foreground="White" FontSize="14"/>
+          <ComboBox SelectedItem="{Binding NewInviteRole}"
+                    Background="#333333"
+                    Foreground="White"
+                    HorizontalAlignment="Stretch">
+            <ComboBoxItem Content="지자체 담당자" Tag="middle_local"/>
+            <ComboBoxItem Content="군부대 담당자" Tag="middle_military"/>
+            <ComboBoxItem Content="지자체 실무자" Tag="user_local"/>
+            <ComboBoxItem Content="군부대 실무자" Tag="user_military"/>
+          </ComboBox>
         </StackPanel>
 
-        <StackPanel Spacing="5">
-          <TextBlock Text="지역 (지자체)" Foreground="White" FontSize="14"/>
-          <TextBox Text="{Binding NewInviteRegion}"
-                   Background="#333333"
-                   Foreground="White"
-                   Padding="10"/>
-        </StackPanel>
+        <TextBlock Text="초대 코드가 자동 생성됩니다." Foreground="#888888" FontSize="12"/>
 
         <Grid ColumnDefinitions="*,*" Margin="0,10,0,0">
           <Button Grid.Column="0" Command="{Binding CloseNewInviteDialogCommand}"
