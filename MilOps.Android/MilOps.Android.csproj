@@ -26,6 +26,11 @@
     </AndroidResource>
   </ItemGroup>
 
+  <!-- 설정 파일을 Assets로 포함 -->
+  <ItemGroup>
+    <AndroidAsset Include="Assets\config.env" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageReference Include="Avalonia.Android" />
     <PackageReference Include="Xamarin.AndroidX.Core.SplashScreen" />
