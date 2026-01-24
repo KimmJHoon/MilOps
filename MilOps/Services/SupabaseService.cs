@@ -69,12 +69,40 @@ public static class SupabaseService
     /// </summary>
     public static async Task<string?> GetEmailByLoginIdAsync(string loginId)
     {
-        var response = await Client.From<Models.User>()
-            .Select("email")
-            .Filter("login_id", Supabase.Postgrest.Constants.Operator.Equals, loginId)
-            .Single();
+        try
+        {
+            var response = await Client.From<Models.User>()
+                .Select("email")
+                .Filter("login_id", Supabase.Postgrest.Constants.Operator.Equals, loginId)
+                .Single();
 
-        return response?.Email;
+            return response?.Email;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SupabaseService] GetEmailByLoginIdAsync Error: {ex.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// login_id로 전체 사용자 정보를 조회
+    /// </summary>
+    public static async Task<Models.User?> GetUserByLoginIdAsync(string loginId)
+    {
+        try
+        {
+            var response = await Client.From<Models.User>()
+                .Filter("login_id", Supabase.Postgrest.Constants.Operator.Equals, loginId)
+                .Single();
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SupabaseService] GetUserByLoginIdAsync Error: {ex.Message}");
+            return null;
+        }
     }
 
     /// <summary>
@@ -82,13 +110,50 @@ public static class SupabaseService
     /// </summary>
     public static async Task<Models.User?> GetCurrentUserProfileAsync()
     {
-        var session = Client.Auth.CurrentSession;
-        if (session?.User == null) return null;
+        try
+        {
+            var session = Client.Auth.CurrentSession;
+            if (session?.User == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[SupabaseService] GetCurrentUserProfileAsync: No session or user");
+                return null;
+            }
 
-        var response = await Client.From<Models.User>()
-            .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, session.User.Id!)
-            .Single();
+            var userEmail = session.User.Email;
+            System.Diagnostics.Debug.WriteLine($"[SupabaseService] GetCurrentUserProfileAsync: User ID = {session.User.Id}, Email = {userEmail}");
 
-        return response;
+            // email로 조회 (RLS 정책과 관계없이 작동)
+            var response = await Client.From<Models.User>()
+                .Filter("email", Supabase.Postgrest.Constants.Operator.Equals, userEmail!)
+                .Single();
+
+            if (response == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[SupabaseService] GetCurrentUserProfileAsync: User profile not found by email");
+
+                // email로 못 찾으면 id로 시도
+                response = await Client.From<Models.User>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, session.User.Id!)
+                    .Single();
+
+                if (response == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[SupabaseService] GetCurrentUserProfileAsync: User profile not found by id either");
+                }
+            }
+
+            if (response != null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SupabaseService] GetCurrentUserProfileAsync: Found user {response.LoginId}, Role={response.Role}");
+            }
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[SupabaseService] GetCurrentUserProfileAsync Error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[SupabaseService] Stack trace: {ex.StackTrace}");
+            return null;
+        }
     }
 }

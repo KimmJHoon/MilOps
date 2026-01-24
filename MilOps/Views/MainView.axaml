@@ -158,9 +158,10 @@
       <Grid RowDefinitions="Auto,*,Auto">
         <!-- 드로어 헤더 -->
         <Border Grid.Row="0" Background="#333333" Padding="20">
-          <StackPanel Spacing="10">
-            <TextBlock Text="사용자 정보" FontSize="18" Foreground="White"/>
-            <TextBlock Text="{Binding CurrentUserId}" FontSize="16" Foreground="#00FF00"/>
+          <StackPanel Spacing="8">
+            <TextBlock Text="사용자 정보" FontSize="18" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
+            <TextBlock Text="{Binding CurrentUserName}" FontSize="16" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
+            <TextBlock Text="{Binding CurrentUserId}" FontSize="14" Foreground="#00FF00"/>
           </StackPanel>
         </Border>
 

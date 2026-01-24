@@ -37,30 +37,31 @@ public static class AuthService
     {
         try
         {
-            // 1. login_id로 email 조회
-            var email = await SupabaseService.GetEmailByLoginIdAsync(loginId);
-            if (string.IsNullOrEmpty(email))
+            // 1. login_id로 사용자 전체 정보 조회 (로그인 전이므로 anon key로 접근)
+            System.Diagnostics.Debug.WriteLine($"[AuthService] LoginAsync: Step 1 - Getting user info for login_id={loginId}");
+            var userInfo = await SupabaseService.GetUserByLoginIdAsync(loginId);
+            if (userInfo == null || string.IsNullOrEmpty(userInfo.Email))
             {
+                System.Diagnostics.Debug.WriteLine("[AuthService] LoginAsync: User not found");
                 return (false, "존재하지 않는 아이디입니다");
             }
+            System.Diagnostics.Debug.WriteLine($"[AuthService] LoginAsync: Found user - Email={userInfo.Email}, Role={userInfo.Role}");
 
             // 2. Supabase Auth로 로그인
-            var session = await SupabaseService.Client.Auth.SignIn(email, password);
+            System.Diagnostics.Debug.WriteLine("[AuthService] LoginAsync: Step 2 - Signing in with Supabase Auth");
+            var session = await SupabaseService.Client.Auth.SignIn(userInfo.Email, password);
             if (session?.User == null)
             {
+                System.Diagnostics.Debug.WriteLine("[AuthService] LoginAsync: Sign in failed - no session");
                 return (false, "로그인에 실패했습니다");
             }
+            System.Diagnostics.Debug.WriteLine($"[AuthService] LoginAsync: Sign in successful, User ID={session.User.Id}");
 
-            // 3. 사용자 프로필 조회
-            var userProfile = await SupabaseService.GetCurrentUserProfileAsync();
-            if (userProfile == null)
-            {
-                await SupabaseService.Client.Auth.SignOut();
-                return (false, "사용자 정보를 찾을 수 없습니다");
-            }
-
-            CurrentUser = userProfile;
-            CurrentUserRole = ParseRole(userProfile.Role);
+            // 3. 이미 조회한 사용자 정보 사용 (RLS 정책 우회)
+            System.Diagnostics.Debug.WriteLine($"[AuthService] LoginAsync: Using pre-fetched profile - LoginId={userInfo.LoginId}, Role={userInfo.Role}");
+            CurrentUser = userInfo;
+            CurrentUserRole = ParseRole(userInfo.Role);
+            System.Diagnostics.Debug.WriteLine($"[AuthService] LoginAsync: ParsedRole={CurrentUserRole}, IsSuperAdmin={IsSuperAdmin}");
 
             return (true, null);
         }

@@ -135,14 +135,17 @@
 
         <StackPanel Spacing="5">
           <TextBlock Text="역할 선택" Foreground="White" FontSize="14"/>
-          <ComboBox SelectedItem="{Binding NewInviteRole}"
+          <ComboBox ItemsSource="{Binding AvailableRoles}"
+                    SelectedValue="{Binding NewInviteRole}"
+                    SelectedValueBinding="{Binding Value}"
                     Background="#333333"
                     Foreground="White"
                     HorizontalAlignment="Stretch">
-            <ComboBoxItem Content="지자체 담당자" Tag="middle_local"/>
-            <ComboBoxItem Content="군부대 담당자" Tag="middle_military"/>
-            <ComboBoxItem Content="지자체 실무자" Tag="user_local"/>
-            <ComboBoxItem Content="군부대 실무자" Tag="user_military"/>
+            <ComboBox.ItemTemplate>
+              <DataTemplate>
+                <TextBlock Text="{Binding DisplayName}" Foreground="White"/>
+              </DataTemplate>
+            </ComboBox.ItemTemplate>
           </ComboBox>
         </StackPanel>
 

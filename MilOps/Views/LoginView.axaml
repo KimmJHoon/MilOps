@@ -21,7 +21,8 @@
         <TextBox Text="{Binding UserId}"
                  Watermark="아이디를 입력하세요"
                  Background="#333333"
-                 Foreground="White"
+                 Foreground="Black"
+                 CaretBrush="Black"
                  BorderBrush="#555555"
                  Padding="10"/>
       </StackPanel>
@@ -33,7 +34,8 @@
                  PasswordChar="*"
                  Watermark="비밀번호를 입력하세요"
                  Background="#333333"
-                 Foreground="White"
+                 Foreground="Black"
+                 CaretBrush="Black"
                  BorderBrush="#555555"
                  Padding="10"/>
       </StackPanel>

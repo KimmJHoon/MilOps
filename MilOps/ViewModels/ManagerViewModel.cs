@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.Input;
 using MilOps.Models;
 using MilOps.Services;
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
@@ -32,21 +33,51 @@ public partial class ManagerViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoading = false;
 
+    [ObservableProperty]
+    private ObservableCollection<RoleOption> _availableRoles = new();
+
     public ManagerViewModel()
     {
+        InitializeAvailableRoles();
         _ = LoadInvitationsAsync();
+    }
+
+    private void InitializeAvailableRoles()
+    {
+        AvailableRoles.Clear();
+
+        if (AuthService.IsSuperAdmin)
+        {
+            // 최상위 관리자는 중간 담당자만 초대 가능
+            AvailableRoles.Add(new RoleOption("middle_local", "지자체 담당자"));
+            AvailableRoles.Add(new RoleOption("middle_military", "군부대 담당자"));
+        }
+        else
+        {
+            // 중간 담당자는 실무자만 초대 가능
+            AvailableRoles.Add(new RoleOption("user_local", "지자체 실무자"));
+            AvailableRoles.Add(new RoleOption("user_military", "군부대 실무자"));
+        }
+
+        // 기본 선택값 설정
+        if (AvailableRoles.Count > 0)
+        {
+            NewInviteRole = AvailableRoles[0].Value;
+        }
     }
 
     private async Task LoadInvitationsAsync()
     {
         if (!SupabaseService.IsInitialized) return;
+        if (AuthService.CurrentUser == null) return;  // 로그인 전이면 스킵
 
         IsLoading = true;
         try
         {
+            var currentUserId = AuthService.CurrentUser.Id;
             var response = await SupabaseService.Client
                 .From<Invitation>()
-                .Where(i => i.CreatedBy == AuthService.CurrentUser!.Id)
+                .Filter("created_by", Supabase.Postgrest.Constants.Operator.Equals, currentUserId.ToString())
                 .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
                 .Get();
 
@@ -77,7 +108,11 @@ public partial class ManagerViewModel : ViewModelBase
     [RelayCommand]
     private void OpenNewInviteDialog()
     {
-        NewInviteRole = "middle_local";
+        // 첫 번째 가능한 역할로 초기화
+        if (AvailableRoles.Count > 0)
+        {
+            NewInviteRole = AvailableRoles[0].Value;
+        }
         IsNewInviteDialogOpen = true;
     }
 
@@ -133,7 +168,7 @@ public partial class ManagerViewModel : ViewModelBase
         {
             await SupabaseService.Client
                 .From<Invitation>()
-                .Where(i => i.Id == invitation.Id)
+                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, invitation.Id.ToString())
                 .Delete();
 
             Invitations.Remove(invitation);
@@ -154,7 +189,7 @@ public partial class ManagerViewModel : ViewModelBase
 
             await SupabaseService.Client
                 .From<Invitation>()
-                .Where(i => i.Id == invitation.Id)
+                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, invitation.Id.ToString())
                 .Set(i => i.ExpiresAt, invitation.ExpiresAt)
                 .Update();
 
@@ -185,4 +220,18 @@ public partial class ManagerViewModel : ViewModelBase
         return new string(Enumerable.Repeat(chars, 8)
             .Select(s => s[random.Next(s.Length)]).ToArray());
     }
+}
+
+public class RoleOption
+{
+    public string Value { get; }
+    public string DisplayName { get; }
+
+    public RoleOption(string value, string displayName)
+    {
+        Value = value;
+        DisplayName = displayName;
+    }
+
+    public override string ToString() => DisplayName;
 }

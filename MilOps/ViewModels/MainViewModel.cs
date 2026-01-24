@@ -34,13 +34,31 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isSuperAdmin = false;
 
-    public string CurrentUserId => AuthService.CurrentUserId ?? "";
+    [ObservableProperty]
+    private string _currentUserId = "";
+
+    [ObservableProperty]
+    private string _currentUserName = "";
 
     public event Action? LogoutRequested;
 
     public MainViewModel()
     {
+        // AuthService에서 현재 사용자 역할 확인
         _isSuperAdmin = AuthService.IsSuperAdmin;
+
+        // 디버그 로그
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] IsSuperAdmin: {_isSuperAdmin}");
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] CurrentUserRole: {AuthService.CurrentUserRole}");
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] CurrentUser: {AuthService.CurrentUser?.LoginId}");
+    }
+
+    public void RefreshUserRole()
+    {
+        IsSuperAdmin = AuthService.IsSuperAdmin;
+        CurrentUserId = AuthService.CurrentUserId ?? "";
+        CurrentUserName = AuthService.CurrentUser?.Name ?? "";
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] RefreshUserRole - IsSuperAdmin: {IsSuperAdmin}, UserId: {CurrentUserId}");
     }
 
     [RelayCommand]

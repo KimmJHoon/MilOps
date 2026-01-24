@@ -26,6 +26,15 @@ public partial class MainView : UserControl
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
     }
 
+    /// <summary>
+    /// 로그인 후 사용자 역할 정보 갱신
+    /// </summary>
+    public void RefreshUserRole()
+    {
+        _viewModel.RefreshUserRole();
+        System.Diagnostics.Debug.WriteLine($"[MainView] RefreshUserRole called - IsSuperAdmin: {_viewModel.IsSuperAdmin}");
+    }
+
     private void OnOverlayPressed(object? sender, PointerPressedEventArgs e)
     {
         _viewModel.CloseDrawerCommand.Execute(null);
