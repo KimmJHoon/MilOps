@@ -6,7 +6,11 @@
         xmlns:views="using:MilOps.Views"
         mc:Ignorable="d" d:DesignWidth="800" d:DesignHeight="450"
         x:Class="MilOps.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
         Icon="/Assets/avalonia-logo.ico"
         Title="MilOps">
-        <views:MainView />
+  <Grid>
+    <views:LoginView x:Name="LoginViewControl"/>
+    <views:MainView x:Name="MainViewControl" IsVisible="False"/>
+  </Grid>
 </Window>

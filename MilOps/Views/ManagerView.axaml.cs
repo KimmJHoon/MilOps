@@ -3,11 +3,11 @@ using MilOps.ViewModels;
 
 namespace MilOps.Views;
 
-public partial class CalendarView : UserControl
+public partial class ManagerView : UserControl
 {
-    public CalendarView()
+    public ManagerView()
     {
         InitializeComponent();
-        DataContext = new CalendarViewModel();
+        DataContext = new ManagerViewModel();
     }
 }

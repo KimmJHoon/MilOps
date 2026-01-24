@@ -1,0 +1,156 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MilOps.ViewModels"
+             xmlns:models="using:MilOps.Models"
+             x:Class="MilOps.Views.ManagerView"
+             x:DataType="vm:ManagerViewModel">
+
+  <Grid Background="#000000">
+    <ScrollViewer>
+      <StackPanel Margin="15" Spacing="15">
+
+        <!-- 통계 박스 -->
+        <Grid ColumnDefinitions="*,*,*" Margin="0,0,0,10">
+          <!-- 전체 -->
+          <Border Grid.Column="0" Background="#1A1A1A" CornerRadius="8" Padding="15" Margin="0,0,5,0">
+            <StackPanel HorizontalAlignment="Center">
+              <TextBlock Text="{Binding TotalCount}" FontSize="28" Foreground="White" HorizontalAlignment="Center"/>
+              <TextBlock Text="전체" FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+
+          <!-- 활성 -->
+          <Border Grid.Column="1" Background="#1A1A1A" CornerRadius="8" Padding="15" Margin="5,0,5,0">
+            <StackPanel HorizontalAlignment="Center">
+              <TextBlock Text="{Binding ActiveCount}" FontSize="28" Foreground="#4CAF50" HorizontalAlignment="Center"/>
+              <TextBlock Text="활성" FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+
+          <!-- 초대중 -->
+          <Border Grid.Column="2" Background="#1A1A1A" CornerRadius="8" Padding="15" Margin="5,0,0,0">
+            <StackPanel HorizontalAlignment="Center">
+              <TextBlock Text="{Binding PendingCount}" FontSize="28" Foreground="#FF9800" HorizontalAlignment="Center"/>
+              <TextBlock Text="초대중" FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <!-- 목록 헤더 -->
+        <Grid Margin="0,10,0,5">
+          <TextBlock Text="지자체(도) 목록" FontSize="16" Foreground="White" VerticalAlignment="Center"/>
+          <Button Command="{Binding OpenNewInviteDialogCommand}"
+                  Background="#2196F3"
+                  HorizontalAlignment="Right"
+                  Padding="12,8">
+            <TextBlock Text="+ 새 초대" FontSize="14" Foreground="White"/>
+          </Button>
+        </Grid>
+
+        <!-- 초대 목록 -->
+        <ItemsControl ItemsSource="{Binding Invitations}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="models:Invitation">
+              <Border Background="#1A1A1A" CornerRadius="8" Padding="15" Margin="0,5">
+                <Grid RowDefinitions="Auto,Auto,Auto">
+                  <!-- 이름 + 상태 배지 -->
+                  <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{Binding Name}" FontSize="16" Foreground="#2196F3"/>
+                    <Border Background="{Binding StatusColor}" CornerRadius="4" Padding="8,2">
+                      <TextBlock Text="{Binding StatusText}" FontSize="12" Foreground="White"/>
+                    </Border>
+                  </StackPanel>
+
+                  <!-- 지역 -->
+                  <TextBlock Grid.Row="1" Text="{Binding Region}" FontSize="14" Foreground="White" Margin="0,5,0,0"/>
+
+                  <!-- 등록일 + 액션 버튼 -->
+                  <Grid Grid.Row="2" Margin="0,5,0,0">
+                    <TextBlock Text="{Binding RegisteredDateText}" FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
+
+                    <!-- 활성 상태: 삭제 버튼 -->
+                    <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).DeleteInvitationCommand}"
+                            CommandParameter="{Binding}"
+                            Background="Transparent"
+                            HorizontalAlignment="Right"
+                            IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:InvitationStatus.Active}}">
+                      <TextBlock Text="삭제" FontSize="14" Foreground="#F44336"/>
+                    </Button>
+
+                    <!-- 초대중 상태: 재발송/취소 버튼 -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="15"
+                                IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:InvitationStatus.Pending}}">
+                      <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).ResendInvitationCommand}"
+                              CommandParameter="{Binding}"
+                              Background="Transparent">
+                        <TextBlock Text="재발송" FontSize="14" Foreground="#4CAF50"/>
+                      </Button>
+                      <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).CancelInvitationCommand}"
+                              CommandParameter="{Binding}"
+                              Background="Transparent">
+                        <TextBlock Text="취소" FontSize="14" Foreground="#888888"/>
+                      </Button>
+                    </StackPanel>
+
+                    <!-- 만료 상태: 재발송 버튼 -->
+                    <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).ResendInvitationCommand}"
+                            CommandParameter="{Binding}"
+                            Background="Transparent"
+                            HorizontalAlignment="Right"
+                            IsVisible="{Binding Status, Converter={x:Static ObjectConverters.Equal}, ConverterParameter={x:Static models:InvitationStatus.Expired}}">
+                      <TextBlock Text="재발송" FontSize="14" Foreground="#4CAF50"/>
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- 새 초대 다이얼로그 오버레이 -->
+    <Border Background="#80000000" IsVisible="{Binding IsNewInviteDialogOpen}"/>
+
+    <!-- 새 초대 다이얼로그 -->
+    <Border Background="#222222"
+            CornerRadius="10"
+            Padding="20"
+            Width="300"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            IsVisible="{Binding IsNewInviteDialogOpen}">
+      <StackPanel Spacing="15">
+        <TextBlock Text="새 담당자 초대" FontSize="18" Foreground="White" HorizontalAlignment="Center"/>
+
+        <StackPanel Spacing="5">
+          <TextBlock Text="이름" Foreground="White" FontSize="14"/>
+          <TextBox Text="{Binding NewInviteName}"
+                   Background="#333333"
+                   Foreground="White"
+                   Padding="10"/>
+        </StackPanel>
+
+        <StackPanel Spacing="5">
+          <TextBlock Text="지역 (지자체)" Foreground="White" FontSize="14"/>
+          <TextBox Text="{Binding NewInviteRegion}"
+                   Background="#333333"
+                   Foreground="White"
+                   Padding="10"/>
+        </StackPanel>
+
+        <Grid ColumnDefinitions="*,*" Margin="0,10,0,0">
+          <Button Grid.Column="0" Command="{Binding CloseNewInviteDialogCommand}"
+                  Background="#555555" Margin="0,0,5,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10">
+            <TextBlock Text="취소" Foreground="White"/>
+          </Button>
+          <Button Grid.Column="1" Command="{Binding SendInviteCommand}"
+                  Background="#2196F3" Margin="5,0,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10">
+            <TextBlock Text="초대" Foreground="White"/>
+          </Button>
+        </Grid>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

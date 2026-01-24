@@ -1,10 +1,78 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="MilOps.Views.CalendarView">
-  <Grid Background="#000000">
-    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
-      <TextBlock Text="캘린더 화면" FontSize="28" Foreground="White" HorizontalAlignment="Center"/>
-      <TextBlock Text="일정 캘린더가 표시될 영역입니다" FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
-    </StackPanel>
+             xmlns:vm="using:MilOps.ViewModels"
+             x:Class="MilOps.Views.CalendarView"
+             x:DataType="vm:CalendarViewModel">
+
+  <Grid Background="#000000" Margin="10">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <!-- 월 네비게이션 -->
+    <Grid Grid.Row="0" Margin="0,10">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="Auto"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="Auto"/>
+      </Grid.ColumnDefinitions>
+
+      <Button Grid.Column="0" Command="{Binding PreviousMonthCommand}"
+              Background="Transparent" BorderThickness="0" Padding="15,5">
+        <TextBlock Text="◀" FontSize="20" Foreground="White"/>
+      </Button>
+
+      <TextBlock Grid.Column="1" Text="{Binding CurrentMonthYear}"
+                 FontSize="22" Foreground="White"
+                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+      <Button Grid.Column="2" Command="{Binding NextMonthCommand}"
+              Background="Transparent" BorderThickness="0" Padding="15,5">
+        <TextBlock Text="▶" FontSize="20" Foreground="White"/>
+      </Button>
+    </Grid>
+
+    <!-- 요일 헤더 -->
+    <Grid Grid.Row="1" Margin="0,10,0,5">
+      <Grid.ColumnDefinitions>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+        <ColumnDefinition Width="*"/>
+      </Grid.ColumnDefinitions>
+
+      <TextBlock Grid.Column="0" Text="일" Foreground="#FF6B6B" FontSize="16" HorizontalAlignment="Center"/>
+      <TextBlock Grid.Column="1" Text="월" Foreground="White" FontSize="16" HorizontalAlignment="Center"/>
+      <TextBlock Grid.Column="2" Text="화" Foreground="White" FontSize="16" HorizontalAlignment="Center"/>
+      <TextBlock Grid.Column="3" Text="수" Foreground="White" FontSize="16" HorizontalAlignment="Center"/>
+      <TextBlock Grid.Column="4" Text="목" Foreground="White" FontSize="16" HorizontalAlignment="Center"/>
+      <TextBlock Grid.Column="5" Text="금" Foreground="White" FontSize="16" HorizontalAlignment="Center"/>
+      <TextBlock Grid.Column="6" Text="토" Foreground="#6B9FFF" FontSize="16" HorizontalAlignment="Center"/>
+    </Grid>
+
+    <!-- 날짜 그리드 -->
+    <ItemsControl Grid.Row="2" ItemsSource="{Binding Days}">
+      <ItemsControl.ItemsPanel>
+        <ItemsPanelTemplate>
+          <UniformGrid Columns="7"/>
+        </ItemsPanelTemplate>
+      </ItemsControl.ItemsPanel>
+      <ItemsControl.ItemTemplate>
+        <DataTemplate>
+          <Border BorderBrush="#555555" BorderThickness="0.5" Padding="4">
+            <TextBlock Text="{Binding DayText}"
+                       FontSize="14"
+                       Foreground="{Binding DayColor}"
+                       HorizontalAlignment="Left"
+                       VerticalAlignment="Top"/>
+          </Border>
+        </DataTemplate>
+      </ItemsControl.ItemTemplate>
+    </ItemsControl>
   </Grid>
 </UserControl>
