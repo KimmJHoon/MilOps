@@ -4,39 +4,31 @@
              x:Class="MilOps.Views.LoginView"
              x:DataType="vm:LoginViewModel">
 
-  <Grid Background="#000000">
+  <Grid Background="{DynamicResource SystemChromeLowColor}">
     <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                 Spacing="20" Width="300" Margin="20">
 
       <!-- 앱 타이틀 -->
       <TextBlock Text="군-지자체 일정관리"
                  FontSize="24"
-                 Foreground="White"
+                 Foreground="{DynamicResource SystemBaseHighColor}"
                  HorizontalAlignment="Center"
                  Margin="0,0,0,30"/>
 
       <!-- 아이디 입력 -->
       <StackPanel Spacing="5">
-        <TextBlock Text="아이디" Foreground="White" FontSize="14"/>
+        <TextBlock Text="아이디" Foreground="{DynamicResource SystemBaseHighColor}" FontSize="14"/>
         <TextBox Text="{Binding UserId}"
                  Watermark="아이디를 입력하세요"
-                 Background="#333333"
-                 Foreground="Black"
-                 CaretBrush="Black"
-                 BorderBrush="#555555"
                  Padding="10"/>
       </StackPanel>
 
       <!-- 비밀번호 입력 -->
       <StackPanel Spacing="5">
-        <TextBlock Text="비밀번호" Foreground="White" FontSize="14"/>
+        <TextBlock Text="비밀번호" Foreground="{DynamicResource SystemBaseHighColor}" FontSize="14"/>
         <TextBox Text="{Binding Password}"
                  PasswordChar="*"
                  Watermark="비밀번호를 입력하세요"
-                 Background="#333333"
-                 Foreground="Black"
-                 CaretBrush="Black"
-                 BorderBrush="#555555"
                  Padding="10"/>
       </StackPanel>
 
@@ -51,11 +43,26 @@
       <Button Command="{Binding LoginCommand}"
               HorizontalAlignment="Stretch"
               HorizontalContentAlignment="Center"
-              Background="#00AA00"
-              Foreground="White"
+              Classes="accent"
               Padding="15"
               Margin="0,10,0,0">
         <TextBlock Text="로그인" FontSize="16"/>
+      </Button>
+
+      <!-- 구분선 -->
+      <Grid ColumnDefinitions="*,Auto,*" Margin="0,10,0,10">
+        <Border Grid.Column="0" Height="1" Background="#555555" VerticalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="또는" Foreground="#888888" Margin="10,0"/>
+        <Border Grid.Column="2" Height="1" Background="#555555" VerticalAlignment="Center"/>
+      </Grid>
+
+      <!-- 회원가입 버튼 -->
+      <Button Command="{Binding OpenSignUpCommand}"
+              HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Center"
+              Background="#333333"
+              Padding="15">
+        <TextBlock Text="회원가입" FontSize="14" Foreground="White"/>
       </Button>
 
     </StackPanel>

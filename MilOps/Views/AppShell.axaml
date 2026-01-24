@@ -5,5 +5,7 @@
   <Grid>
     <views:LoginView x:Name="LoginViewControl"/>
     <views:MainView x:Name="MainViewControl" IsVisible="False"/>
+    <views:InviteCodeView x:Name="InviteCodeViewControl" IsVisible="False"/>
+    <views:InviteAcceptView x:Name="InviteAcceptViewControl" IsVisible="False"/>
   </Grid>
 </UserControl>

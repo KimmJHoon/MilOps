@@ -1,0 +1,77 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MilOps.ViewModels"
+             x:Class="MilOps.Views.InviteCodeView"
+             x:DataType="vm:InviteCodeViewModel">
+
+  <Grid Background="{DynamicResource SystemChromeLowColor}">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                Spacing="20" Width="300" Margin="20">
+
+      <!-- 뒤로가기 버튼 -->
+      <Button Command="{Binding GoBackCommand}"
+              HorizontalAlignment="Left"
+              Background="Transparent"
+              Padding="5"
+              Margin="0,0,0,10">
+        <StackPanel Orientation="Horizontal" Spacing="5">
+          <TextBlock Text="←" FontSize="16" Foreground="{DynamicResource SystemBaseHighColor}"/>
+          <TextBlock Text="뒤로" FontSize="14" Foreground="{DynamicResource SystemBaseHighColor}"/>
+        </StackPanel>
+      </Button>
+
+      <!-- 타이틀 -->
+      <TextBlock Text="초대코드 입력"
+                 FontSize="24"
+                 Foreground="{DynamicResource SystemBaseHighColor}"
+                 HorizontalAlignment="Center"
+                 Margin="0,0,0,10"/>
+
+      <!-- 설명 -->
+      <TextBlock Text="관리자로부터 받은 8자리 초대코드를 입력해주세요"
+                 FontSize="12"
+                 Foreground="#888888"
+                 HorizontalAlignment="Center"
+                 TextWrapping="Wrap"
+                 TextAlignment="Center"
+                 Margin="0,0,0,20"/>
+
+      <!-- 초대코드 입력 -->
+      <StackPanel Spacing="5">
+        <TextBlock Text="초대코드" Foreground="{DynamicResource SystemBaseHighColor}" FontSize="14"/>
+        <TextBox Text="{Binding InviteCode}"
+                 Watermark="예: ABC12345"
+                 Padding="15"
+                 FontSize="18"
+                 TextAlignment="Center"
+                 MaxLength="8"/>
+      </StackPanel>
+
+      <!-- 에러 메시지 -->
+      <TextBlock Text="{Binding ErrorMessage}"
+                 Foreground="#FF6B6B"
+                 FontSize="12"
+                 HorizontalAlignment="Center"
+                 TextWrapping="Wrap"
+                 TextAlignment="Center"
+                 IsVisible="{Binding HasError}"/>
+
+      <!-- 확인 버튼 -->
+      <Button Command="{Binding VerifyCodeCommand}"
+              HorizontalAlignment="Stretch"
+              HorizontalContentAlignment="Center"
+              Classes="accent"
+              Padding="15"
+              Margin="0,10,0,0"
+              IsEnabled="{Binding !IsLoading}">
+        <Panel>
+          <TextBlock Text="확인" FontSize="16" IsVisible="{Binding !IsLoading}"/>
+          <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsLoading}" HorizontalAlignment="Center">
+            <TextBlock Text="확인 중..." FontSize="16"/>
+          </StackPanel>
+        </Panel>
+      </Button>
+
+    </StackPanel>
+  </Grid>
+</UserControl>

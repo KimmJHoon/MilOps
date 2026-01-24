@@ -24,6 +24,13 @@ public partial class LoginViewModel : ViewModelBase
     private bool _isLoading = false;
 
     public event Action? LoginSuccessful;
+    public event Action? SignUpRequested;
+
+    [RelayCommand]
+    private void OpenSignUp()
+    {
+        SignUpRequested?.Invoke();
+    }
 
     [RelayCommand]
     private async Task LoginAsync()

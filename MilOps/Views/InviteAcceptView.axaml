@@ -1,0 +1,217 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MilOps.ViewModels"
+             x:Class="MilOps.Views.InviteAcceptView"
+             x:DataType="vm:InviteAcceptViewModel">
+
+  <Grid Background="{DynamicResource SystemChromeLowColor}">
+    <!-- 로딩/검증 중 -->
+    <StackPanel IsVisible="{Binding IsValidating}"
+                VerticalAlignment="Center"
+                HorizontalAlignment="Center"
+                Spacing="20">
+      <TextBlock Text="초대 정보 확인 중..."
+                 FontSize="18"
+                 Foreground="{DynamicResource SystemBaseHighColor}"
+                 HorizontalAlignment="Center"/>
+      <ProgressBar IsIndeterminate="True" Width="200"/>
+    </StackPanel>
+
+    <!-- 메인 콘텐츠 -->
+    <ScrollViewer IsVisible="{Binding !IsValidating}"
+                  VerticalScrollBarVisibility="Auto">
+      <StackPanel VerticalAlignment="Center"
+                  HorizontalAlignment="Center"
+                  Spacing="20"
+                  Width="340"
+                  Margin="20">
+
+        <!-- 초대 무효 메시지 -->
+        <Border IsVisible="{Binding !IsInviteValid}"
+                Background="#331111"
+                CornerRadius="8"
+                Padding="20">
+          <StackPanel Spacing="15">
+            <TextBlock Text="초대 코드 오류"
+                       FontSize="20"
+                       Foreground="#FF6B6B"
+                       HorizontalAlignment="Center"/>
+            <TextBlock Text="{Binding ErrorMessage}"
+                       FontSize="14"
+                       Foreground="#CCCCCC"
+                       TextWrapping="Wrap"
+                       HorizontalAlignment="Center"/>
+            <Button Command="{Binding GoToLoginCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Background="#444444"
+                    Padding="12"
+                    Margin="0,10,0,0">
+              <TextBlock Text="로그인 화면으로" FontSize="14" Foreground="White"/>
+            </Button>
+          </StackPanel>
+        </Border>
+
+        <!-- 회원가입 폼 -->
+        <StackPanel IsVisible="{Binding IsInviteValid}" Spacing="15">
+
+          <!-- 헤더 배너 -->
+          <Border Background="#E3F2FD" CornerRadius="8" Padding="15">
+            <StackPanel Spacing="5">
+              <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+                <TextBlock Text="&#x1F4E9;" FontSize="20"/>
+                <TextBlock Text="초대받으셨습니다"
+                           FontSize="18"
+                           FontWeight="Bold"
+                           Foreground="#1565C0"/>
+              </StackPanel>
+              <TextBlock Text="아래 정보를 확인하고 ID/비밀번호를 설정해주세요."
+                         FontSize="12"
+                         Foreground="#666666"
+                         HorizontalAlignment="Center"/>
+            </StackPanel>
+          </Border>
+
+          <!-- 가입 정보 (자동) 카드 -->
+          <Border Background="#F5F5F5" CornerRadius="8" Padding="15" BorderBrush="#E0E0E0" BorderThickness="1">
+            <StackPanel Spacing="12">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="&#x1F4CB;" FontSize="16"/>
+                <TextBlock Text="가입 정보 (자동)" FontSize="14" FontWeight="SemiBold" Foreground="#333333"/>
+              </StackPanel>
+
+              <Grid ColumnDefinitions="80,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="역할" Foreground="#666666" FontSize="13" Margin="0,0,0,8"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding InviteeRole}" Foreground="#333333" FontSize="13" HorizontalAlignment="Right" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="소속" Foreground="#666666" FontSize="13" Margin="0,0,0,8"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding InviteeAffiliation}" Foreground="#333333" FontSize="13" HorizontalAlignment="Right" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="이름" Foreground="#666666" FontSize="13" Margin="0,0,0,8"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding InviteeName}" Foreground="#333333" FontSize="13" HorizontalAlignment="Right" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="연락처" Foreground="#666666" FontSize="13"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding InviteePhone}" Foreground="#333333" FontSize="13" HorizontalAlignment="Right"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- 계정 설정 카드 -->
+          <Border Background="#FFFFFF" CornerRadius="8" Padding="15" BorderBrush="#E0E0E0" BorderThickness="1">
+            <StackPanel Spacing="15">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="&#x1F512;" FontSize="16"/>
+                <TextBlock Text="계정 설정" FontSize="14" FontWeight="SemiBold" Foreground="#333333"/>
+              </StackPanel>
+
+              <!-- 아이디 -->
+              <StackPanel Spacing="5">
+                <TextBlock Text="아이디" Foreground="#333333" FontSize="13"/>
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBox Grid.Column="0"
+                           Text="{Binding LoginId}"
+                           Watermark="영문, 숫자 조합"
+                           Padding="12"
+                           Margin="0,0,8,0"
+                           Background="White"
+                           BorderBrush="#CCCCCC"/>
+                  <Button Grid.Column="1"
+                          Command="{Binding CheckLoginIdCommand}"
+                          Background="#F5F5F5"
+                          BorderBrush="#CCCCCC"
+                          Padding="15,10">
+                    <TextBlock Text="중복확인" FontSize="12" Foreground="#333333"/>
+                  </Button>
+                </Grid>
+                <Panel IsVisible="{Binding LoginIdCheckMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                  <TextBlock Text="{Binding LoginIdCheckMessage}"
+                             FontSize="11"
+                             Foreground="#4CAF50"
+                             IsVisible="{Binding IsLoginIdAvailable}"/>
+                  <TextBlock Text="{Binding LoginIdCheckMessage}"
+                             FontSize="11"
+                             Foreground="#F44336"
+                             IsVisible="{Binding !IsLoginIdAvailable}"/>
+                </Panel>
+              </StackPanel>
+
+              <!-- 비밀번호 -->
+              <StackPanel Spacing="5">
+                <TextBlock Text="비밀번호" Foreground="#333333" FontSize="13"/>
+                <TextBox Text="{Binding Password}"
+                         PasswordChar="*"
+                         Watermark="8자 이상, 영문+숫자"
+                         Padding="12"
+                         Background="White"
+                         BorderBrush="#CCCCCC"/>
+              </StackPanel>
+
+              <!-- 비밀번호 확인 -->
+              <StackPanel Spacing="5">
+                <TextBlock Text="비밀번호 확인" Foreground="#333333" FontSize="13"/>
+                <TextBox Text="{Binding PasswordConfirm}"
+                         PasswordChar="*"
+                         Watermark="비밀번호 재입력"
+                         Padding="12"
+                         Background="White"
+                         BorderBrush="#CCCCCC"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- 에러 메시지 -->
+          <TextBlock Text="{Binding ErrorMessage}"
+                     Foreground="#F44336"
+                     FontSize="13"
+                     TextWrapping="Wrap"
+                     HorizontalAlignment="Center"
+                     IsVisible="{Binding HasError}"/>
+
+          <!-- 가입 완료 버튼 -->
+          <Button Command="{Binding RegisterCommand}"
+                  HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center"
+                  Background="#2196F3"
+                  Padding="15"
+                  CornerRadius="8"
+                  IsEnabled="{Binding !IsLoading}">
+            <Panel>
+              <TextBlock Text="가입 완료" FontSize="16" Foreground="White" FontWeight="SemiBold"
+                         IsVisible="{Binding !IsLoading}"/>
+              <StackPanel Orientation="Horizontal" Spacing="10"
+                          IsVisible="{Binding IsLoading}"
+                          HorizontalAlignment="Center">
+                <ProgressBar IsIndeterminate="True" Width="20" Height="20"/>
+                <TextBlock Text="처리 중..." FontSize="16" Foreground="White"/>
+              </StackPanel>
+            </Panel>
+          </Button>
+
+          <!-- 만료 안내 -->
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
+            <TextBlock Text="&#x23F0;" FontSize="14"/>
+            <TextBlock FontSize="13" Foreground="#FF9800">
+              <Run Text="이 초대 링크는 "/>
+              <Run Text="{Binding RemainingDays}" FontWeight="Bold" Foreground="#F44336"/>
+              <Run Text="일 후 "/>
+              <Run Text="만료됩니다" Foreground="#F44336"/>
+            </TextBlock>
+          </StackPanel>
+
+          <!-- 로그인 링크 -->
+          <Button Command="{Binding GoToLoginCommand}"
+                  HorizontalAlignment="Center"
+                  Background="Transparent"
+                  BorderThickness="0"
+                  Padding="10">
+            <TextBlock Text="이미 계정이 있으신가요? 로그인"
+                       FontSize="13"
+                       Foreground="#888888"
+                       TextDecorations="Underline"/>
+          </Button>
+
+        </StackPanel>
+      </StackPanel>
+    </ScrollViewer>
+  </Grid>
+</UserControl>
