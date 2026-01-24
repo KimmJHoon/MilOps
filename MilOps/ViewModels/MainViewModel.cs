@@ -63,7 +63,33 @@ public partial class MainViewModel : ViewModelBase
         UpdateUserRole();
         CurrentUserId = AuthService.CurrentUserId ?? "";
         CurrentUserName = AuthService.CurrentUser?.Name ?? "";
+
+        // 현재 선택된 탭이 해당 역할에서 접근 불가능하면 기본 탭(캘린더)으로 리셋
+        ResetToValidTab();
+
         System.Diagnostics.Debug.WriteLine($"[MainViewModel] RefreshUserRole - IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
+    }
+
+    /// <summary>
+    /// 현재 역할에서 접근 불가능한 탭이 선택되어 있으면 캘린더로 리셋
+    /// </summary>
+    private void ResetToValidTab()
+    {
+        // 담당자 탭은 중간관리자, 최종관리자만 접근 가능
+        if (IsManagerSelected && !ShowManagerTab)
+        {
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] Manager tab not accessible, resetting to calendar");
+            SelectTab("calendar");
+            return;
+        }
+
+        // 일정 탭은 사용자, 중간관리자만 접근 가능
+        if (IsScheduleSelected && !ShowScheduleTab)
+        {
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] Schedule tab not accessible, resetting to calendar");
+            SelectTab("calendar");
+            return;
+        }
     }
 
     private void UpdateUserRole()

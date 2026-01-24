@@ -4,6 +4,7 @@ using MilOps.Models;
 using MilOps.Services;
 using MilOps.ViewModels;
 using System;
+using System.Threading.Tasks;
 
 namespace MilOps.Views;
 
@@ -53,10 +54,37 @@ public partial class AppShell : UserControl
         // 딥링크 주기적 확인 (앱 실행 중 딥링크 수신 대비)
         StartDeepLinkCheckTimer();
 
-        // 이미 로그인된 상태인지 확인 (App.axaml.cs에서 세션 복원됨)
-        if (AuthService.IsLoggedIn && !IsInviteAcceptVisible())
+        // 세션 복원 및 자동 로그인 시도 (비동기)
+        _ = TryRestoreSessionAndAutoLoginAsync();
+    }
+
+    /// <summary>
+    /// 세션 복원 및 자동 로그인 시도
+    /// </summary>
+    private async Task TryRestoreSessionAndAutoLoginAsync()
+    {
+        try
         {
-            OnLoginSuccess();
+            System.Diagnostics.Debug.WriteLine("[AppShell] Attempting to restore session...");
+
+            var restored = await AuthService.TryRestoreSessionAsync();
+
+            if (restored && !IsInviteAcceptVisible())
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] Session restored, auto-login successful");
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    OnLoginSuccess();
+                });
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] No session to restore or invite view is visible");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AppShell] Session restore failed: {ex.Message}");
         }
     }
 
