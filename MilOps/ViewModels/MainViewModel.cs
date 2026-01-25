@@ -2,6 +2,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MilOps.Services;
 using System;
+using System.Threading.Tasks;
 
 namespace MilOps.ViewModels;
 
@@ -50,8 +51,6 @@ public partial class MainViewModel : ViewModelBase
     // 메뉴 표시 여부 (역할별)
     public bool ShowScheduleTab => IsUser || IsMiddleAdmin;  // 사용자, 중간관리자
     public bool ShowManagerTab => IsMiddleAdmin || IsSuperAdmin;  // 중간관리자, 최종관리자
-
-    public event Action? LogoutRequested;
 
     public MainViewModel()
     {
@@ -167,13 +166,14 @@ public partial class MainViewModel : ViewModelBase
     }
 
     [RelayCommand]
-    private void Logout()
+    private async Task Logout()
     {
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command started");
-        AuthService.Logout();
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command started - initiating app restart");
         IsDrawerOpen = false;
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] LogoutRequested has listeners: {LogoutRequested != null}");
-        LogoutRequested?.Invoke();
+
+        // AppRestartService를 통해 로그아웃 및 앱 재시작
+        await AppRestartService.LogoutAndRestartAsync();
+
         System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command completed");
     }
 }

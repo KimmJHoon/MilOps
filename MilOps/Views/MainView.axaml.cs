@@ -13,24 +13,14 @@ public partial class MainView : UserControl
     private TranslateTransform? _drawerTransform;
     private bool _isAnimating = false;
 
-    public event Action? LogoutRequested;
-
     public MainView()
     {
         InitializeComponent();
         _viewModel = new MainViewModel();
-        _viewModel.LogoutRequested += OnViewModelLogoutRequested;
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         DataContext = _viewModel;
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
-    }
-
-    private void OnViewModelLogoutRequested()
-    {
-        System.Diagnostics.Debug.WriteLine($"[MainView] OnViewModelLogoutRequested - LogoutRequested has listeners: {LogoutRequested != null}");
-        LogoutRequested?.Invoke();
-        System.Diagnostics.Debug.WriteLine("[MainView] LogoutRequested invoked");
     }
 
     /// <summary>

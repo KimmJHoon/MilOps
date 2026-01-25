@@ -30,9 +30,6 @@ public partial class MainWindow : Window
             };
         }
 
-        // 로그아웃 이벤트 연결
-        MainViewControl.LogoutRequested += OnLogout;
-
         // 창이 로드된 후 세션 복원 시도
         Loaded += OnWindowLoaded;
     }
@@ -90,20 +87,4 @@ public partial class MainWindow : Window
         System.Diagnostics.Debug.WriteLine("[MainWindow] OnLoginSuccess completed");
     }
 
-    private void OnLogout()
-    {
-        System.Diagnostics.Debug.WriteLine("[MainWindow] OnLogout called");
-        MainViewControl.IsVisible = false;
-        LoginViewControl.IsVisible = true;
-
-        // 로그인 폼 초기화
-        if (LoginViewControl.DataContext is LoginViewModel loginVm)
-        {
-            loginVm.UserId = "";
-            loginVm.Password = "";
-            loginVm.ErrorMessage = "";
-            loginVm.HasError = false;
-        }
-        System.Diagnostics.Debug.WriteLine("[MainWindow] OnLogout completed");
-    }
 }
