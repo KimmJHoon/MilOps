@@ -11,6 +11,7 @@ using Avalonia.Android;
 using Firebase;
 using Firebase.Messaging;
 using MilOps.Config;
+using MilOps.Services;
 using System;
 using System.IO;
 using System.Threading.Tasks;
@@ -32,16 +33,22 @@ namespace MilOps.Android;
 public class MainActivity : AvaloniaMainActivity<App>
 {
     private const string TAG = "MilOps";
+    private static MainActivity? _instance;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         try
         {
+            _instance = this;
+
             // Android Assets에서 .env 파일 읽어서 SupabaseConfig에 설정
             LoadSupabaseConfig();
 
             // Firebase 초기화
             InitializeFirebase();
+
+            // 앱 재시작 서비스 설정
+            SetupAppRestartService();
 
             base.OnCreate(savedInstanceState);
 
@@ -57,6 +64,49 @@ public class MainActivity : AvaloniaMainActivity<App>
             Log.Error(TAG, $"StackTrace: {ex.StackTrace}");
             throw;
         }
+    }
+
+    /// <summary>
+    /// 앱 재시작 서비스 설정
+    /// </summary>
+    private void SetupAppRestartService()
+    {
+        AppRestartService.RestartApp = () =>
+        {
+            Log.Info(TAG, "Restarting app...");
+
+            // 앱 재시작 인텐트 생성
+            var intent = PackageManager?.GetLaunchIntentForPackage(PackageName ?? "");
+            if (intent != null)
+            {
+                intent.AddFlags(ActivityFlags.ClearTop | ActivityFlags.NewTask | ActivityFlags.ClearTask);
+
+                // PendingIntent로 앱 재시작 예약
+                var pendingIntent = PendingIntent.GetActivity(
+                    this,
+                    0,
+                    intent,
+                    PendingIntentFlags.CancelCurrent | PendingIntentFlags.Immutable);
+
+                // AlarmManager로 100ms 후 재시작
+                var alarmManager = GetSystemService(AlarmService) as AlarmManager;
+                alarmManager?.Set(
+                    AlarmType.Rtc,
+                    Java.Lang.JavaSystem.CurrentTimeMillis() + 100,
+                    pendingIntent);
+
+                // 현재 액티비티 종료
+                FinishAffinity();
+                Java.Lang.JavaSystem.Exit(0);
+            }
+        };
+
+        AppRestartService.ExitApp = () =>
+        {
+            Log.Info(TAG, "Exiting app...");
+            FinishAffinity();
+            Java.Lang.JavaSystem.Exit(0);
+        };
     }
 
     /// <summary>
