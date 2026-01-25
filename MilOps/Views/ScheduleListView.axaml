@@ -9,26 +9,26 @@
       <StackPanel Margin="10" Spacing="10">
 
         <!-- 페이지 타이틀 -->
-        <TextBlock Text="📋 일정 목록" FontSize="18" Foreground="White" FontWeight="Bold"/>
+        <TextBlock Text=" 일정 목록" FontSize="18" Foreground="White"/>
 
         <!-- 역할 탭 (현재 사용자 역할에 따라 하나만 표시) -->
         <Border Background="#1A1A1A" CornerRadius="8" Padding="8">
           <Panel HorizontalAlignment="Center">
             <Border Background="#2196F3" CornerRadius="6" Padding="10,6"
                     IsVisible="{Binding ShowLocalUserTab}">
-              <TextBlock Text="🏛️ 지자체담당자" Foreground="White" FontSize="12"/>
+              <TextBlock Text="지자체담당자" Foreground="White" FontSize="12"/>
             </Border>
             <Border Background="#4CAF50" CornerRadius="6" Padding="10,6"
                     IsVisible="{Binding ShowMilitaryUserTab}">
-              <TextBlock Text="🎖️ 대대담당자" Foreground="White" FontSize="12"/>
+              <TextBlock Text="대대담당자" Foreground="White" FontSize="12"/>
             </Border>
             <Border Background="#9C27B0" CornerRadius="6" Padding="10,6"
                     IsVisible="{Binding ShowDivisionTab}">
-              <TextBlock Text="🎖️ 사단담당자" Foreground="White" FontSize="12"/>
+              <TextBlock Text="사단담당자" Foreground="White" FontSize="12"/>
             </Border>
             <Border Background="#FF9800" CornerRadius="6" Padding="10,6"
                     IsVisible="{Binding ShowRegionTab}">
-              <TextBlock Text="🏛️ 지자체(도)" Foreground="White" FontSize="12"/>
+              <TextBlock Text="지자체(도)" Foreground="White" FontSize="12"/>
             </Border>
           </Panel>
         </Border>
@@ -36,7 +36,7 @@
         <!-- 현재 사용자 정보 -->
         <Border Background="#1A3A5C" CornerRadius="8" Padding="10">
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="5">
-            <TextBlock Text="👤" FontSize="13"/>
+            <TextBlock Text="사용자 정보 : " FontSize="13"/>
             <TextBlock Text="{Binding CurrentUserDisplay}" Foreground="White" FontSize="13"
                        TextTrimming="CharacterEllipsis"/>
           </StackPanel>
