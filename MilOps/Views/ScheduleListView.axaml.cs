@@ -1,6 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
+using MilOps.Models;
 using MilOps.Services;
 using MilOps.ViewModels;
 using System;
@@ -28,6 +29,8 @@ public partial class ScheduleListView : UserControl
         if (_viewModel != null)
         {
             _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+            _viewModel.NavigateToScheduleCreate -= OnNavigateToScheduleCreate;
+            _viewModel.NavigateToScheduleDetail -= OnNavigateToScheduleDetail;
         }
         _viewModel?.ClearCache();
         _viewModel = null;
@@ -72,12 +75,16 @@ public partial class ScheduleListView : UserControl
             if (_viewModel != null)
             {
                 _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+                _viewModel.NavigateToScheduleCreate -= OnNavigateToScheduleCreate;
+                _viewModel.NavigateToScheduleDetail -= OnNavigateToScheduleDetail;
             }
             _viewModel?.ClearCache();
 
             // 새 ViewModel 생성
             _viewModel = new ScheduleListViewModel();
             _viewModel.NavigateToCompanyRegister += OnNavigateToCompanyRegister;
+            _viewModel.NavigateToScheduleCreate += OnNavigateToScheduleCreate;
+            _viewModel.NavigateToScheduleDetail += OnNavigateToScheduleDetail;
             DataContext = _viewModel;
             _lastUserId = currentUserId;
             _lastUserRole = currentUserRole;
@@ -104,8 +111,29 @@ public partial class ScheduleListView : UserControl
         if (_viewModel != null)
         {
             _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+            _viewModel.NavigateToScheduleCreate -= OnNavigateToScheduleCreate;
+            _viewModel.NavigateToScheduleDetail -= OnNavigateToScheduleDetail;
         }
         _viewModel?.ClearCache();
+    }
+
+    private void OnNavigateToCompanyRegister()
+    {
+        var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
+        mainView?.OpenCompanyRegister();
+    }
+
+    private void OnNavigateToScheduleCreate()
+    {
+        var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
+        mainView?.OpenScheduleCreate();
+    }
+
+    private void OnNavigateToScheduleDetail(Schedule schedule, string mode)
+    {
+        System.Diagnostics.Debug.WriteLine($"[ScheduleListView] NavigateToScheduleDetail - scheduleId: {schedule.Id}, mode: {mode}");
+        var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
+        mainView?.OpenScheduleInput(schedule.Id, mode);
     }
 
     public ScheduleListViewModel? ViewModel => _viewModel;

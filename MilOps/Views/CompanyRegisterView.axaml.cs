@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 namespace MilOps.Views;
 
 public partial class CompanyRegisterView : UserControl
+
 {
     private CompanyRegisterViewModel? _viewModel;
 
@@ -17,7 +18,7 @@ public partial class CompanyRegisterView : UserControl
     {
         InitializeComponent();
     }
-
+    
     protected override async void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);

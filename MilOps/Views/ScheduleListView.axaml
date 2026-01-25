@@ -154,7 +154,7 @@
                     <!-- Row 0: 업체명 + 상태 배지 -->
                     <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
                       <TextBlock Grid.Column="0" Text="{Binding CompanyName}"
-                                 FontSize="14" Foreground="White" FontWeight="SemiBold"
+                                 FontSize="14" Foreground="White"
                                  TextTrimming="CharacterEllipsis"/>
                       <Border Grid.Column="1" Background="{Binding StatusColor}"
                               CornerRadius="4" Padding="8,3" Margin="8,0,0,0">

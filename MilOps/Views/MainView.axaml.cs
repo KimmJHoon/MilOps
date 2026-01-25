@@ -22,9 +22,11 @@ public partial class MainView : UserControl
         DataContext = _viewModel;
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
-
-        // CompanyRegisterView의 ViewModel 이벤트 연결
+        
+        // View 이벤트 연결
         SetupCompanyRegisterView();
+        SetupScheduleCreateView();
+        SetupScheduleInputView();
     }
 
     private void SetupCompanyRegisterView()
@@ -33,9 +35,46 @@ public partial class MainView : UserControl
         CompanyRegisterView.CloseRequested += OnCompanyRegisterCloseRequested;
     }
 
+    private void SetupScheduleCreateView()
+    {
+        // ScheduleCreateView의 CloseRequested 이벤트 구독
+        ScheduleCreateView.CloseRequested += OnScheduleCreateCloseRequested;
+        ScheduleCreateView.ScheduleCreated += OnScheduleCreated;
+    }
+
+    private void SetupScheduleInputView()
+    {
+        // ScheduleInputView의 이벤트 구독
+        ScheduleInputView.CloseRequested += OnScheduleInputCloseRequested;
+        ScheduleInputView.ScheduleUpdated += OnScheduleInputUpdated;
+    }
+
     private void OnCompanyRegisterCloseRequested(object? sender, EventArgs e)
     {
         _viewModel.CloseCompanyRegisterCommand.Execute(null);
+    }
+
+    private void OnScheduleCreateCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseScheduleCreateCommand.Execute(null);
+    }
+
+    private void OnScheduleCreated(object? sender, EventArgs e)
+    {
+        // 일정 생성 완료 시 화면 닫기 및 목록 새로고침
+        _viewModel.CloseScheduleCreateCommand.Execute(null);
+
+        // ScheduleListView 새로고침
+        RefreshScheduleList();
+    }
+
+    /// <summary>
+    /// 일정 목록 새로고침
+    /// </summary>
+    public void RefreshScheduleList()
+    {
+        ScheduleListView.ViewModel?.RefreshCommand.Execute(null);
+        System.Diagnostics.Debug.WriteLine("[MainView] RefreshScheduleList called");
     }
 
     /// <summary>
@@ -44,6 +83,35 @@ public partial class MainView : UserControl
     public void OpenCompanyRegister()
     {
         _viewModel.OpenCompanyRegisterCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// 일정 생성 화면 열기 (외부에서 호출 가능)
+    /// </summary>
+    public void OpenScheduleCreate()
+    {
+        _viewModel.OpenScheduleCreateCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// 일정 입력/예약 화면 열기 (외부에서 호출 가능)
+    /// </summary>
+    public async void OpenScheduleInput(Guid scheduleId, string mode)
+    {
+        _viewModel.OpenScheduleInput(scheduleId, mode);
+        await ScheduleInputView.InitializeAsync(scheduleId, mode);
+    }
+
+    private void OnScheduleInputCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseScheduleInputCommand.Execute(null);
+    }
+
+    private void OnScheduleInputUpdated(object? sender, EventArgs e)
+    {
+        // 일정 업데이트 완료 시 화면 닫기 및 목록 새로고침
+        _viewModel.CloseScheduleInputCommand.Execute(null);
+        RefreshScheduleList();
     }
 
     /// <summary>
