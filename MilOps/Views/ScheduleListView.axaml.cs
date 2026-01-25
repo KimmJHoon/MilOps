@@ -97,6 +97,13 @@ public partial class ScheduleListView : UserControl
         }
     }
 
+    private void OnNavigateToCompanyRegister()
+    {
+        // 부모 MainView 찾아서 업체 등록 화면 열기
+        var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
+        mainView?.OpenCompanyRegister();
+    }
+
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);

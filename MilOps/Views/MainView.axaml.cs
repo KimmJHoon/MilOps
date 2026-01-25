@@ -22,7 +22,7 @@ public partial class MainView : UserControl
         DataContext = _viewModel;
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
-
+        
         // View 이벤트 연결
         SetupCompanyRegisterView();
         SetupScheduleCreateView();
