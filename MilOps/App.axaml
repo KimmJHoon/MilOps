@@ -16,5 +16,14 @@
 
     <Application.Resources>
         <converters:StatusFilterConverter x:Key="StatusFilterConverter"/>
+        <converters:BoolToTabBgConverter x:Key="BoolToTabBgConverter"/>
+        <converters:BoolToTabFgConverter x:Key="BoolToTabFgConverter"/>
+        <converters:BoolToSlotBgConverter x:Key="BoolToSlotBgConverter"/>
+        <converters:BoolToSlotBorderConverter x:Key="BoolToSlotBorderConverter"/>
+        <converters:BoolToSlotFgConverter x:Key="BoolToSlotFgConverter"/>
+        <converters:BoolToDateBgConverter x:Key="BoolToDateBgConverter"/>
+        <converters:BoolToDateFgConverter x:Key="BoolToDateFgConverter"/>
+        <converters:BoolToSaveBtnColorConverter x:Key="BoolToSaveBtnColorConverter"/>
+        <converters:BoolToSaveBtnTextConverter x:Key="BoolToSaveBtnTextConverter"/>
     </Application.Resources>
 </Application>

@@ -72,4 +72,13 @@ public partial class ScheduleCreateView : UserControl
             _viewModel.ScheduleCreated -= OnViewModelScheduleCreated;
         }
     }
+    protected void OnCloseRequested()
+    {
+        CloseRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    protected void OnScheduleCreated()
+    {
+        ScheduleCreated?.Invoke(this, EventArgs.Empty);
+    }
 }

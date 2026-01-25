@@ -56,6 +56,23 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _currentUserName = "";
 
+    // 오버레이 화면 열림 상태
+    [ObservableProperty]
+    private bool _isCompanyRegisterOpen = false;
+
+    [ObservableProperty]
+    private bool _isScheduleCreateOpen = false;
+
+    [ObservableProperty]
+    private bool _isScheduleInputOpen = false;
+
+    // 일정 입력 화면에 전달할 데이터
+    private Guid _scheduleInputId;
+    private string _scheduleInputMode = "input";
+
+    public Guid ScheduleInputId => _scheduleInputId;
+    public string ScheduleInputMode => _scheduleInputMode;
+
     // 메뉴 표시 여부 (역할별)
     public bool ShowScheduleTab => IsUser || IsMiddleAdmin;  // 사용자, 중간관리자
     public bool ShowManagerTab => IsMiddleAdmin || IsSuperAdmin;  // 중간관리자, 최종관리자
@@ -185,16 +202,50 @@ public partial class MainViewModel : ViewModelBase
         System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command completed");
     }
 
+    // === 업체 등록 화면 ===
     [RelayCommand]
-    public void OpenCompanyRegister()
+    private void OpenCompanyRegister()
     {
         IsCompanyRegisterOpen = true;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] OpenCompanyRegister");
     }
 
     [RelayCommand]
-    public void CloseCompanyRegister()
+    private void CloseCompanyRegister()
     {
         IsCompanyRegisterOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseCompanyRegister");
+    }
+
+    // === 일정 생성 화면 ===
+    [RelayCommand]
+    private void OpenScheduleCreate()
+    {
+        IsScheduleCreateOpen = true;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] OpenScheduleCreate");
+    }
+
+    [RelayCommand]
+    private void CloseScheduleCreate()
+    {
+        IsScheduleCreateOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleCreate");
+    }
+
+    // === 일정 입력/예약 화면 ===
+    public void OpenScheduleInput(Guid scheduleId, string mode)
+    {
+        _scheduleInputId = scheduleId;
+        _scheduleInputMode = mode;
+        IsScheduleInputOpen = true;
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleInput - scheduleId: {scheduleId}, mode: {mode}");
+    }
+
+    [RelayCommand]
+    private void CloseScheduleInput()
+    {
+        IsScheduleInputOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleInput");
     }
 
     [RelayCommand]

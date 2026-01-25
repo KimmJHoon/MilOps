@@ -93,6 +93,8 @@ public partial class ScheduleListViewModel : ViewModelBase
     private Dictionary<Guid, string> _districtNames = new();
     private Dictionary<Guid, string> _userNames = new();
     private Dictionary<Guid, User> _userCache = new();
+    private Dictionary<Guid, Battalion> _battalionCache = new();
+    private Dictionary<Guid, District> _districtCache = new();
 
     // 원본 일정 데이터 (필터링 전)
     private List<Schedule> _allSchedules = new();
@@ -221,7 +223,9 @@ public partial class ScheduleListViewModel : ViewModelBase
 
             _companyNames = companiesTask.Result.Models.ToDictionary(c => c.Id, c => c.Name);
             _battalionNames = battalionsTask.Result.Models.ToDictionary(b => b.Id, b => b.Name);
+            _battalionCache = battalionsTask.Result.Models.ToDictionary(b => b.Id, b => b);
             _districtNames = districtsTask.Result.Models.ToDictionary(d => d.Id, d => d.Name);
+            _districtCache = districtsTask.Result.Models.ToDictionary(d => d.Id, d => d);
             _userNames = usersTask.Result.Models.ToDictionary(u => u.Id, u => u.FullDisplayName);
             _userCache = usersTask.Result.Models.ToDictionary(u => u.Id, u => u);
 
@@ -284,14 +288,75 @@ public partial class ScheduleListViewModel : ViewModelBase
 
     private List<Schedule> FilterSchedulesByRole(List<Schedule> schedules, User currentUser)
     {
-        return currentUser.Role switch
+        switch (currentUser.Role)
         {
-            "user_local" => schedules.Where(s => s.LocalUserId == currentUser.Id).ToList(),
-            "user_military" => schedules.Where(s => s.MilitaryUserId == currentUser.Id && s.Status != "created").ToList(),
-            "middle_military" => schedules.Where(s => s.CreatedBy == currentUser.Id).ToList(),
-            "middle_local" => schedules.Where(s => s.Status == "reserved" || s.Status == "confirmed").ToList(),
-            _ => schedules
-        };
+            case "user_local":
+                return schedules.Where(s => s.LocalUserId == currentUser.Id).ToList();
+
+            case "user_military":
+                return schedules.Where(s => s.MilitaryUserId == currentUser.Id && s.Status != "created").ToList();
+
+            case "middle_military":
+                // 사단담당자: 자신이 생성한 일정 또는 자신의 사단 소속 대대담당자가 배정된 일정
+                if (!currentUser.DivisionId.HasValue)
+                {
+                    return schedules.Where(s => s.CreatedBy == currentUser.Id).ToList();
+                }
+
+                return schedules.Where(s =>
+                    s.CreatedBy == currentUser.Id ||
+                    IsMilitaryUserInMyDivision(s.MilitaryUserId, currentUser.DivisionId.Value)
+                ).ToList();
+
+            case "middle_local":
+                // 지자체(도) 담당자: 예약됨/확정됨 상태 또는 자신의 Region 소속 LocalUser의 일정
+                if (!currentUser.RegionId.HasValue)
+                {
+                    return schedules.Where(s => s.Status == "reserved" || s.Status == "confirmed").ToList();
+                }
+
+                return schedules.Where(s =>
+                    (s.Status == "reserved" || s.Status == "confirmed") &&
+                    IsLocalUserInMyRegion(s.LocalUserId, currentUser.RegionId.Value)
+                ).ToList();
+
+            default:
+                return schedules;
+        }
+    }
+
+    /// <summary>
+    /// 대대담당자가 특정 사단 소속인지 확인
+    /// </summary>
+    private bool IsMilitaryUserInMyDivision(Guid militaryUserId, Guid divisionId)
+    {
+        if (!_userCache.TryGetValue(militaryUserId, out var militaryUser))
+            return false;
+
+        if (!militaryUser.BattalionId.HasValue)
+            return false;
+
+        if (!_battalionCache.TryGetValue(militaryUser.BattalionId.Value, out var battalion))
+            return false;
+
+        return battalion.DivisionId == divisionId;
+    }
+
+    /// <summary>
+    /// 지자체담당자가 특정 Region 소속인지 확인
+    /// </summary>
+    private bool IsLocalUserInMyRegion(Guid localUserId, Guid regionId)
+    {
+        if (!_userCache.TryGetValue(localUserId, out var localUser))
+            return false;
+
+        if (!localUser.DistrictId.HasValue)
+            return false;
+
+        if (!_districtCache.TryGetValue(localUser.DistrictId.Value, out var district))
+            return false;
+
+        return district.RegionId == regionId;
     }
 
     private void UpdateStatusCounts()
@@ -558,7 +623,9 @@ public partial class ScheduleListViewModel : ViewModelBase
         _allSchedules.Clear();
         _companyNames.Clear();
         _battalionNames.Clear();
+        _battalionCache.Clear();
         _districtNames.Clear();
+        _districtCache.Clear();
         _userNames.Clear();
         _userCache.Clear();
     }
