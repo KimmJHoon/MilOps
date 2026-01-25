@@ -280,5 +280,13 @@
             VerticalAlignment="Stretch">
       <views:CompanyRegisterView x:Name="CompanyRegisterView"/>
     </Border>
+
+    <!-- 일정 생성 화면 오버레이 -->
+    <Border Background="#000000"
+            IsVisible="{Binding IsScheduleCreateOpen}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+      <views:ScheduleCreateView x:Name="ScheduleCreateView"/>
+    </Border>
   </Panel>
 </UserControl>

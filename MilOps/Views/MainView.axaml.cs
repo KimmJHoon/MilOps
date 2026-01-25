@@ -23,8 +23,9 @@ public partial class MainView : UserControl
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
 
-        // CompanyRegisterView의 ViewModel 이벤트 연결
+        // View 이벤트 연결
         SetupCompanyRegisterView();
+        SetupScheduleCreateView();
     }
 
     private void SetupCompanyRegisterView()
@@ -33,9 +34,27 @@ public partial class MainView : UserControl
         CompanyRegisterView.CloseRequested += OnCompanyRegisterCloseRequested;
     }
 
+    private void SetupScheduleCreateView()
+    {
+        // ScheduleCreateView의 CloseRequested 이벤트 구독
+        ScheduleCreateView.CloseRequested += OnScheduleCreateCloseRequested;
+        ScheduleCreateView.ScheduleCreated += OnScheduleCreated;
+    }
+
     private void OnCompanyRegisterCloseRequested(object? sender, EventArgs e)
     {
         _viewModel.CloseCompanyRegisterCommand.Execute(null);
+    }
+
+    private void OnScheduleCreateCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseScheduleCreateCommand.Execute(null);
+    }
+
+    private void OnScheduleCreated(object? sender, EventArgs e)
+    {
+        // 일정 생성 완료 시 화면 닫기
+        _viewModel.CloseScheduleCreateCommand.Execute(null);
     }
 
     /// <summary>
@@ -44,6 +63,14 @@ public partial class MainView : UserControl
     public void OpenCompanyRegister()
     {
         _viewModel.OpenCompanyRegisterCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// 일정 생성 화면 열기 (외부에서 호출 가능)
+    /// </summary>
+    public void OpenScheduleCreate()
+    {
+        _viewModel.OpenScheduleCreateCommand.Execute(null);
     }
 
     /// <summary>

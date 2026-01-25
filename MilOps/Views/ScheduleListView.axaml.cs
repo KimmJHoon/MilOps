@@ -28,6 +28,7 @@ public partial class ScheduleListView : UserControl
         if (_viewModel != null)
         {
             _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+            _viewModel.NavigateToScheduleCreate -= OnNavigateToScheduleCreate;
         }
         _viewModel?.ClearCache();
         _viewModel = null;
@@ -72,12 +73,14 @@ public partial class ScheduleListView : UserControl
             if (_viewModel != null)
             {
                 _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+                _viewModel.NavigateToScheduleCreate -= OnNavigateToScheduleCreate;
             }
             _viewModel?.ClearCache();
 
             // 새 ViewModel 생성
             _viewModel = new ScheduleListViewModel();
             _viewModel.NavigateToCompanyRegister += OnNavigateToCompanyRegister;
+            _viewModel.NavigateToScheduleCreate += OnNavigateToScheduleCreate;
             DataContext = _viewModel;
             _lastUserId = currentUserId;
             _lastUserRole = currentUserRole;
@@ -97,6 +100,13 @@ public partial class ScheduleListView : UserControl
         mainView?.OpenCompanyRegister();
     }
 
+    private void OnNavigateToScheduleCreate()
+    {
+        // 부모 MainView 찾아서 일정 생성 화면 열기
+        var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
+        mainView?.OpenScheduleCreate();
+    }
+
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
@@ -104,6 +114,7 @@ public partial class ScheduleListView : UserControl
         if (_viewModel != null)
         {
             _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+            _viewModel.NavigateToScheduleCreate -= OnNavigateToScheduleCreate;
         }
         _viewModel?.ClearCache();
     }
