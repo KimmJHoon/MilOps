@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
@@ -47,10 +48,13 @@ public class Company : BaseModel
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    // Navigation properties (not mapped, for UI binding)
+    // Navigation properties (DB에 저장되지 않음 - JsonIgnore로 직렬화 제외)
+    [JsonIgnore]
     public District? District { get; set; }
 
     // Helper properties
+    [JsonIgnore]
     public string DisplayName => Name;
+    [JsonIgnore]
     public bool IsDeleted => DeletedAt.HasValue;
 }

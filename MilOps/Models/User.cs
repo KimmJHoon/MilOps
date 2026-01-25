@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
@@ -62,22 +63,33 @@ public class User : BaseModel
     [Column("updated_at")]
     public DateTime UpdatedAt { get; set; }
 
-    // Navigation properties (not mapped, for UI binding)
+    // Navigation properties (DB에 저장되지 않음 - JsonIgnore로 직렬화 제외)
+    [JsonIgnore]
     public Region? Region { get; set; }
+    [JsonIgnore]
     public District? District { get; set; }
+    [JsonIgnore]
     public Division? Division { get; set; }
+    [JsonIgnore]
     public Battalion? Battalion { get; set; }
 
     // Helper properties
+    [JsonIgnore]
     public bool IsSuperAdmin => Role == "super_admin_mois" || Role == "super_admin_army";
+    [JsonIgnore]
     public bool IsMiddleManager => Role == "middle_local" || Role == "middle_military";
+    [JsonIgnore]
     public bool IsUser => Role == "user_local" || Role == "user_military";
 
+    [JsonIgnore]
     public bool IsLocalSide => Role == "super_admin_mois" || Role == "middle_local" || Role == "user_local";
+    [JsonIgnore]
     public bool IsMilitarySide => Role == "super_admin_army" || Role == "middle_military" || Role == "user_military";
 
+    [JsonIgnore]
     public bool IsDeleted => DeletedAt.HasValue;
 
+    [JsonIgnore]
     public string RoleDisplayName => Role switch
     {
         "super_admin_mois" => "최종관리자 (행정안전부)",
@@ -89,6 +101,7 @@ public class User : BaseModel
         _ => "알 수 없음"
     };
 
+    [JsonIgnore]
     public string PositionDisplay
     {
         get
@@ -101,6 +114,7 @@ public class User : BaseModel
         }
     }
 
+    [JsonIgnore]
     public string FullDisplayName
     {
         get

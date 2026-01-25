@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
@@ -74,13 +75,18 @@ public class Schedule : BaseModel
     [Column("confirmed_at")]
     public DateTime? ConfirmedAt { get; set; }
 
-    // Navigation properties (not mapped, for UI binding)
+    // Navigation properties (DB에 저장되지 않음 - JsonIgnore로 직렬화 제외)
+    [JsonIgnore]
     public Company? Company { get; set; }
+    [JsonIgnore]
     public User? LocalUser { get; set; }
+    [JsonIgnore]
     public User? MilitaryUser { get; set; }
+    [JsonIgnore]
     public User? Creator { get; set; }
 
     // Helper properties
+    [JsonIgnore]
     public string StatusDisplayName => Status switch
     {
         "created" => "생성됨",
@@ -90,6 +96,7 @@ public class Schedule : BaseModel
         _ => "알 수 없음"
     };
 
+    [JsonIgnore]
     public string StatusColor => Status switch
     {
         "created" => "#9E9E9E",      // Gray
@@ -99,14 +106,21 @@ public class Schedule : BaseModel
         _ => "#9E9E9E"
     };
 
+    [JsonIgnore]
     public bool CanInput => Status == "created";
+    [JsonIgnore]
     public bool CanReserve => Status == "inputted";
+    [JsonIgnore]
     public bool CanConfirm => Status == "reserved";
+    [JsonIgnore]
     public bool IsConfirmed => Status == "confirmed";
+    [JsonIgnore]
     public bool IsDeleted => DeletedAt.HasValue;
 
+    [JsonIgnore]
     public bool BothConfirmed => LocalConfirmed && MilitaryConfirmed;
 
+    [JsonIgnore]
     public string ReservedTimeDisplay
     {
         get
@@ -121,6 +135,7 @@ public class Schedule : BaseModel
         }
     }
 
+    [JsonIgnore]
     public string AvailableDateRangeDisplay
     {
         get
@@ -157,7 +172,10 @@ public class ScheduleAvailableTime : BaseModel
     public DateTime CreatedAt { get; set; }
 
     // Helper properties
+    [JsonIgnore]
     public string TimeRangeDisplay => $"{StartTime:hh\\:mm}-{EndTime:hh\\:mm}";
+    [JsonIgnore]
     public string DateDisplay => AvailableDate.ToString("yyyy-MM-dd");
+    [JsonIgnore]
     public string FullDisplay => $"{DateDisplay} {TimeRangeDisplay}";
 }

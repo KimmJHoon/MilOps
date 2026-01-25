@@ -957,6 +957,7 @@ public partial class ManagerViewModel : ViewModelBase
                 Phone = NewInvitePhone.Trim(),
                 MilitaryRank = ShowRankField ? SelectedRankOption?.Value : null,
                 InvitedBy = AuthService.CurrentUser.Id,
+                CreatedBy = AuthService.CurrentUser.Id,
                 Status = "pending",
                 ExpiresAt = DateTime.UtcNow.AddDays(7),
                 CreatedAt = DateTime.UtcNow

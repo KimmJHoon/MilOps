@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
@@ -46,10 +47,12 @@ public class District : BaseModel
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    // Navigation property
+    // Navigation property (DB에 저장되지 않음)
+    [JsonIgnore]
     public Region? Region { get; set; }
 
     // Helper property
+    [JsonIgnore]
     public string FullName => Region != null ? $"{Region.Name} {Name}" : Name;
 }
 
@@ -95,10 +98,12 @@ public class Battalion : BaseModel
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    // Navigation property
+    // Navigation property (DB에 저장되지 않음)
+    [JsonIgnore]
     public Division? Division { get; set; }
 
     // Helper property
+    [JsonIgnore]
     public string FullName => Division != null ? $"{Division.Name} {Name}" : Name;
 }
 
@@ -124,7 +129,9 @@ public class DistrictBattalionMapping : BaseModel
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
 
-    // Navigation properties
+    // Navigation properties (DB에 저장되지 않음)
+    [JsonIgnore]
     public District? District { get; set; }
+    [JsonIgnore]
     public Battalion? Battalion { get; set; }
 }

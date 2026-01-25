@@ -51,6 +51,9 @@ public class Invitation : BaseModel
     [Column("invited_by")]
     public Guid InvitedBy { get; set; }
 
+    [Column("created_by")]
+    public Guid? CreatedBy { get; set; }
+
     [Column("status")]
     public string Status { get; set; } = "pending";
 
