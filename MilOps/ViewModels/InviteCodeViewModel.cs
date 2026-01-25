@@ -56,20 +56,26 @@ public partial class InviteCodeViewModel : ViewModelBase
         }
 
         IsLoading = true;
+        System.Diagnostics.Debug.WriteLine($"[InviteCodeVM] VerifyCodeAsync started for code: {code}");
 
         try
         {
             // Supabase 초기화
+            System.Diagnostics.Debug.WriteLine($"[InviteCodeVM] Supabase IsInitialized: {SupabaseService.IsInitialized}");
             if (!SupabaseService.IsInitialized)
             {
+                System.Diagnostics.Debug.WriteLine("[InviteCodeVM] Initializing Supabase...");
                 await SupabaseService.InitializeAsync();
+                System.Diagnostics.Debug.WriteLine("[InviteCodeVM] Supabase initialized");
             }
 
             // 초대코드 조회
+            System.Diagnostics.Debug.WriteLine("[InviteCodeVM] Querying invitation...");
             var response = await SupabaseService.Client
                 .From<Invitation>()
                 .Filter("invite_code", Supabase.Postgrest.Constants.Operator.Equals, code)
                 .Single();
+            System.Diagnostics.Debug.WriteLine($"[InviteCodeVM] Query completed, response: {(response != null ? response.InviteCode : "null")}");
 
             if (response == null)
             {
@@ -101,13 +107,17 @@ public partial class InviteCodeViewModel : ViewModelBase
             }
 
             // 유효한 초대코드 - 소속 정보 조회
+            System.Diagnostics.Debug.WriteLine("[InviteCodeVM] Loading affiliation info...");
             await LoadAffiliationInfoAsync(response);
+            System.Diagnostics.Debug.WriteLine("[InviteCodeVM] Affiliation loaded, invoking CodeValidated event");
             ValidatedInvitation = response;
             CodeValidated?.Invoke(response);
+            System.Diagnostics.Debug.WriteLine("[InviteCodeVM] CodeValidated event invoked");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[InviteCodeVM] Error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[InviteCodeVM] Error: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[InviteCodeVM] StackTrace: {ex.StackTrace}");
             ErrorMessage = "초대코드 확인 중 오류가 발생했습니다";
             HasError = true;
         }

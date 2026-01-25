@@ -87,44 +87,66 @@ public partial class AppShell : UserControl
 
     private void SetupInviteCodeView()
     {
-        // InviteCodeView에 ViewModel 설정
-        var inviteCodeVm = new InviteCodeViewModel();
-        InviteCodeViewControl.DataContext = inviteCodeVm;
-
-        // 뒤로가기 이벤트
-        inviteCodeVm.BackRequested += () =>
+        System.Diagnostics.Debug.WriteLine("[AppShell] SetupInviteCodeView called");
+        try
         {
-            System.Diagnostics.Debug.WriteLine("[AppShell] Back to login requested from InviteCodeView");
-            ShowLoginView();
-        };
+            // InviteCodeView에 ViewModel 설정
+            var inviteCodeVm = new InviteCodeViewModel();
+            InviteCodeViewControl.DataContext = inviteCodeVm;
+            System.Diagnostics.Debug.WriteLine("[AppShell] InviteCodeViewModel created and set");
 
-        // 코드 검증 성공 이벤트
-        inviteCodeVm.CodeValidated += (invitation) =>
+            // 뒤로가기 이벤트
+            inviteCodeVm.BackRequested += () =>
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] Back to login requested from InviteCodeView");
+                ShowLoginView();
+            };
+
+            // 코드 검증 성공 이벤트
+            inviteCodeVm.CodeValidated += (invitation) =>
+            {
+                System.Diagnostics.Debug.WriteLine($"[AppShell] Invite code validated: {invitation?.InviteCode}, proceeding to registration");
+                ShowInviteAcceptViewWithInvitation(invitation);
+            };
+            System.Diagnostics.Debug.WriteLine("[AppShell] SetupInviteCodeView completed");
+        }
+        catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AppShell] Invite code validated, proceeding to registration");
-            ShowInviteAcceptViewWithInvitation(invitation);
-        };
+            System.Diagnostics.Debug.WriteLine($"[AppShell] SetupInviteCodeView error: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[AppShell] StackTrace: {ex.StackTrace}");
+        }
     }
 
     private void SetupInviteAcceptView()
     {
-        // InviteAcceptView에 ViewModel 설정
-        var inviteVm = new InviteAcceptViewModel();
-        InviteAcceptViewControl.DataContext = inviteVm;
-
-        // 회원가입 성공 이벤트
-        inviteVm.RegistrationSuccessful += () =>
+        System.Diagnostics.Debug.WriteLine("[AppShell] SetupInviteAcceptView called");
+        try
         {
-            System.Diagnostics.Debug.WriteLine("[AppShell] Registration successful, navigating to login");
-            ShowLoginView();
-        };
+            // InviteAcceptView에 ViewModel 설정
+            var inviteVm = new InviteAcceptViewModel();
+            InviteAcceptViewControl.DataContext = inviteVm;
+            System.Diagnostics.Debug.WriteLine("[AppShell] InviteAcceptViewModel created and set");
 
-        // 로그인 화면으로 이동 이벤트
-        inviteVm.NavigateToLogin += () =>
+            // 회원가입 성공 이벤트
+            inviteVm.RegistrationSuccessful += () =>
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] Registration successful, navigating to login");
+                ShowLoginView();
+            };
+
+            // 로그인 화면으로 이동 이벤트
+            inviteVm.NavigateToLogin += () =>
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] Navigate to login requested");
+                ShowLoginView();
+            };
+            System.Diagnostics.Debug.WriteLine("[AppShell] SetupInviteAcceptView completed");
+        }
+        catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine("[AppShell] Navigate to login requested");
-            ShowLoginView();
-        };
+            System.Diagnostics.Debug.WriteLine($"[AppShell] SetupInviteAcceptView error: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[AppShell] StackTrace: {ex.StackTrace}");
+        }
     }
 
     private void StartDeepLinkCheckTimer()
@@ -183,33 +205,61 @@ public partial class AppShell : UserControl
 
     private void ShowInviteCodeView()
     {
-        // 모든 뷰 숨기기
-        LoginViewControl.IsVisible = false;
-        MainViewControl.IsVisible = false;
-        InviteAcceptViewControl.IsVisible = false;
-        InviteCodeViewControl.IsVisible = true;
-
-        // 초대코드 입력 폼 초기화
-        if (InviteCodeViewControl.DataContext is InviteCodeViewModel inviteCodeVm)
+        System.Diagnostics.Debug.WriteLine("[AppShell] ShowInviteCodeView called");
+        try
         {
-            inviteCodeVm.InviteCode = "";
-            inviteCodeVm.ErrorMessage = "";
-            inviteCodeVm.HasError = false;
+            // 모든 뷰 숨기기
+            LoginViewControl.IsVisible = false;
+            MainViewControl.IsVisible = false;
+            InviteAcceptViewControl.IsVisible = false;
+            InviteCodeViewControl.IsVisible = true;
+
+            // 초대코드 입력 폼 초기화
+            if (InviteCodeViewControl.DataContext is InviteCodeViewModel inviteCodeVm)
+            {
+                inviteCodeVm.InviteCode = "";
+                inviteCodeVm.ErrorMessage = "";
+                inviteCodeVm.HasError = false;
+                System.Diagnostics.Debug.WriteLine("[AppShell] InviteCodeView form reset");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] WARNING: InviteCodeViewControl.DataContext is not InviteCodeViewModel");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteCodeView error: {ex.GetType().Name}: {ex.Message}");
         }
     }
 
     private void ShowInviteAcceptViewWithInvitation(Invitation invitation)
     {
-        // 모든 뷰 숨기기
-        LoginViewControl.IsVisible = false;
-        MainViewControl.IsVisible = false;
-        InviteCodeViewControl.IsVisible = false;
-        InviteAcceptViewControl.IsVisible = true;
-
-        // 초대 정보로 ViewModel 초기화
-        if (InviteAcceptViewControl.DataContext is InviteAcceptViewModel inviteVm)
+        System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteAcceptViewWithInvitation called, invitation: {invitation?.InviteCode}");
+        try
         {
-            inviteVm.InitializeWithInvitation(invitation);
+            // 모든 뷰 숨기기
+            LoginViewControl.IsVisible = false;
+            MainViewControl.IsVisible = false;
+            InviteCodeViewControl.IsVisible = false;
+            InviteAcceptViewControl.IsVisible = true;
+
+            // 초대 정보로 ViewModel 초기화
+            if (InviteAcceptViewControl.DataContext is InviteAcceptViewModel inviteVm)
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] Initializing InviteAcceptViewModel with invitation");
+                inviteVm.InitializeWithInvitation(invitation);
+                System.Diagnostics.Debug.WriteLine("[AppShell] InviteAcceptViewModel initialized");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("[AppShell] WARNING: InviteAcceptViewControl.DataContext is not InviteAcceptViewModel");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteAcceptViewWithInvitation error: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[AppShell] StackTrace: {ex.StackTrace}");
         }
     }
 

@@ -115,13 +115,38 @@ public static class AuthService
         {
             System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: Starting...");
 
-            if (!SupabaseService.IsInitialized)
+            // Supabase 초기화
+            try
             {
-                await SupabaseService.InitializeAsync();
+                if (!SupabaseService.IsInitialized)
+                {
+                    System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: Initializing Supabase...");
+                    await SupabaseService.InitializeAsync();
+                    System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: Supabase initialized");
+                }
+            }
+            catch (Exception initEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Supabase init failed - {initEx.Message}");
+                return false;
             }
 
             // 1. 저장된 세션 토큰 로드
-            var (accessToken, refreshToken, loginId) = await SessionStorageService.LoadSessionAsync();
+            string? accessToken = null;
+            string? refreshToken = null;
+            string? loginId = null;
+
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: Loading session...");
+                (accessToken, refreshToken, loginId) = await SessionStorageService.LoadSessionAsync();
+                System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Session loaded - hasAccess={!string.IsNullOrEmpty(accessToken)}, hasRefresh={!string.IsNullOrEmpty(refreshToken)}, loginId={loginId ?? "null"}");
+            }
+            catch (Exception loadEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Load session failed - {loadEx.Message}");
+                return false;
+            }
 
             if (string.IsNullOrEmpty(accessToken) || string.IsNullOrEmpty(refreshToken) || string.IsNullOrEmpty(loginId))
             {
@@ -134,10 +159,12 @@ public static class AuthService
             // 2. 토큰으로 세션 복원 시도
             try
             {
+                System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: Setting session...");
                 var session = await SupabaseService.Client.Auth.SetSession(accessToken, refreshToken);
+
                 if (session?.User == null)
                 {
-                    System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: SetSession failed");
+                    System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: SetSession failed - no user");
                     SessionStorageService.ClearSession();
                     return false;
                 }
@@ -152,29 +179,44 @@ public static class AuthService
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: SetSession error - {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: SetSession error - {ex.GetType().Name}: {ex.Message}");
                 SessionStorageService.ClearSession();
                 return false;
             }
 
             // 4. 사용자 프로필 조회
-            var userProfile = await SupabaseService.GetUserByLoginIdAsync(loginId);
-            if (userProfile == null)
+            try
             {
-                System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: User profile not found");
+                System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: Loading user profile...");
+                var userProfile = await SupabaseService.GetUserByLoginIdAsync(loginId);
+
+                if (userProfile == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[AuthService] TryRestoreSessionAsync: User profile not found");
+                    SessionStorageService.ClearSession();
+                    return false;
+                }
+
+                CurrentUser = userProfile;
+                CurrentUserRole = ParseRole(userProfile.Role);
+                System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Success - {loginId}, Role={CurrentUserRole}");
+                return true;
+            }
+            catch (Exception profileEx)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Profile load error - {profileEx.Message}");
                 SessionStorageService.ClearSession();
                 return false;
             }
-
-            CurrentUser = userProfile;
-            CurrentUserRole = ParseRole(userProfile.Role);
-            System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Success - {loginId}, Role={CurrentUserRole}");
-            return true;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Error - {ex.Message}");
-            SessionStorageService.ClearSession();
+            System.Diagnostics.Debug.WriteLine($"[AuthService] TryRestoreSessionAsync: Unexpected error - {ex.GetType().Name}: {ex.Message}\n{ex.StackTrace}");
+            try
+            {
+                SessionStorageService.ClearSession();
+            }
+            catch { }
             return false;
         }
     }
