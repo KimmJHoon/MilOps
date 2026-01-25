@@ -272,5 +272,13 @@
         </Border>
       </Grid>
     </Border>
+
+    <!-- 업체 등록 화면 오버레이 -->
+    <Border Background="#000000"
+            IsVisible="{Binding IsCompanyRegisterOpen}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+      <views:CompanyRegisterView x:Name="CompanyRegisterView"/>
+    </Border>
   </Panel>
 </UserControl>

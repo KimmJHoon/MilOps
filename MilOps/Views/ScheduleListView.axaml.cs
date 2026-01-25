@@ -1,8 +1,10 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using Avalonia.VisualTree;
 using MilOps.Services;
 using MilOps.ViewModels;
 using System;
+using System.Linq;
 
 namespace MilOps.Views;
 
@@ -23,6 +25,10 @@ public partial class ScheduleListView : UserControl
     private void OnCleanupBeforeLogout()
     {
         System.Diagnostics.Debug.WriteLine("[ScheduleListView] CleanupBeforeLogout - clearing cache");
+        if (_viewModel != null)
+        {
+            _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+        }
         _viewModel?.ClearCache();
         _viewModel = null;
         _lastUserId = null;
@@ -63,10 +69,15 @@ public partial class ScheduleListView : UserControl
             System.Diagnostics.Debug.WriteLine($"[ScheduleListView] Creating new ViewModel for user: {AuthService.CurrentUser.LoginId}, role: {currentUserRole}");
 
             // 기존 ViewModel 정리
+            if (_viewModel != null)
+            {
+                _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+            }
             _viewModel?.ClearCache();
 
             // 새 ViewModel 생성
             _viewModel = new ScheduleListViewModel();
+            _viewModel.NavigateToCompanyRegister += OnNavigateToCompanyRegister;
             DataContext = _viewModel;
             _lastUserId = currentUserId;
             _lastUserRole = currentUserRole;
@@ -79,10 +90,21 @@ public partial class ScheduleListView : UserControl
         }
     }
 
+    private void OnNavigateToCompanyRegister()
+    {
+        // 부모 MainView 찾아서 업체 등록 화면 열기
+        var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
+        mainView?.OpenCompanyRegister();
+    }
+
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
         // View가 제거될 때 캐시 정리 (리소스 절약)
+        if (_viewModel != null)
+        {
+            _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+        }
         _viewModel?.ClearCache();
     }
 

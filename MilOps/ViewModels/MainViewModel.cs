@@ -32,6 +32,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isDrawerOpen = false;
 
+    // 업체 등록 화면 표시 여부
+    [ObservableProperty]
+    private bool _isCompanyRegisterOpen = false;
+
     // 역할별 플래그
     [ObservableProperty]
     private bool _isSuperAdmin = false;
@@ -175,5 +179,17 @@ public partial class MainViewModel : ViewModelBase
         await AppRestartService.LogoutAndRestartAsync();
 
         System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command completed");
+    }
+
+    [RelayCommand]
+    public void OpenCompanyRegister()
+    {
+        IsCompanyRegisterOpen = true;
+    }
+
+    [RelayCommand]
+    public void CloseCompanyRegister()
+    {
+        IsCompanyRegisterOpen = false;
     }
 }

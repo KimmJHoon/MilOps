@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using MilOps.ViewModels;
 using System;
@@ -21,6 +22,28 @@ public partial class MainView : UserControl
         DataContext = _viewModel;
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
+
+        // CompanyRegisterView의 ViewModel 이벤트 연결
+        SetupCompanyRegisterView();
+    }
+
+    private void SetupCompanyRegisterView()
+    {
+        // CompanyRegisterView의 CloseRequested 이벤트 구독
+        CompanyRegisterView.CloseRequested += OnCompanyRegisterCloseRequested;
+    }
+
+    private void OnCompanyRegisterCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseCompanyRegisterCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// 업체 등록 화면 열기 (외부에서 호출 가능)
+    /// </summary>
+    public void OpenCompanyRegister()
+    {
+        _viewModel.OpenCompanyRegisterCommand.Execute(null);
     }
 
     /// <summary>

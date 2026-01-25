@@ -1,0 +1,267 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MilOps.ViewModels"
+             x:Class="MilOps.Views.CompanyRegisterView"
+             x:DataType="vm:CompanyRegisterViewModel"
+             DataContext="{x:Null}">
+
+  <Grid Background="#000000">
+    <!-- 권한 없음 메시지 -->
+    <Border IsVisible="{Binding !HasPermission}"
+            Background="#1A1A1A" CornerRadius="8" Padding="20"
+            VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+      <StackPanel Spacing="10" HorizontalAlignment="Center">
+        <TextBlock Text="권한 없음" FontSize="18" Foreground="#F44336" HorizontalAlignment="Center"/>
+        <TextBlock Text="업체 등록은 지자체(도) 담당자만 가능합니다." FontSize="13" Foreground="#888888"
+                   TextWrapping="Wrap" HorizontalAlignment="Center"/>
+        <Button Command="{Binding CloseCommand}" Background="#555555" Padding="20,10" CornerRadius="6"
+                HorizontalAlignment="Center" Margin="0,10,0,0">
+          <TextBlock Text="닫기" Foreground="White" FontSize="13"/>
+        </Button>
+      </StackPanel>
+    </Border>
+
+    <!-- 메인 컨텐츠 -->
+    <Grid IsVisible="{Binding HasPermission}" RowDefinitions="Auto,*">
+      <!-- 헤더 -->
+      <Border Grid.Row="0" Background="#1A1A1A" Padding="10">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Button Grid.Column="0" Command="{Binding CloseCommand}"
+                  Background="Transparent" Padding="8,4">
+            <TextBlock Text="← 뒤로" Foreground="White" FontSize="14"/>
+          </Button>
+          <TextBlock Grid.Column="1" Text="업체 관리" FontSize="16" Foreground="White"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          <Button Grid.Column="2" Command="{Binding OpenRegisterDialogCommand}"
+                  Background="#2196F3" Padding="10,6" CornerRadius="6">
+            <TextBlock Text="+ 등록" Foreground="White" FontSize="13"/>
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- 업체 목록 -->
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="10" Spacing="8">
+          <!-- 로딩 -->
+          <TextBlock Text="로딩중..." IsVisible="{Binding IsLoading}"
+                     Foreground="#888888" HorizontalAlignment="Center" FontSize="13"/>
+
+          <!-- 성공 메시지 -->
+          <Border Background="#2E7D32" CornerRadius="6" Padding="10"
+                  IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding SuccessMessage}" Foreground="White" FontSize="12"
+                       HorizontalAlignment="Center"/>
+          </Border>
+
+          <!-- 에러 메시지 -->
+          <Border Background="#C62828" CornerRadius="6" Padding="10"
+                  IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="White" FontSize="12"
+                       HorizontalAlignment="Center" TextWrapping="Wrap"/>
+          </Border>
+
+          <!-- 빈 목록 -->
+          <Border Background="#1A1A1A" CornerRadius="8" Padding="20"
+                  IsVisible="{Binding ShowEmptyMessage}">
+            <TextBlock Text="등록된 업체가 없습니다." Foreground="#888888"
+                       HorizontalAlignment="Center" FontSize="13"/>
+          </Border>
+
+          <!-- 업체 목록 -->
+          <ItemsControl ItemsSource="{Binding Companies}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate DataType="vm:CompanyListItem">
+                <Border Background="#1A1A1A" CornerRadius="8" Padding="12" Margin="0,4">
+                  <StackPanel Spacing="4">
+                    <!-- 업체명 + 수정/삭제 버튼 -->
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Grid.Column="0" Text="{Binding Name}"
+                                 FontSize="15" Foreground="White"
+                                 TextTrimming="CharacterEllipsis"/>
+                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Button Command="{Binding $parent[ItemsControl].((vm:CompanyRegisterViewModel)DataContext).EditCompanyCommand}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent" Padding="4">
+                          <TextBlock Text="수정" FontSize="12" Foreground="#2196F3"/>
+                        </Button>
+                        <Button Command="{Binding $parent[ItemsControl].((vm:CompanyRegisterViewModel)DataContext).DeleteCompanyCommand}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent" Padding="4">
+                          <TextBlock Text="삭제" FontSize="12" Foreground="#F44336"/>
+                        </Button>
+                      </StackPanel>
+                    </Grid>
+
+                    <!-- 지역 (시/군/구) -->
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="지역:" FontSize="12" Foreground="#888888"/>
+                      <TextBlock Text="{Binding LocationDisplay}" FontSize="12" Foreground="#AAAAAA"/>
+                    </StackPanel>
+
+                    <!-- 주소 -->
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                      <TextBlock Text="주소:" FontSize="12" Foreground="#888888"/>
+                      <TextBlock Text="{Binding Address}" FontSize="12" Foreground="#4CAF50"
+                                 TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+
+                    <!-- 생산품 -->
+                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                IsVisible="{Binding Products, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                      <TextBlock Text="생산품:" FontSize="12" Foreground="#888888"/>
+                      <TextBlock Text="{Binding Products}" FontSize="12" Foreground="#FF9800"
+                                 TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+
+                    <!-- 담당자명 -->
+                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                IsVisible="{Binding ContactName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                      <TextBlock Text="담당자:" FontSize="12" Foreground="#888888"/>
+                      <TextBlock Text="{Binding ContactName}" FontSize="12" Foreground="#2196F3"/>
+                    </StackPanel>
+
+                    <!-- 연락처 -->
+                    <StackPanel Orientation="Horizontal" Spacing="6"
+                                IsVisible="{Binding ContactPhone, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                      <TextBlock Text="연락처:" FontSize="12" Foreground="#888888"/>
+                      <TextBlock Text="{Binding ContactPhone}" FontSize="12" Foreground="#9C27B0"/>
+                    </StackPanel>
+
+                    <!-- 등록일 -->
+                    <TextBlock Text="{Binding CreatedAtDisplay}"
+                               FontSize="11" Foreground="#666666" Margin="0,4,0,0"
+                               HorizontalAlignment="Right"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+
+    <!-- 등록/수정 다이얼로그 오버레이 -->
+    <Border Background="#80000000" IsVisible="{Binding IsRegisterDialogOpen}"/>
+
+    <!-- 등록/수정 다이얼로그 -->
+    <Border Background="#222222"
+            CornerRadius="10"
+            Padding="16"
+            Margin="15,30"
+            MaxWidth="400"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Stretch"
+            IsVisible="{Binding IsRegisterDialogOpen}">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="12">
+          <!-- 타이틀 -->
+          <TextBlock Text="{Binding FormTitle}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
+
+          <!-- 에러 메시지 -->
+          <Border Background="#C62828" CornerRadius="6" Padding="8"
+                  IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="White" FontSize="11"
+                       TextWrapping="Wrap" HorizontalAlignment="Center"/>
+          </Border>
+
+          <!-- 지역 선택 (Region) -->
+          <StackPanel Spacing="4">
+            <TextBlock Text="광역시/도" Foreground="#AAAAAA" FontSize="12"/>
+            <ComboBox ItemsSource="{Binding Regions}"
+                      SelectedItem="{Binding SelectedRegion}"
+                      Background="#333333"
+                      Foreground="White"
+                      HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding Name}"/>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+
+          <!-- 시군구 선택 (District) -->
+          <StackPanel Spacing="4">
+            <TextBlock Text="시/군/구 *" Foreground="#AAAAAA" FontSize="12"/>
+            <ComboBox ItemsSource="{Binding Districts}"
+                      SelectedItem="{Binding SelectedDistrict}"
+                      Background="#333333"
+                      Foreground="White"
+                      HorizontalAlignment="Stretch">
+              <ComboBox.ItemTemplate>
+                <DataTemplate>
+                  <TextBlock Text="{Binding Name}"/>
+                </DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+
+          <!-- 업체명 -->
+          <StackPanel Spacing="4">
+            <TextBlock Text="업체명 *" Foreground="#AAAAAA" FontSize="12"/>
+            <TextBox Text="{Binding CompanyName}"
+                     Watermark="업체명 입력"
+                     Background="#333333"
+                     Foreground="White"
+                     Padding="8"/>
+          </StackPanel>
+
+          <!-- 주소 -->
+          <StackPanel Spacing="4">
+            <TextBlock Text="주소 *" Foreground="#AAAAAA" FontSize="12"/>
+            <TextBox Text="{Binding Address}"
+                     Watermark="주소 입력"
+                     Background="#333333"
+                     Foreground="White"
+                     Padding="8"/>
+          </StackPanel>
+
+          <!-- 생산품 -->
+          <StackPanel Spacing="4">
+            <TextBlock Text="생산품" Foreground="#AAAAAA" FontSize="12"/>
+            <TextBox Text="{Binding Products}"
+                     Watermark="생산품 입력 (예: 쌀, 채소)"
+                     Background="#333333"
+                     Foreground="White"
+                     Padding="8"/>
+          </StackPanel>
+
+          <!-- 담당자명 -->
+          <StackPanel Spacing="4">
+            <TextBlock Text="담당자명" Foreground="#AAAAAA" FontSize="12"/>
+            <TextBox Text="{Binding ContactName}"
+                     Watermark="담당자 이름"
+                     Background="#333333"
+                     Foreground="White"
+                     Padding="8"/>
+          </StackPanel>
+
+          <!-- 담당자 연락처 -->
+          <StackPanel Spacing="4">
+            <TextBlock Text="담당자 연락처" Foreground="#AAAAAA" FontSize="12"/>
+            <TextBox Text="{Binding ContactPhone}"
+                     Watermark="010-0000-0000"
+                     Background="#333333"
+                     Foreground="White"
+                     Padding="8"/>
+          </StackPanel>
+
+          <!-- 버튼들 -->
+          <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+            <Button Grid.Column="0" Command="{Binding CloseRegisterDialogCommand}"
+                    Background="#555555" Margin="0,0,4,0" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" Padding="10" CornerRadius="6">
+              <TextBlock Text="취소" Foreground="White" FontSize="13"/>
+            </Button>
+            <Button Grid.Column="1" Command="{Binding SaveCompanyCommand}"
+                    Background="#2196F3" Margin="4,0,0,0" HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center" Padding="10" CornerRadius="6"
+                    IsEnabled="{Binding !IsLoading}">
+              <TextBlock Text="저장" Foreground="White" FontSize="13"/>
+            </Button>
+          </Grid>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+  </Grid>
+</UserControl>
