@@ -26,6 +26,7 @@ public partial class MainView : UserControl
         // View 이벤트 연결
         SetupCompanyRegisterView();
         SetupScheduleCreateView();
+        SetupScheduleInputView();
     }
 
     private void SetupCompanyRegisterView()
@@ -39,6 +40,13 @@ public partial class MainView : UserControl
         // ScheduleCreateView의 CloseRequested 이벤트 구독
         ScheduleCreateView.CloseRequested += OnScheduleCreateCloseRequested;
         ScheduleCreateView.ScheduleCreated += OnScheduleCreated;
+    }
+
+    private void SetupScheduleInputView()
+    {
+        // ScheduleInputView의 이벤트 구독
+        ScheduleInputView.CloseRequested += OnScheduleInputCloseRequested;
+        ScheduleInputView.ScheduleUpdated += OnScheduleInputUpdated;
     }
 
     private void OnCompanyRegisterCloseRequested(object? sender, EventArgs e)
@@ -83,6 +91,27 @@ public partial class MainView : UserControl
     public void OpenScheduleCreate()
     {
         _viewModel.OpenScheduleCreateCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// 일정 입력/예약 화면 열기 (외부에서 호출 가능)
+    /// </summary>
+    public async void OpenScheduleInput(Guid scheduleId, string mode)
+    {
+        _viewModel.OpenScheduleInput(scheduleId, mode);
+        await ScheduleInputView.InitializeAsync(scheduleId, mode);
+    }
+
+    private void OnScheduleInputCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseScheduleInputCommand.Execute(null);
+    }
+
+    private void OnScheduleInputUpdated(object? sender, EventArgs e)
+    {
+        // 일정 업데이트 완료 시 화면 닫기 및 목록 새로고침
+        _viewModel.CloseScheduleInputCommand.Execute(null);
+        RefreshScheduleList();
     }
 
     /// <summary>
