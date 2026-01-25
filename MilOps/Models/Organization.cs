@@ -17,8 +17,8 @@ public class Region : BaseModel
     [Column("name")]
     public string Name { get; set; } = "";
 
-    [Column("code")]
-    public string? Code { get; set; }
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
@@ -40,11 +40,17 @@ public class District : BaseModel
     [Column("name")]
     public string Name { get; set; } = "";
 
-    [Column("code")]
-    public string? Code { get; set; }
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
+
+    // Navigation property
+    public Region? Region { get; set; }
+
+    // Helper property
+    public string FullName => Region != null ? $"{Region.Name} {Name}" : Name;
 }
 
 /// <summary>
@@ -59,6 +65,9 @@ public class Division : BaseModel
 
     [Column("name")]
     public string Name { get; set; } = "";
+
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
@@ -80,8 +89,17 @@ public class Battalion : BaseModel
     [Column("name")]
     public string Name { get; set; } = "";
 
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
+
+    // Navigation property
+    public Division? Division { get; set; }
+
+    // Helper property
+    public string FullName => Division != null ? $"{Division.Name} {Name}" : Name;
 }
 
 /// <summary>
@@ -100,6 +118,13 @@ public class DistrictBattalionMapping : BaseModel
     [Column("battalion_id")]
     public Guid BattalionId { get; set; }
 
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
+
+    // Navigation properties
+    public District? District { get; set; }
+    public Battalion? Battalion { get; set; }
 }
