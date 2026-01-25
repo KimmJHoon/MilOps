@@ -104,6 +104,13 @@ public partial class ScheduleListView : UserControl
         mainView?.OpenCompanyRegister();
     }
 
+    private void OnNavigateToScheduleCreate()
+    {
+        // 부모 MainView 찾아서 일정 생성 화면 열기
+        var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
+        mainView?.OpenScheduleCreate();
+    }
+
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);

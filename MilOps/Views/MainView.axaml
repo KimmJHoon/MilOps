@@ -288,13 +288,5 @@
             VerticalAlignment="Stretch">
       <views:ScheduleCreateView x:Name="ScheduleCreateView"/>
     </Border>
-
-    <!-- 일정 입력/예약 화면 오버레이 -->
-    <Border Background="#000000"
-            IsVisible="{Binding IsScheduleInputOpen}"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch">
-      <views:ScheduleInputView x:Name="ScheduleInputView"/>
-    </Border>
   </Panel>
 </UserControl>

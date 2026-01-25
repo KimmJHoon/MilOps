@@ -1,13 +1,265 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
-             x:Class="MilOps.Views.ScheduleCreateView">
+             xmlns:vm="using:MilOps.ViewModels"
+             x:Class="MilOps.Views.ScheduleCreateView"
+             x:DataType="vm:ScheduleCreateViewModel"
+             DataContext="{x:Null}">
+
   <Grid Background="#000000">
-    <TextBlock Text="일정 생성 화면 (구현 예정)"
-               Foreground="White"
-               HorizontalAlignment="Center"
-               VerticalAlignment="Center"/>
+    <!-- 권한 없음 메시지 -->
+    <Border IsVisible="{Binding !HasPermission}"
+            Background="#1A1A1A" CornerRadius="8" Padding="20"
+            VerticalAlignment="Center" HorizontalAlignment="Center" Margin="20">
+      <StackPanel Spacing="10" HorizontalAlignment="Center">
+        <TextBlock Text="권한 없음" FontSize="18" Foreground="#F44336" HorizontalAlignment="Center"/>
+        <TextBlock Text="일정 생성은 사단담당자만 가능합니다." FontSize="13" Foreground="#888888"
+                   TextWrapping="Wrap" HorizontalAlignment="Center"/>
+        <Button Command="{Binding CloseCommand}" Background="#555555" Padding="20,10" CornerRadius="6"
+                HorizontalAlignment="Center" Margin="0,10,0,0">
+          <TextBlock Text="닫기" Foreground="White" FontSize="13"/>
+        </Button>
+      </StackPanel>
+    </Border>
+
+    <!-- 메인 컨텐츠 -->
+    <Grid IsVisible="{Binding HasPermission}" RowDefinitions="Auto,*">
+      <!-- 헤더 -->
+      <Border Grid.Row="0" Background="#1A1A1A" Padding="10">
+        <Grid ColumnDefinitions="Auto,*">
+          <Button Grid.Column="0" Command="{Binding CloseCommand}"
+                  Background="Transparent" Padding="8,4">
+            <TextBlock Text="← 뒤로" Foreground="White" FontSize="14"/>
+          </Button>
+          <TextBlock Grid.Column="1" Text="🗓️ 일정 생성" FontSize="16" Foreground="White"
+                     HorizontalAlignment="Center" VerticalAlignment="Center" Margin="-50,0,0,0"/>
+        </Grid>
+      </Border>
+
+      <!-- 폼 컨텐츠 -->
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="16" Spacing="16">
+          <!-- 현재 사용자 정보 -->
+          <Border Background="#FF980020" CornerRadius="8" Padding="12">
+            <TextBlock Text="{Binding CurrentUserDisplay}" FontSize="14" Foreground="#FF9800"
+                       HorizontalAlignment="Center"/>
+          </Border>
+
+          <!-- 로딩 -->
+          <TextBlock Text="로딩중..." IsVisible="{Binding IsLoading}"
+                     Foreground="#888888" HorizontalAlignment="Center" FontSize="13"/>
+
+          <!-- 성공 메시지 -->
+          <Border Background="#2E7D32" CornerRadius="6" Padding="10"
+                  IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding SuccessMessage}" Foreground="White" FontSize="12"
+                       HorizontalAlignment="Center"/>
+          </Border>
+
+          <!-- 에러 메시지 -->
+          <Border Background="#C62828" CornerRadius="6" Padding="10"
+                  IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="White" FontSize="12"
+                       HorizontalAlignment="Center" TextWrapping="Wrap"/>
+          </Border>
+
+          <!-- 새 일정 생성 섹션 -->
+          <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
+            <StackPanel Spacing="14">
+              <TextBlock Text="새 일정 생성" FontSize="15" Foreground="White" FontWeight="Bold"/>
+
+              <!-- 지자체 (시/도) -->
+              <StackPanel Spacing="4">
+                <TextBlock Text="지자체 (시/도)" Foreground="#AAAAAA" FontSize="12"/>
+                <ComboBox ItemsSource="{Binding Regions}"
+                          SelectedItem="{Binding SelectedRegion}"
+                          Background="#333333"
+                          Foreground="White"
+                          HorizontalAlignment="Stretch"
+                          PlaceholderText="시/도 선택">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+
+              <!-- 지자체 (구/군) -->
+              <StackPanel Spacing="4">
+                <TextBlock Text="지자체 (구/군)" Foreground="#AAAAAA" FontSize="12"/>
+                <ComboBox ItemsSource="{Binding Districts}"
+                          SelectedItem="{Binding SelectedDistrict}"
+                          Background="#333333"
+                          Foreground="White"
+                          HorizontalAlignment="Stretch"
+                          PlaceholderText="구/군 선택"
+                          IsEnabled="{Binding SelectedRegion, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+
+              <!-- 담당대대 -->
+              <StackPanel Spacing="4">
+                <TextBlock Text="담당대대" Foreground="#AAAAAA" FontSize="12"/>
+                <ComboBox ItemsSource="{Binding Battalions}"
+                          SelectedItem="{Binding SelectedBattalion}"
+                          Background="#333333"
+                          Foreground="White"
+                          HorizontalAlignment="Stretch"
+                          PlaceholderText="대대 선택">
+                  <ComboBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding Name}"/>
+                    </DataTemplate>
+                  </ComboBox.ItemTemplate>
+                </ComboBox>
+              </StackPanel>
+
+              <!-- 업체 검색 -->
+              <StackPanel Spacing="4">
+                <TextBlock Text="업체 검색" Foreground="#AAAAAA" FontSize="12"/>
+
+                <!-- 선택된 업체가 없을 때: 검색 입력 -->
+                <Grid IsVisible="{Binding SelectedCompany, Converter={x:Static ObjectConverters.IsNull}}">
+                  <TextBox Text="{Binding CompanySearchText}"
+                           Watermark="{Binding CompanySearchPlaceholder}"
+                           Background="#333333"
+                           Foreground="White"
+                           Padding="10"
+                           IsEnabled="{Binding SelectedDistrict, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                </Grid>
+
+                <!-- 선택된 업체가 있을 때: 선택된 업체 표시 -->
+                <Border Background="#333333" CornerRadius="6" Padding="10"
+                        IsVisible="{Binding SelectedCompany, Converter={x:Static ObjectConverters.IsNotNull}}">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Grid.Column="0" Spacing="2">
+                      <TextBlock Text="{Binding SelectedCompany.Name}" FontSize="14" Foreground="White"/>
+                      <TextBlock Text="{Binding SelectedCompany.Address}" FontSize="11" Foreground="#888888"
+                                 TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+                    <Button Grid.Column="1" Command="{Binding ClearCompanySelectionCommand}"
+                            Background="Transparent" Padding="8,4" VerticalAlignment="Center">
+                      <TextBlock Text="✕" FontSize="14" Foreground="#888888"/>
+                    </Button>
+                  </Grid>
+                </Border>
+
+                <!-- 검색 결과 목록 -->
+                <Border Background="#2A2A2A" CornerRadius="6" Padding="4"
+                        IsVisible="{Binding ShowCompanySearchResults}"
+                        MaxHeight="200">
+                  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding SearchedCompanies}">
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                          <Button Command="{Binding $parent[ItemsControl].((vm:ScheduleCreateViewModel)DataContext).SelectCompanyCommand}"
+                                  CommandParameter="{Binding}"
+                                  Background="Transparent"
+                                  HorizontalAlignment="Stretch"
+                                  HorizontalContentAlignment="Stretch"
+                                  Padding="8,6"
+                                  Margin="0,2">
+                            <StackPanel Spacing="2">
+                              <TextBlock Text="{Binding Name}" FontSize="13" Foreground="White"/>
+                              <TextBlock Text="{Binding Address}" FontSize="10" Foreground="#888888"
+                                         TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                          </Button>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                  </ScrollViewer>
+                </Border>
+
+                <!-- 검색 안내 -->
+                <TextBlock Text="2글자 이상 입력하면 해당 지역의 업체를 검색합니다."
+                           FontSize="10" Foreground="#666666"
+                           IsVisible="{Binding SelectedCompany, Converter={x:Static ObjectConverters.IsNull}}"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- 자동 연결 정보 -->
+          <Border Background="#1A1A1A" CornerRadius="10" Padding="16"
+                  IsVisible="{Binding ShowAutoInfo}">
+            <StackPanel Spacing="12">
+              <TextBlock Text="👁️ 자동 연결 정보" FontSize="14" Foreground="#888888"/>
+
+              <!-- 업체 정보 -->
+              <StackPanel Spacing="4"
+                          IsVisible="{Binding SelectedCompany, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="업체 정보" FontSize="12" Foreground="#666666"/>
+                <TextBlock Text="{Binding CompanyAddress}" FontSize="13" Foreground="#4CAF50"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding CompanyAddress, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <TextBlock Text="{Binding CompanyProducts}" FontSize="13" Foreground="#FF9800"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding CompanyProducts, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+              </StackPanel>
+
+              <!-- 지자체담당자 정보 -->
+              <StackPanel Spacing="4"
+                          IsVisible="{Binding SelectedDistrict, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="지자체담당자" FontSize="12" Foreground="#666666"/>
+                <Panel>
+                  <TextBlock Text="{Binding LocalUserName}" FontSize="13" Foreground="#2196F3"
+                             IsVisible="{Binding HasLocalUser}"/>
+                  <TextBlock Text="{Binding LocalUserName}" FontSize="13" Foreground="#F44336"
+                             IsVisible="{Binding !HasLocalUser}"/>
+                </Panel>
+                <TextBlock Text="{Binding LocalUserPhone}" FontSize="12" Foreground="#888888"
+                           IsVisible="{Binding HasLocalUser}"/>
+              </StackPanel>
+
+              <!-- 대대담당자 정보 -->
+              <StackPanel Spacing="4"
+                          IsVisible="{Binding SelectedBattalion, Converter={x:Static ObjectConverters.IsNotNull}}">
+                <TextBlock Text="대대담당자" FontSize="12" Foreground="#666666"/>
+                <Panel>
+                  <TextBlock Text="{Binding MilitaryUserName}" FontSize="13" Foreground="#FF9800"
+                             IsVisible="{Binding HasMilitaryUser}"/>
+                  <TextBlock Text="{Binding MilitaryUserName}" FontSize="13" Foreground="#F44336"
+                             IsVisible="{Binding !HasMilitaryUser}"/>
+                </Panel>
+                <TextBlock Text="{Binding MilitaryUserPhone}" FontSize="12" Foreground="#888888"
+                           IsVisible="{Binding HasMilitaryUser}"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- 일정 생성 버튼 -->
+          <Panel Margin="0,8,0,0">
+            <Button Command="{Binding CreateScheduleCommand}"
+                    Background="#FF9800"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="16"
+                    CornerRadius="8"
+                    IsVisible="{Binding CanCreate}">
+              <TextBlock Text="일정 생성" FontSize="16" Foreground="White" FontWeight="Bold"/>
+            </Button>
+            <Button Background="#555555"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Padding="16"
+                    CornerRadius="8"
+                    IsEnabled="False"
+                    IsVisible="{Binding !CanCreate}">
+              <TextBlock Text="일정 생성" FontSize="16" Foreground="#888888" FontWeight="Bold"/>
+            </Button>
+          </Panel>
+
+          <!-- 안내 문구 -->
+          <TextBlock Text="일정이 생성되면 지자체담당자에게 알림이 발송됩니다."
+                     FontSize="11" Foreground="#666666" HorizontalAlignment="Center"
+                     TextWrapping="Wrap"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
   </Grid>
 </UserControl>

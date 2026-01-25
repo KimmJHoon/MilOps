@@ -36,6 +36,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isCompanyRegisterOpen = false;
 
+    // 일정 생성 화면 표시 여부
+    [ObservableProperty]
+    private bool _isScheduleCreateOpen = false;
+
     // 역할별 플래그
     [ObservableProperty]
     private bool _isSuperAdmin = false;
@@ -242,5 +246,17 @@ public partial class MainViewModel : ViewModelBase
     {
         IsScheduleInputOpen = false;
         System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleInput");
+    }
+
+    [RelayCommand]
+    public void OpenScheduleCreate()
+    {
+        IsScheduleCreateOpen = true;
+    }
+
+    [RelayCommand]
+    public void CloseScheduleCreate()
+    {
+        IsScheduleCreateOpen = false;
     }
 }
