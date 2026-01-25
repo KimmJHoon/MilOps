@@ -39,9 +39,6 @@ public partial class AppShell : UserControl
             };
         }
 
-        // 로그아웃 이벤트 연결
-        MainViewControl.LogoutRequested += OnLogout;
-
         // 초대코드 입력 화면 설정
         SetupInviteCodeView();
 
@@ -263,20 +260,4 @@ public partial class AppShell : UserControl
         System.Diagnostics.Debug.WriteLine("[AppShell] OnLoginSuccess completed");
     }
 
-    private void OnLogout()
-    {
-        MainViewControl.IsVisible = false;
-        InviteCodeViewControl.IsVisible = false;
-        InviteAcceptViewControl.IsVisible = false;
-        LoginViewControl.IsVisible = true;
-
-        // 로그인 폼 초기화
-        if (LoginViewControl.DataContext is LoginViewModel loginVm)
-        {
-            loginVm.UserId = "";
-            loginVm.Password = "";
-            loginVm.ErrorMessage = "";
-            loginVm.HasError = false;
-        }
-    }
 }

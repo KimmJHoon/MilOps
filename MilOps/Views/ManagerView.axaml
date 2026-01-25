@@ -164,23 +164,25 @@
                     HorizontalAlignment="Stretch"/>
         </StackPanel>
 
-        <!-- 소속 (텍스트 입력 - 대대담당자 초대 모드) -->
-        <StackPanel Spacing="5" IsVisible="{Binding ShowBattalionTextInput}">
+        <!-- 소속 (텍스트 입력 - 사단/대대 직접 입력 모드) -->
+        <StackPanel Spacing="5" IsVisible="{Binding ShowAffiliationTextInput}">
           <TextBlock Text="{Binding AffiliationLabel}" Foreground="#AAAAAA" FontSize="13"/>
           <Grid ColumnDefinitions="*,Auto">
             <TextBox Grid.Column="0"
-                     Text="{Binding NewBattalionName}"
-                     Watermark="예: 101"
+                     Text="{Binding NewAffiliationText}"
+                     Watermark="예: 31"
                      Background="#333333"
                      Foreground="White"
-                     Padding="10"/>
+                     Padding="10"
+                     MaxLength="5"/>
             <TextBlock Grid.Column="1"
-                       Text=" 대대"
+                       Text="{Binding AffiliationSuffix}"
                        Foreground="White"
                        FontSize="14"
                        VerticalAlignment="Center"
                        Margin="8,0,0,0"/>
           </Grid>
+          <TextBlock Text="* 최대 5자리 숫자까지 입력 가능" Foreground="#666666" FontSize="11"/>
         </StackPanel>
 
         <!-- 이름 -->
