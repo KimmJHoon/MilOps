@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
 using MilOps.ViewModels;
 using System;
@@ -21,6 +22,67 @@ public partial class MainView : UserControl
         DataContext = _viewModel;
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
+
+        // View 이벤트 연결
+        SetupCompanyRegisterView();
+        SetupScheduleCreateView();
+    }
+
+    private void SetupCompanyRegisterView()
+    {
+        // CompanyRegisterView의 CloseRequested 이벤트 구독
+        CompanyRegisterView.CloseRequested += OnCompanyRegisterCloseRequested;
+    }
+
+    private void SetupScheduleCreateView()
+    {
+        // ScheduleCreateView의 CloseRequested 이벤트 구독
+        ScheduleCreateView.CloseRequested += OnScheduleCreateCloseRequested;
+        ScheduleCreateView.ScheduleCreated += OnScheduleCreated;
+    }
+
+    private void OnCompanyRegisterCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseCompanyRegisterCommand.Execute(null);
+    }
+
+    private void OnScheduleCreateCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseScheduleCreateCommand.Execute(null);
+    }
+
+    private void OnScheduleCreated(object? sender, EventArgs e)
+    {
+        // 일정 생성 완료 시 화면 닫기 및 목록 새로고침
+        _viewModel.CloseScheduleCreateCommand.Execute(null);
+
+        // ScheduleListView 새로고침
+        RefreshScheduleList();
+    }
+
+    /// <summary>
+    /// 일정 목록 새로고침
+    /// </summary>
+    public void RefreshScheduleList()
+    {
+        ScheduleListView.ViewModel?.RefreshCommand.Execute(null);
+        System.Diagnostics.Debug.WriteLine("[MainView] RefreshScheduleList called");
+    }
+
+    /// <summary>
+    /// 업체 등록 화면 열기 (외부에서 호출 가능)
+    /// </summary>
+    public void OpenCompanyRegister()
+    {
+        _viewModel.OpenCompanyRegisterCommand.Execute(null);
+    }
+
+    /// <summary>
+    /// 일정 생성 화면 열기 (외부에서 호출 가능)
+    /// </summary>
+    public void OpenScheduleCreate()
+    {
+        _viewModel.OpenScheduleCreateCommand.Execute(null);
     }
 
     /// <summary>

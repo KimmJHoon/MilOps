@@ -42,7 +42,7 @@
         <views:CalendarView/>
       </Border>
       <Border IsVisible="{Binding IsScheduleSelected}">
-        <views:ScheduleListView/>
+        <views:ScheduleListView x:Name="ScheduleListView"/>
       </Border>
       <Border IsVisible="{Binding IsManagerSelected}">
         <views:ManagerView/>
