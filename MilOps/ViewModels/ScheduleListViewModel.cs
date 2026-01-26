@@ -87,6 +87,18 @@ public partial class ScheduleListViewModel : ViewModelBase
     [ObservableProperty]
     private bool _showEmptyMessage = false;
 
+    // 삭제 확인 모달
+    [ObservableProperty]
+    private bool _showDeleteModal = false;
+
+    [ObservableProperty]
+    private string _deleteModalCompanyName = "";
+
+    [ObservableProperty]
+    private string _deleteModalBattalionName = "";
+
+    private ScheduleListItem? _pendingDeleteItem;
+
     // 캐시된 조직 데이터
     private Dictionary<Guid, string> _companyNames = new();
     private Dictionary<Guid, string> _battalionNames = new();
@@ -440,7 +452,11 @@ public partial class ScheduleListViewModel : ViewModelBase
             item.ActionText = GetActionText(schedule, currentUser);
             item.ActionIcon = GetActionIcon(schedule, currentUser);
             item.ShowConfirmStatus = schedule.Status == "reserved";
-            item.CanDelete = currentUser.Role == "middle_military" && schedule.Status == "created";
+            // 사단담당자가 생성됨 상태의 일정만 삭제 가능
+            item.CanDelete = currentUser.Role == "middle_military"
+                && schedule.Status == "created";
+
+            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] CreateScheduleListItem - Schedule: {schedule.Id}, Status: {schedule.Status}, Role: {currentUser.Role}, CanDelete: {item.CanDelete}");
 
             // 확정 상태 설정
             if (schedule.Status == "reserved")
@@ -510,7 +526,7 @@ public partial class ScheduleListViewModel : ViewModelBase
             ("reserved", "user_local") when schedule.LocalConfirmed => "⏳ 상대방 대기",
             ("reserved", "user_military") when schedule.MilitaryConfirmed => "⏳ 상대방 대기",
             ("confirmed", _) => "📄 상세보기",
-            ("created", "middle_military") => "🗑️ 삭제 가능",
+            ("created", "middle_military") => "🗑️ 삭제하기",
             _ => "📄 상세보기"
         };
     }
@@ -563,35 +579,59 @@ public partial class ScheduleListViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 일정 삭제 (사단담당자, 생성됨 상태만)
+    /// 일정 삭제 모달 표시 (사단담당자, 생성됨 상태만)
     /// </summary>
     [RelayCommand]
-    private async Task DeleteScheduleAsync(ScheduleListItem item)
+    private void DeleteSchedule(ScheduleListItem item)
     {
         if (item?.Schedule == null) return;
 
         var schedule = item.Schedule;
         var currentUser = AuthService.CurrentUser;
 
-        // 권한 확인
+        // 권한 확인: 사단담당자가 생성됨 상태의 일정만 삭제 가능
         if (currentUser?.Role != "middle_military" || schedule.Status != "created")
         {
-            System.Diagnostics.Debug.WriteLine("[ScheduleListVM] Delete not allowed");
+            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Delete not allowed - Role: {currentUser?.Role}, Status: {schedule.Status}");
             return;
         }
+
+        // 삭제 확인 모달 표시
+        _pendingDeleteItem = item;
+        DeleteModalCompanyName = item.CompanyName;
+        DeleteModalBattalionName = item.BattalionName;
+        ShowDeleteModal = true;
+    }
+
+    /// <summary>
+    /// 삭제 확인 (모달에서 확인 버튼 클릭)
+    /// </summary>
+    [RelayCommand]
+    private async Task ConfirmDeleteAsync()
+    {
+        ShowDeleteModal = false;
+
+        if (_pendingDeleteItem?.Schedule == null) return;
+
+        var schedule = _pendingDeleteItem.Schedule;
+        var currentUser = AuthService.CurrentUser;
+
+        if (currentUser == null) return;
 
         try
         {
             // Soft delete
+#pragma warning disable CS8603 // Possible null reference return
             await SupabaseService.Client.From<Schedule>()
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, schedule.Id.ToString())
                 .Set(s => s.DeletedAt, DateTime.UtcNow)
                 .Set(s => s.DeletedBy, currentUser.Id)
                 .Update();
+#pragma warning restore CS8603
 
             // 목록에서 제거
             _allSchedules.Remove(schedule);
-            Schedules.Remove(item);
+            Schedules.Remove(_pendingDeleteItem);
             UpdateStatusCounts();
 
             System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Schedule deleted: {schedule.Id}");
@@ -600,6 +640,20 @@ public partial class ScheduleListViewModel : ViewModelBase
         {
             System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Failed to delete schedule: {ex.Message}");
         }
+        finally
+        {
+            _pendingDeleteItem = null;
+        }
+    }
+
+    /// <summary>
+    /// 삭제 취소 (모달에서 취소 버튼 클릭)
+    /// </summary>
+    [RelayCommand]
+    private void CancelDelete()
+    {
+        ShowDeleteModal = false;
+        _pendingDeleteItem = null;
     }
 
     /// <summary>

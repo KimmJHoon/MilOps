@@ -5,6 +5,7 @@
              x:DataType="vm:ScheduleListViewModel">
 
   <Grid Background="#000000">
+    <!-- 메인 컨텐츠 -->
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel Margin="10" Spacing="10">
 
@@ -141,91 +142,158 @@
         <ItemsControl ItemsSource="{Binding Schedules}">
           <ItemsControl.ItemTemplate>
             <DataTemplate DataType="vm:ScheduleListItem">
-              <Button Command="{Binding $parent[ItemsControl].((vm:ScheduleListViewModel)DataContext).SelectScheduleCommand}"
-                      CommandParameter="{Binding}"
-                      Background="Transparent"
-                      Padding="0"
-                      Margin="0,4"
-                      HorizontalAlignment="Stretch"
-                      HorizontalContentAlignment="Stretch">
-                <Border Background="#1A1A1A" CornerRadius="8" Padding="12">
-                  <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+              <!-- 전체 컨테이너 Grid -->
+              <Grid Margin="0,4">
+                <!-- 메인 버튼 (일정 상세로 이동) -->
+                <Button Command="{Binding $parent[ItemsControl].((vm:ScheduleListViewModel)DataContext).SelectScheduleCommand}"
+                        CommandParameter="{Binding}"
+                        Background="Transparent"
+                        Padding="0"
+                        HorizontalAlignment="Stretch"
+                        HorizontalContentAlignment="Stretch">
+                  <Border Background="#1A1A1A" CornerRadius="8" Padding="12">
+                    <Grid RowDefinitions="Auto,Auto,Auto,Auto">
 
-                    <!-- Row 0: 업체명 + 상태 배지 -->
-                    <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                      <TextBlock Grid.Column="0" Text="{Binding CompanyName}"
-                                 FontSize="14" Foreground="White"
+                      <!-- Row 0: 업체명 + 상태 배지 -->
+                      <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
+                        <TextBlock Grid.Column="0" Text="{Binding CompanyName}"
+                                   FontSize="14" Foreground="White"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <Border Grid.Column="1" Background="{Binding StatusColor}"
+                                CornerRadius="4" Padding="8,3" Margin="8,0,0,0">
+                          <TextBlock Text="{Binding StatusDisplay}" FontSize="11" Foreground="White"/>
+                        </Border>
+                      </Grid>
+
+                      <!-- Row 1: 대대 정보 -->
+                      <TextBlock Grid.Row="1" Text="{Binding BattalionName}"
+                                 FontSize="12" Foreground="#AAAAAA" Margin="0,4,0,0"
                                  TextTrimming="CharacterEllipsis"/>
-                      <Border Grid.Column="1" Background="{Binding StatusColor}"
-                              CornerRadius="4" Padding="8,3" Margin="8,0,0,0">
-                        <TextBlock Text="{Binding StatusDisplay}" FontSize="11" Foreground="White"/>
-                      </Border>
-                    </Grid>
 
-                    <!-- Row 1: 대대 정보 -->
-                    <TextBlock Grid.Row="1" Text="{Binding BattalionName}"
-                               FontSize="12" Foreground="#AAAAAA" Margin="0,4,0,0"
-                               TextTrimming="CharacterEllipsis"/>
-
-                    <!-- Row 2: 예약 시간 (예약됨/확정됨 상태에서만) -->
-                    <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0"
-                                IsVisible="{Binding HasReservedTime}">
-                      <TextBlock Text="📅" FontSize="12"/>
-                      <TextBlock Text="{Binding ReservedTimeDisplay}"
-                                 FontSize="12" Foreground="#2196F3"/>
-                    </StackPanel>
-
-                    <!-- Row 3: 액션 영역 -->
-                    <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
-
-                      <!-- 확정 상태 표시 (예약됨 상태) -->
-                      <StackPanel Orientation="Horizontal" Spacing="8"
-                                  IsVisible="{Binding ShowConfirmStatus}">
-                        <StackPanel Orientation="Horizontal" Spacing="2">
-                          <TextBlock Text="🏛️" FontSize="11"/>
-                          <TextBlock Text="{Binding LocalConfirmStatus}" FontSize="11"/>
-                        </StackPanel>
-                        <TextBlock Text="|" Foreground="#444444" FontSize="11"/>
-                        <StackPanel Orientation="Horizontal" Spacing="2">
-                          <TextBlock Text="🎖️" FontSize="11"/>
-                          <TextBlock Text="{Binding MilitaryConfirmStatus}" FontSize="11"/>
-                        </StackPanel>
+                      <!-- Row 2: 예약 시간 (예약됨/확정됨 상태에서만) -->
+                      <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="0,6,0,0"
+                                  IsVisible="{Binding HasReservedTime}">
+                        <TextBlock Text="📅" FontSize="12"/>
+                        <TextBlock Text="{Binding ReservedTimeDisplay}"
+                                   FontSize="12" Foreground="#2196F3"/>
                       </StackPanel>
 
-                      <!-- 미확정 정보 (중간관리자용) -->
-                      <TextBlock Text="{Binding UnconfirmedInfo}"
-                                 FontSize="11" Foreground="#FF9800"
-                                 TextTrimming="CharacterEllipsis"
-                                 IsVisible="{Binding UnconfirmedInfo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                      <!-- Row 3: 액션 영역 -->
+                      <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Margin="0,8,0,0">
 
-                      <!-- 액션 텍스트 -->
-                      <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                        <TextBlock Text="{Binding ActionIcon}" Foreground="#2196F3" FontSize="12"/>
-                        <TextBlock Text="{Binding ActionText}" Foreground="#2196F3" FontSize="12"/>
-                      </StackPanel>
+                        <!-- 확정 상태 표시 (예약됨 상태) -->
+                        <StackPanel Orientation="Horizontal" Spacing="8"
+                                    IsVisible="{Binding ShowConfirmStatus}">
+                          <StackPanel Orientation="Horizontal" Spacing="2">
+                            <TextBlock Text="🏛️" FontSize="11"/>
+                            <TextBlock Text="{Binding LocalConfirmStatus}" FontSize="11"/>
+                          </StackPanel>
+                          <TextBlock Text="|" Foreground="#444444" FontSize="11"/>
+                          <StackPanel Orientation="Horizontal" Spacing="2">
+                            <TextBlock Text="🎖️" FontSize="11"/>
+                            <TextBlock Text="{Binding MilitaryConfirmStatus}" FontSize="11"/>
+                          </StackPanel>
+                        </StackPanel>
+
+                        <!-- 미확정 정보 (중간관리자용) -->
+                        <TextBlock Text="{Binding UnconfirmedInfo}"
+                                   FontSize="11" Foreground="#FF9800"
+                                   TextTrimming="CharacterEllipsis"
+                                   IsVisible="{Binding UnconfirmedInfo, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+
+                        <!-- 액션 텍스트 (삭제 불가능한 경우) -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4"
+                                    IsVisible="{Binding !CanDelete}">
+                          <TextBlock Text="{Binding ActionIcon}" Foreground="#2196F3" FontSize="12"/>
+                          <TextBlock Text="{Binding ActionText}" Foreground="#2196F3" FontSize="12"/>
+                        </StackPanel>
+
+                        <!-- 삭제하기 텍스트 (삭제 가능한 경우) -->
+                        <Button Grid.Column="1"
+                                Command="{Binding $parent[ItemsControl].((vm:ScheduleListViewModel)DataContext).DeleteScheduleCommand}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent"
+                                Padding="0"
+                                IsVisible="{Binding CanDelete}">
+                          <StackPanel Orientation="Horizontal" Spacing="4">
+                            <TextBlock Text="→" Foreground="#F44336" FontSize="12"/>
+                            <TextBlock Text="삭제하기" Foreground="#F44336" FontSize="12"/>
+                          </StackPanel>
+                        </Button>
+                      </Grid>
+
                     </Grid>
-
-                    <!-- 삭제 버튼 (사단담당자, 생성됨 상태만) -->
-                    <Button Grid.Row="0" Grid.RowSpan="4"
-                            Command="{Binding $parent[ItemsControl].((vm:ScheduleListViewModel)DataContext).DeleteScheduleCommand}"
-                            CommandParameter="{Binding}"
-                            Background="Transparent"
-                            HorizontalAlignment="Right"
-                            VerticalAlignment="Top"
-                            Padding="4"
-                            Margin="0,-4,-4,0"
-                            IsVisible="{Binding CanDelete}">
-                      <TextBlock Text="🗑️" FontSize="14"/>
-                    </Button>
-
-                  </Grid>
-                </Border>
-              </Button>
+                  </Border>
+                </Button>
+              </Grid>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
       </StackPanel>
     </ScrollViewer>
+
+    <!-- 삭제 확인 모달 오버레이 -->
+    <Grid IsVisible="{Binding ShowDeleteModal}">
+      <!-- 배경 오버레이 -->
+      <Border Background="#000000" Opacity="0.7"/>
+
+      <!-- 모달 다이얼로그 -->
+      <Border Background="#1A1A1A" CornerRadius="16"
+              Padding="24" Margin="32"
+              VerticalAlignment="Center"
+              HorizontalAlignment="Stretch">
+        <StackPanel Spacing="20">
+          <!-- 제목 -->
+          <TextBlock Text="일정을 삭제하시겠습니까?"
+                     FontSize="18" Foreground="White" FontWeight="Bold"
+                     HorizontalAlignment="Center"/>
+
+          <!-- 일정 정보 -->
+          <Border Background="#252525" CornerRadius="10" Padding="16">
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="업체:"
+                           FontSize="14" Foreground="#888888" Margin="0,0,16,8"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding DeleteModalCompanyName}"
+                           FontSize="14" Foreground="White" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="대대:"
+                           FontSize="14" Foreground="#888888" Margin="0,0,16,0"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding DeleteModalBattalionName}"
+                           FontSize="14" Foreground="White"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- 경고 메시지 -->
+          <Border Background="#5F2A2A" CornerRadius="8" Padding="12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+              <TextBlock Text="&#x26A0;" FontSize="14"/>
+              <TextBlock Text="삭제된 일정은 복구할 수 없습니다"
+                         FontSize="13" Foreground="#FF8888"/>
+            </StackPanel>
+          </Border>
+
+          <!-- 버튼 -->
+          <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+            <Button Grid.Column="0" Command="{Binding CancelDeleteCommand}"
+                    Background="#333333" CornerRadius="8"
+                    HorizontalAlignment="Stretch" Padding="16"
+                    HorizontalContentAlignment="Center"
+                    Margin="0,0,8,0">
+              <TextBlock Text="취소" FontSize="15" Foreground="White"/>
+            </Button>
+            <Button Grid.Column="1" Command="{Binding ConfirmDeleteCommand}"
+                    Background="#F44336" CornerRadius="8"
+                    HorizontalAlignment="Stretch" Padding="16"
+                    HorizontalContentAlignment="Center"
+                    Margin="8,0,0,0">
+              <TextBlock Text="삭제" FontSize="15" Foreground="White"/>
+            </Button>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
   </Grid>
 </UserControl>

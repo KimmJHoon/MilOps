@@ -434,6 +434,7 @@ public partial class ScheduleInputViewModel : ViewModelBase
         }
 
         // 1. 일정 업데이트
+#pragma warning disable CS8603 // Possible null reference return
         await client.From<Schedule>()
             .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
             .Set(s => s.AvailableStart, AvailableStartDate.Value)
@@ -442,6 +443,7 @@ public partial class ScheduleInputViewModel : ViewModelBase
             .Set(s => s.Status, "inputted")
             .Set(s => s.StatusOrder, 2)
             .Update();
+#pragma warning restore CS8603
 
         // 2. 기존 가능 시간 삭제
         await client.From<ScheduleAvailableTime>()

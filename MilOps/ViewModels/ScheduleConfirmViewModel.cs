@@ -521,11 +521,13 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
             {
                 // 지자체담당자 확정
                 System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Updating LocalConfirmed to true");
+#pragma warning disable CS8603 // Possible null reference return
                 await client.From<Schedule>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
                     .Set(s => s.LocalConfirmed, true)
                     .Set(s => s.LocalConfirmedAt, now)
                     .Update();
+#pragma warning restore CS8603
 
                 _schedule.LocalConfirmed = true;
                 _schedule.LocalConfirmedAt = now;
@@ -534,11 +536,13 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
             {
                 // 대대담당자 확정
                 System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Updating MilitaryConfirmed to true");
+#pragma warning disable CS8603 // Possible null reference return
                 await client.From<Schedule>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
                     .Set(s => s.MilitaryConfirmed, true)
                     .Set(s => s.MilitaryConfirmedAt, now)
                     .Update();
+#pragma warning restore CS8603
 
                 _schedule.MilitaryConfirmed = true;
                 _schedule.MilitaryConfirmedAt = now;
@@ -559,12 +563,14 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
             if (bothConfirmed)
             {
                 System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Updating status to confirmed");
+#pragma warning disable CS8603 // Possible null reference return
                 await client.From<Schedule>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
                     .Set(s => s.Status, "confirmed")
                     .Set(s => s.StatusOrder, 4)
                     .Set(s => s.ConfirmedAt, now)
                     .Update();
+#pragma warning restore CS8603
 
                 _schedule.Status = "confirmed";
                 _schedule.StatusOrder = 4;
