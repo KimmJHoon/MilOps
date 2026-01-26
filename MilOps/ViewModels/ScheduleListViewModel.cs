@@ -115,9 +115,23 @@ public partial class ScheduleListViewModel : ViewModelBase
 
     private async Task InitializeAsync()
     {
-        DetermineUserRole();
-        await LoadCacheDataAsync();
-        await LoadSchedulesAsync();
+        try
+        {
+            // 로그인되지 않은 상태면 초기화 중단
+            if (AuthService.CurrentUser == null)
+            {
+                System.Diagnostics.Debug.WriteLine("[ScheduleListVM] InitializeAsync skipped - no current user");
+                return;
+            }
+
+            DetermineUserRole();
+            await LoadCacheDataAsync();
+            await LoadSchedulesAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] InitializeAsync error: {ex.Message}");
+        }
     }
 
     /// <summary>

@@ -12,26 +12,14 @@ using System.Threading.Tasks;
 namespace MilOps.ViewModels;
 
 /// <summary>
-/// 일정 입력/예약 ViewModel
-/// - 지자체담당자(user_local): 가능 일자/시간 입력
-/// - 대대담당자(user_military): 예약 일자/시간 선택
+/// 일정 입력 ViewModel (지자체담당자/user_local 전용)
+/// - 가능 일자/시간 입력
 /// </summary>
 public partial class ScheduleInputViewModel : ViewModelBase
 {
     // 현재 일정
     private Schedule? _schedule;
     private Guid _scheduleId;
-
-    // 현재 모드 (input: 지자체담당자 입력, reserve: 대대담당자 예약)
-    [ObservableProperty]
-    private string _currentMode = "input";
-
-    // 탭 선택 상태
-    [ObservableProperty]
-    private bool _isInputTabSelected = true;
-
-    [ObservableProperty]
-    private bool _isReserveTabSelected = false;
 
     // 로딩 상태
     [ObservableProperty]
@@ -55,20 +43,10 @@ public partial class ScheduleInputViewModel : ViewModelBase
     private string _companyName = "";
 
     [ObservableProperty]
-    private string _companyAddress = "";
-
-    [ObservableProperty]
     private string _companyProducts = "";
 
     [ObservableProperty]
     private string _battalionName = "";
-
-    // 지자체담당자 정보
-    [ObservableProperty]
-    private string _localUserName = "";
-
-    [ObservableProperty]
-    private string _localUserPhone = "";
 
     // 대대담당자 정보
     [ObservableProperty]
@@ -77,12 +55,23 @@ public partial class ScheduleInputViewModel : ViewModelBase
     [ObservableProperty]
     private string _militaryUserPhone = "";
 
-    // === 지자체담당자용: 가능 일자 입력 ===
+    // === 가능 일자 입력 ===
     [ObservableProperty]
-    private DateTimeOffset _availableStartDate = DateTimeOffset.Now.AddDays(1);
+    private DateTime? _availableStartDate;
 
     [ObservableProperty]
-    private DateTimeOffset _availableEndDate = DateTimeOffset.Now.AddDays(7);
+    private DateTime? _availableEndDate;
+
+    // 종료일 최소값 (시작일 기준)
+    [ObservableProperty]
+    private DateTime _minEndDate = DateTime.Now;
+
+    // 날짜 유효성 검사
+    [ObservableProperty]
+    private bool _hasDateValidationError = false;
+
+    [ObservableProperty]
+    private string _dateValidationMessage = "";
 
     // 가능 시간 슬롯 (선택 가능한 시간대)
     [ObservableProperty]
@@ -95,26 +84,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
     // 메모
     [ObservableProperty]
     private string _memo = "";
-
-    // === 대대담당자용: 예약 일자/시간 선택 ===
-    [ObservableProperty]
-    private ObservableCollection<DateItem> _availableDates = new();
-
-    [ObservableProperty]
-    private DateItem? _selectedDate;
-
-    [ObservableProperty]
-    private ObservableCollection<TimeSlotItem> _availableTimeSlotsForDate = new();
-
-    [ObservableProperty]
-    private TimeSlotItem? _selectedTimeSlot;
-
-    // 예약 정보 표시
-    [ObservableProperty]
-    private string _reservationDisplay = "";
-
-    [ObservableProperty]
-    private bool _showReservationDisplay = false;
 
     // 에러/성공 메시지
     [ObservableProperty]
@@ -131,9 +100,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
     [ObservableProperty]
     private bool _canInput = false;
 
-    [ObservableProperty]
-    private bool _canReserve = false;
-
     // 이벤트
     public event EventHandler? CloseRequested;
     public event EventHandler? ScheduleUpdated;
@@ -141,6 +107,10 @@ public partial class ScheduleInputViewModel : ViewModelBase
     public ScheduleInputViewModel()
     {
         InitializeTimeSlots();
+        // 기본 시작일을 내일로 설정
+        AvailableStartDate = DateTime.Now.Date.AddDays(1);
+        AvailableEndDate = DateTime.Now.Date.AddDays(7);
+        MinEndDate = AvailableStartDate ?? DateTime.Now.Date;
     }
 
     /// <summary>
@@ -166,18 +136,14 @@ public partial class ScheduleInputViewModel : ViewModelBase
     public async Task InitializeAsync(Guid scheduleId, string mode)
     {
         _scheduleId = scheduleId;
-        CurrentMode = mode;
-        IsInputTabSelected = mode == "input";
-        IsReserveTabSelected = mode == "reserve";
 
         var currentUser = AuthService.CurrentUser;
         if (currentUser == null) return;
 
         CurrentUserRole = currentUser.Role;
 
-        // 권한 설정
+        // 권한 설정 (user_local만 입력 가능)
         CanInput = currentUser.Role == "user_local";
-        CanReserve = currentUser.Role == "user_military";
 
         await LoadScheduleAsync();
     }
@@ -227,7 +193,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
             if (company != null)
             {
                 CompanyName = company.Name;
-                CompanyAddress = company.Address;
                 CompanyProducts = company.Products ?? "";
 
                 // District 로드
@@ -252,13 +217,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
                         }
                     }
                 }
-            }
-
-            // 지자체담당자 정보
-            if (localUser != null)
-            {
-                LocalUserName = localUser.FullDisplayName;
-                LocalUserPhone = localUser.Phone ?? "";
             }
 
             // 대대담당자 정보
@@ -290,22 +248,9 @@ public partial class ScheduleInputViewModel : ViewModelBase
 
             // 현재 사용자 표시 설정
             var currentUser = AuthService.CurrentUser;
-            if (currentUser != null)
+            if (currentUser != null && localUser != null)
             {
-                if (currentUser.Role == "user_local")
-                {
-                    CurrentUserDisplay = $"{localUser?.FullDisplayName ?? ""} ({RegionName} {DistrictName} 지자체담당자)";
-                }
-                else if (currentUser.Role == "user_military")
-                {
-                    CurrentUserDisplay = $"{militaryUser?.FullDisplayName ?? ""} ({BattalionName} 대대담당자)";
-                }
-            }
-
-            // 기존 입력된 가능 시간 로드 (대대담당자 예약 모드에서)
-            if (CurrentMode == "reserve" && _schedule.Status == "inputted")
-            {
-                await LoadAvailableTimesAsync();
+                CurrentUserDisplay = $"{localUser.FullDisplayName} ({RegionName} {DistrictName} 지자체담당자)";
             }
 
             // 기존 메모 로드
@@ -314,12 +259,15 @@ public partial class ScheduleInputViewModel : ViewModelBase
             // 기존 가능 일자 로드 (지자체담당자가 이미 입력한 경우)
             if (_schedule.AvailableStart.HasValue)
             {
-                AvailableStartDate = new DateTimeOffset(_schedule.AvailableStart.Value);
+                AvailableStartDate = _schedule.AvailableStart.Value;
             }
             if (_schedule.AvailableEnd.HasValue)
             {
-                AvailableEndDate = new DateTimeOffset(_schedule.AvailableEnd.Value);
+                AvailableEndDate = _schedule.AvailableEnd.Value;
             }
+
+            // 기존 선택된 시간 슬롯 로드
+            await LoadExistingTimeSlotsAsync();
 
             ValidateCanSave();
         }
@@ -335,9 +283,9 @@ public partial class ScheduleInputViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 가능 시간 로드 (대대담당자 예약 모드)
+    /// 기존 선택된 시간 슬롯 로드
     /// </summary>
-    private async Task LoadAvailableTimesAsync()
+    private async Task LoadExistingTimeSlotsAsync()
     {
         try
         {
@@ -346,45 +294,34 @@ public partial class ScheduleInputViewModel : ViewModelBase
 
             var response = await client.From<ScheduleAvailableTime>()
                 .Filter("schedule_id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
-                .Order("available_date", Supabase.Postgrest.Constants.Ordering.Ascending)
                 .Get();
 
-            var times = response.Models;
+            var existingTimes = response.Models;
+            if (existingTimes.Count == 0) return;
 
-            // 날짜별로 그룹화
-            var dateGroups = times
-                .GroupBy(t => t.AvailableDate.Date)
-                .OrderBy(g => g.Key)
+            // 고유한 시간대 추출
+            var uniqueTimeSlots = existingTimes
+                .Select(t => new { t.StartTime, t.EndTime })
+                .Distinct()
                 .ToList();
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
+            // 기존 선택된 시간 슬롯 표시
+            foreach (var slot in TimeSlots)
             {
-                AvailableDates.Clear();
-                foreach (var group in dateGroups)
-                {
-                    AvailableDates.Add(new DateItem
-                    {
-                        Date = group.Key,
-                        DayDisplay = group.Key.Day.ToString() + "일",
-                        TimeSlots = group.Select(t => new TimeSlotItem
-                        {
-                            Id = t.Id,
-                            StartTime = t.StartTime,
-                            EndTime = t.EndTime,
-                            IsSelected = false
-                        }).ToList()
-                    });
-                }
-            });
+                slot.IsSelected = uniqueTimeSlots.Any(t =>
+                    t.StartTime == slot.StartTime && t.EndTime == slot.EndTime);
+            }
+
+            UpdateSelectedTimesDisplay();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleInputVM] LoadAvailableTimesAsync error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[ScheduleInputVM] LoadExistingTimeSlotsAsync error: {ex.Message}");
         }
     }
 
     /// <summary>
-    /// 시간 슬롯 토글 (지자체담당자)
+    /// 시간 슬롯 토글
     /// </summary>
     [RelayCommand]
     private void ToggleTimeSlot(TimeSlotItem slot)
@@ -413,70 +350,22 @@ public partial class ScheduleInputViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 날짜 선택 (대대담당자)
+    /// 날짜 유효성 검사
     /// </summary>
-    [RelayCommand]
-    private void SelectDate(DateItem dateItem)
+    private void ValidateDates()
     {
-        if (dateItem == null) return;
+        HasDateValidationError = false;
+        DateValidationMessage = "";
 
-        // 이전 선택 해제
-        foreach (var d in AvailableDates)
+        if (AvailableStartDate == null || AvailableEndDate == null)
         {
-            d.IsSelected = false;
+            return;
         }
 
-        dateItem.IsSelected = true;
-        SelectedDate = dateItem;
-
-        // 해당 날짜의 시간 슬롯 표시
-        AvailableTimeSlotsForDate.Clear();
-        foreach (var slot in dateItem.TimeSlots)
+        if (AvailableEndDate < AvailableStartDate)
         {
-            slot.IsSelected = false;
-            AvailableTimeSlotsForDate.Add(slot);
-        }
-
-        SelectedTimeSlot = null;
-        UpdateReservationDisplay();
-        ValidateCanSave();
-    }
-
-    /// <summary>
-    /// 시간 슬롯 선택 (대대담당자)
-    /// </summary>
-    [RelayCommand]
-    private void SelectTimeSlot(TimeSlotItem slot)
-    {
-        if (slot == null) return;
-
-        // 이전 선택 해제
-        foreach (var s in AvailableTimeSlotsForDate)
-        {
-            s.IsSelected = false;
-        }
-
-        slot.IsSelected = true;
-        SelectedTimeSlot = slot;
-
-        UpdateReservationDisplay();
-        ValidateCanSave();
-    }
-
-    /// <summary>
-    /// 예약 정보 표시 업데이트
-    /// </summary>
-    private void UpdateReservationDisplay()
-    {
-        if (SelectedDate != null && SelectedTimeSlot != null)
-        {
-            ReservationDisplay = $"{SelectedDate.Date:yyyy년 M월 d일} | {SelectedTimeSlot.TimeRangeDisplay}";
-            ShowReservationDisplay = true;
-        }
-        else
-        {
-            ReservationDisplay = "";
-            ShowReservationDisplay = false;
+            HasDateValidationError = true;
+            DateValidationMessage = "종료일은 시작일보다 이후여야 합니다.";
         }
     }
 
@@ -485,26 +374,19 @@ public partial class ScheduleInputViewModel : ViewModelBase
     /// </summary>
     private void ValidateCanSave()
     {
-        if (CurrentMode == "input")
-        {
-            // 지자체담당자: 가능 일자와 시간이 선택되어야 함
-            var hasSelectedTimes = TimeSlots.Any(t => t.IsSelected);
-            var validDateRange = AvailableStartDate <= AvailableEndDate;
-            CanSave = hasSelectedTimes && validDateRange && CanInput;
-        }
-        else if (CurrentMode == "reserve")
-        {
-            // 대대담당자: 날짜와 시간이 선택되어야 함
-            CanSave = SelectedDate != null && SelectedTimeSlot != null && CanReserve;
-        }
-        else
-        {
-            CanSave = false;
-        }
+        ValidateDates();
+
+        // 가능 일자와 시간이 선택되어야 함
+        var hasSelectedTimes = TimeSlots.Any(t => t.IsSelected);
+        var hasValidDates = AvailableStartDate != null &&
+                            AvailableEndDate != null &&
+                            !HasDateValidationError;
+
+        CanSave = hasSelectedTimes && hasValidDates && CanInput;
     }
 
     /// <summary>
-    /// 저장 (지자체담당자: 입력, 대대담당자: 예약)
+    /// 저장
     /// </summary>
     [RelayCommand]
     private async Task SaveAsync()
@@ -520,14 +402,7 @@ public partial class ScheduleInputViewModel : ViewModelBase
             var client = SupabaseService.Client;
             if (client == null || _schedule == null) return;
 
-            if (CurrentMode == "input")
-            {
-                await SaveInputAsync(client);
-            }
-            else if (CurrentMode == "reserve")
-            {
-                await SaveReserveAsync(client);
-            }
+            await SaveInputAsync(client);
         }
         catch (Exception ex)
         {
@@ -541,7 +416,7 @@ public partial class ScheduleInputViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 지자체담당자: 가능 일정 입력 저장
+    /// 가능 일정 입력 저장
     /// </summary>
     private async Task SaveInputAsync(Supabase.Client client)
     {
@@ -552,11 +427,17 @@ public partial class ScheduleInputViewModel : ViewModelBase
             return;
         }
 
+        if (AvailableStartDate == null || AvailableEndDate == null)
+        {
+            ErrorMessage = "가능한 일자를 선택해주세요.";
+            return;
+        }
+
         // 1. 일정 업데이트
         await client.From<Schedule>()
             .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
-            .Set(s => s.AvailableStart, AvailableStartDate.DateTime)
-            .Set(s => s.AvailableEnd, AvailableEndDate.DateTime)
+            .Set(s => s.AvailableStart, AvailableStartDate.Value)
+            .Set(s => s.AvailableEnd, AvailableEndDate.Value)
             .Set(s => s.Memo, string.IsNullOrWhiteSpace(Memo) ? null : Memo)
             .Set(s => s.Status, "inputted")
             .Set(s => s.StatusOrder, 2)
@@ -568,8 +449,8 @@ public partial class ScheduleInputViewModel : ViewModelBase
             .Delete();
 
         // 3. 새 가능 시간 생성 (선택된 날짜 범위 내 모든 날짜에 대해)
-        var startDate = AvailableStartDate.Date;
-        var endDate = AvailableEndDate.Date;
+        var startDate = AvailableStartDate.Value.Date;
+        var endDate = AvailableEndDate.Value.Date;
 
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
         {
@@ -595,72 +476,9 @@ public partial class ScheduleInputViewModel : ViewModelBase
         // 이벤트 발생
         ScheduleUpdated?.Invoke(this, EventArgs.Empty);
 
-        // 잠시 후 화면 닫기
-        await Task.Delay(1000);
+        // 잠시 후 화면 닫기 (일정 목록으로 돌아감)
+        await Task.Delay(500);
         CloseRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// 대대담당자: 예약 저장
-    /// </summary>
-    private async Task SaveReserveAsync(Supabase.Client client)
-    {
-        if (SelectedDate == null || SelectedTimeSlot == null)
-        {
-            ErrorMessage = "예약할 날짜와 시간을 선택해주세요.";
-            return;
-        }
-
-        // 1. 일정 업데이트
-        await client.From<Schedule>()
-            .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
-            .Set(s => s.ReservedDate, SelectedDate.Date)
-            .Set(s => s.ReservedStartTime, SelectedTimeSlot.StartTime)
-            .Set(s => s.ReservedEndTime, SelectedTimeSlot.EndTime)
-            .Set(s => s.Status, "reserved")
-            .Set(s => s.StatusOrder, 3)
-            .Update();
-
-        // 2. 선택된 시간 슬롯 표시
-        if (SelectedTimeSlot.Id != Guid.Empty)
-        {
-            await client.From<ScheduleAvailableTime>()
-                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, SelectedTimeSlot.Id.ToString())
-                .Set(t => t.IsSelected, true)
-                .Update();
-        }
-
-        SuccessMessage = "예약이 완료되었습니다.";
-        System.Diagnostics.Debug.WriteLine($"[ScheduleInputVM] Reserved: {SelectedDate.Date:yyyy-MM-dd} {SelectedTimeSlot.TimeRangeDisplay}");
-
-        // 이벤트 발생
-        ScheduleUpdated?.Invoke(this, EventArgs.Empty);
-
-        // 잠시 후 화면 닫기
-        await Task.Delay(1000);
-        CloseRequested?.Invoke(this, EventArgs.Empty);
-    }
-
-    /// <summary>
-    /// 탭 전환
-    /// </summary>
-    [RelayCommand]
-    private void SwitchTab(string tab)
-    {
-        if (tab == "input")
-        {
-            IsInputTabSelected = true;
-            IsReserveTabSelected = false;
-            CurrentMode = "input";
-        }
-        else if (tab == "reserve")
-        {
-            IsInputTabSelected = false;
-            IsReserveTabSelected = true;
-            CurrentMode = "reserve";
-        }
-
-        ValidateCanSave();
     }
 
     /// <summary>
@@ -672,12 +490,23 @@ public partial class ScheduleInputViewModel : ViewModelBase
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    partial void OnAvailableStartDateChanged(DateTimeOffset value)
+    partial void OnAvailableStartDateChanged(DateTime? value)
     {
+        // 시작일이 변경되면 종료일 최소값도 변경
+        if (value.HasValue)
+        {
+            MinEndDate = value.Value;
+
+            // 종료일이 시작일보다 이전이면 시작일과 같게 설정
+            if (AvailableEndDate.HasValue && AvailableEndDate.Value < value.Value)
+            {
+                AvailableEndDate = value.Value;
+            }
+        }
         ValidateCanSave();
     }
 
-    partial void OnAvailableEndDateChanged(DateTimeOffset value)
+    partial void OnAvailableEndDateChanged(DateTime? value)
     {
         ValidateCanSave();
     }
@@ -700,7 +529,7 @@ public partial class TimeSlotItem : ObservableObject
 }
 
 /// <summary>
-/// 날짜 아이템 (대대담당자 예약용)
+/// 날짜 아이템 (대대담당자 예약용 - 추후 ScheduleReserveViewModel에서 사용)
 /// </summary>
 public partial class DateItem : ObservableObject
 {
