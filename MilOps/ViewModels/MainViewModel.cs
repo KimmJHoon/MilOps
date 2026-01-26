@@ -58,12 +58,15 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isScheduleInputOpen = false;
 
-    // 일정 입력 화면에 전달할 데이터
+    [ObservableProperty]
+    private bool _isScheduleReserveOpen = false;
+
+    // 일정 입력/예약 화면에 전달할 데이터
     private Guid _scheduleInputId;
-    private string _scheduleInputMode = "input";
+    private Guid _scheduleReserveId;
 
     public Guid ScheduleInputId => _scheduleInputId;
-    public string ScheduleInputMode => _scheduleInputMode;
+    public Guid ScheduleReserveId => _scheduleReserveId;
 
     // 메뉴 표시 여부 (역할별)
     public bool ShowScheduleTab => IsUser || IsMiddleAdmin;  // 사용자, 중간관리자
@@ -224,13 +227,12 @@ public partial class MainViewModel : ViewModelBase
         System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleCreate");
     }
 
-    // === 일정 입력/예약 화면 ===
-    public void OpenScheduleInput(Guid scheduleId, string mode)
+    // === 일정 입력 화면 (지자체담당자용) ===
+    public void OpenScheduleInput(Guid scheduleId)
     {
         _scheduleInputId = scheduleId;
-        _scheduleInputMode = mode;
         IsScheduleInputOpen = true;
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleInput - scheduleId: {scheduleId}, mode: {mode}");
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleInput - scheduleId: {scheduleId}");
     }
 
     [RelayCommand]
@@ -238,5 +240,20 @@ public partial class MainViewModel : ViewModelBase
     {
         IsScheduleInputOpen = false;
         System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleInput");
+    }
+
+    // === 일정 예약 화면 (대대담당자용) ===
+    public void OpenScheduleReserve(Guid scheduleId)
+    {
+        _scheduleReserveId = scheduleId;
+        IsScheduleReserveOpen = true;
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleReserve - scheduleId: {scheduleId}");
+    }
+
+    [RelayCommand]
+    private void CloseScheduleReserve()
+    {
+        IsScheduleReserveOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleReserve");
     }
 }

@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using MilOps.Services;
 using MilOps.ViewModels;
 using System;
 using System.Threading.Tasks;
@@ -22,11 +23,12 @@ public partial class MainView : UserControl
         DataContext = _viewModel;
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
-        
+
         // View 이벤트 연결
         SetupCompanyRegisterView();
         SetupScheduleCreateView();
         SetupScheduleInputView();
+        SetupScheduleReserveView();
     }
 
     private void SetupCompanyRegisterView()
@@ -47,6 +49,13 @@ public partial class MainView : UserControl
         // ScheduleInputView의 이벤트 구독
         ScheduleInputView.CloseRequested += OnScheduleInputCloseRequested;
         ScheduleInputView.ScheduleUpdated += OnScheduleInputUpdated;
+    }
+
+    private void SetupScheduleReserveView()
+    {
+        // ScheduleReserveView의 이벤트 구독
+        ScheduleReserveView.CloseRequested += OnScheduleReserveCloseRequested;
+        ScheduleReserveView.ScheduleUpdated += OnScheduleReserveUpdated;
     }
 
     private void OnCompanyRegisterCloseRequested(object? sender, EventArgs e)
@@ -94,12 +103,32 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// 일정 입력/예약 화면 열기 (외부에서 호출 가능)
+    /// 일정 상세 화면 열기 (역할에 따라 입력 또는 예약 화면으로 분기)
     /// </summary>
     public async void OpenScheduleInput(Guid scheduleId, string mode)
     {
-        _viewModel.OpenScheduleInput(scheduleId, mode);
-        await ScheduleInputView.InitializeAsync(scheduleId, mode);
+        var currentUser = AuthService.CurrentUser;
+        if (currentUser == null) return;
+
+        System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - scheduleId: {scheduleId}, mode: {mode}, role: {currentUser.Role}");
+
+        // 역할에 따라 분기
+        if (currentUser.Role == "user_local")
+        {
+            // 지자체담당자 -> 일정 입력 화면
+            _viewModel.OpenScheduleInput(scheduleId);
+            await ScheduleInputView.InitializeAsync(scheduleId, "input");
+        }
+        else if (currentUser.Role == "user_military")
+        {
+            // 대대담당자 -> 일정 예약 화면
+            _viewModel.OpenScheduleReserve(scheduleId);
+            await ScheduleReserveView.InitializeAsync(scheduleId);
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Unsupported role: {currentUser.Role}");
+        }
     }
 
     private void OnScheduleInputCloseRequested(object? sender, EventArgs e)
@@ -111,6 +140,18 @@ public partial class MainView : UserControl
     {
         // 일정 업데이트 완료 시 화면 닫기 및 목록 새로고침
         _viewModel.CloseScheduleInputCommand.Execute(null);
+        RefreshScheduleList();
+    }
+
+    private void OnScheduleReserveCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseScheduleReserveCommand.Execute(null);
+    }
+
+    private void OnScheduleReserveUpdated(object? sender, EventArgs e)
+    {
+        // 예약 완료 시 화면 닫기 및 목록 새로고침
+        _viewModel.CloseScheduleReserveCommand.Execute(null);
         RefreshScheduleList();
     }
 
