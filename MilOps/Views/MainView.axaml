@@ -304,5 +304,13 @@
             VerticalAlignment="Stretch">
       <views:ScheduleReserveView x:Name="ScheduleReserveView"/>
     </Border>
+
+    <!-- 일정 확정 화면 오버레이 (양측 공통) -->
+    <Border Background="#000000"
+            IsVisible="{Binding IsScheduleConfirmOpen}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+      <views:ScheduleConfirmView x:Name="ScheduleConfirmView"/>
+    </Border>
   </Panel>
 </UserControl>

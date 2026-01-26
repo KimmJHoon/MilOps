@@ -5,9 +5,9 @@ using System.Threading.Tasks;
 
 namespace MilOps.Views;
 
-public partial class ScheduleReserveView : UserControl
+public partial class ScheduleConfirmView : UserControl
 {
-    private ScheduleReserveViewModel? _viewModel;
+    private ScheduleConfirmViewModel? _viewModel;
 
     // 이벤트: 화면 닫기 요청
     public event EventHandler? CloseRequested;
@@ -15,7 +15,7 @@ public partial class ScheduleReserveView : UserControl
     // 이벤트: 일정 상태 변경됨 (scheduleId, newStatus, newStatusOrder 전달)
     public event EventHandler<ScheduleStatusChangedEventArgs>? ScheduleStatusChanged;
 
-    public ScheduleReserveView()
+    public ScheduleConfirmView()
     {
         InitializeComponent();
     }
@@ -25,7 +25,7 @@ public partial class ScheduleReserveView : UserControl
     /// </summary>
     public async Task InitializeAsync(Guid scheduleId)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleReserveView] InitializeAsync - scheduleId: {scheduleId}");
+        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmView] InitializeAsync - scheduleId: {scheduleId}");
 
         // 기존 ViewModel 정리
         if (_viewModel != null)
@@ -35,7 +35,7 @@ public partial class ScheduleReserveView : UserControl
         }
 
         // 새 ViewModel 생성
-        _viewModel = new ScheduleReserveViewModel();
+        _viewModel = new ScheduleConfirmViewModel();
         _viewModel.CloseRequested += OnViewModelCloseRequested;
         _viewModel.ScheduleStatusChanged += OnViewModelScheduleStatusChanged;
         DataContext = _viewModel;
@@ -45,13 +45,13 @@ public partial class ScheduleReserveView : UserControl
 
     private void OnViewModelCloseRequested(object? sender, EventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleReserveView] CloseRequested from ViewModel");
+        System.Diagnostics.Debug.WriteLine("[ScheduleConfirmView] CloseRequested from ViewModel");
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnViewModelScheduleStatusChanged(object? sender, ScheduleStatusChangedEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleReserveView] ScheduleStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
+        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmView] ScheduleStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
         ScheduleStatusChanged?.Invoke(this, e);
     }
 

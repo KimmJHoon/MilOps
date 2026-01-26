@@ -429,6 +429,8 @@ public partial class ScheduleListViewModel : ViewModelBase
             DistrictName = GetDistrictNameFromUser(schedule.LocalUserId),
             LocalUserName = _userNames.GetValueOrDefault(schedule.LocalUserId, ""),
             MilitaryUserName = _userNames.GetValueOrDefault(schedule.MilitaryUserId, ""),
+            StatusDisplay = schedule.StatusDisplayName,
+            StatusColor = schedule.StatusColor,
         };
 
         // 역할에 따른 액션 텍스트 설정
@@ -643,6 +645,44 @@ public partial class ScheduleListViewModel : ViewModelBase
         _userNames.Clear();
         _userCache.Clear();
     }
+
+    /// <summary>
+    /// 특정 일정의 상태를 직접 업데이트 (리프레시 없이)
+    /// </summary>
+    public void UpdateScheduleStatus(Guid scheduleId, string newStatus, int newStatusOrder)
+    {
+        System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] UpdateScheduleStatus - id: {scheduleId}, status: {newStatus}, order: {newStatusOrder}");
+
+        // _allSchedules에서 해당 일정 찾아서 업데이트
+        var schedule = _allSchedules.FirstOrDefault(s => s.Id == scheduleId);
+        if (schedule != null)
+        {
+            schedule.Status = newStatus;
+            schedule.StatusOrder = newStatusOrder;
+            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Updated schedule in _allSchedules");
+        }
+
+        // Schedules 컬렉션에서 해당 아이템 찾아서 UI 갱신
+        var item = Schedules.FirstOrDefault(s => s.Schedule?.Id == scheduleId);
+        if (item != null)
+        {
+            item.Schedule.Status = newStatus;
+            item.Schedule.StatusOrder = newStatusOrder;
+            item.UpdateStatusDisplay();
+
+            // ActionText도 갱신
+            var currentUser = AuthService.CurrentUser;
+            if (currentUser != null)
+            {
+                item.ActionText = GetActionText(item.Schedule, currentUser);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Updated UI item - StatusDisplay: {item.StatusDisplay}");
+        }
+
+        // 상태별 카운트 갱신
+        UpdateStatusCounts();
+    }
 }
 
 /// <summary>
@@ -658,7 +698,9 @@ public partial class ScheduleListItem : ObservableObject
     public string LocalUserName { get; set; } = "";
     public string MilitaryUserName { get; set; } = "";
 
-    public string ActionText { get; set; } = "";
+    [ObservableProperty]
+    private string _actionText = "";
+
     public string ActionIcon { get; set; } = "→";
 
     public bool ShowConfirmStatus { get; set; }
@@ -669,9 +711,23 @@ public partial class ScheduleListItem : ObservableObject
 
     public bool CanDelete { get; set; }
 
-    // 헬퍼 프로퍼티
-    public string StatusDisplay => Schedule?.StatusDisplayName ?? "";
-    public string StatusColor => Schedule?.StatusColor ?? "#9E9E9E";
+    // 헬퍼 프로퍼티 (ObservableProperty로 변경하여 UI 갱신 지원)
+    [ObservableProperty]
+    private string _statusDisplay = "";
+
+    [ObservableProperty]
+    private string _statusColor = "#9E9E9E";
+
     public string ReservedTimeDisplay => Schedule?.ReservedTimeDisplay ?? "";
     public bool HasReservedTime => !string.IsNullOrEmpty(ReservedTimeDisplay);
+
+    /// <summary>
+    /// Schedule 상태 변경 시 UI 속성 갱신
+    /// </summary>
+    public void UpdateStatusDisplay()
+    {
+        if (Schedule == null) return;
+        StatusDisplay = Schedule.StatusDisplayName;
+        StatusColor = Schedule.StatusColor;
+    }
 }

@@ -102,7 +102,7 @@ public partial class ScheduleInputViewModel : ViewModelBase
 
     // 이벤트
     public event EventHandler? CloseRequested;
-    public event EventHandler? ScheduleUpdated;
+    public event EventHandler<ScheduleStatusChangedEventArgs>? ScheduleStatusChanged;
 
     public ScheduleInputViewModel()
     {
@@ -473,11 +473,8 @@ public partial class ScheduleInputViewModel : ViewModelBase
         SuccessMessage = "가능 일정이 저장되었습니다.";
         System.Diagnostics.Debug.WriteLine($"[ScheduleInputVM] Input saved: {selectedTimes.Count} time slots for {(endDate - startDate).Days + 1} days");
 
-        // 이벤트 발생
-        ScheduleUpdated?.Invoke(this, EventArgs.Empty);
-
-        // 잠시 후 화면 닫기 (일정 목록으로 돌아감)
-        await Task.Delay(500);
+        // 상태 변경 이벤트 발생 (inputted, statusOrder=2)
+        ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "inputted", 2));
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 

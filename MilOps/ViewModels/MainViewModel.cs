@@ -61,12 +61,17 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isScheduleReserveOpen = false;
 
-    // 일정 입력/예약 화면에 전달할 데이터
+    [ObservableProperty]
+    private bool _isScheduleConfirmOpen = false;
+
+    // 일정 입력/예약/확정 화면에 전달할 데이터
     private Guid _scheduleInputId;
     private Guid _scheduleReserveId;
+    private Guid _scheduleConfirmId;
 
     public Guid ScheduleInputId => _scheduleInputId;
     public Guid ScheduleReserveId => _scheduleReserveId;
+    public Guid ScheduleConfirmId => _scheduleConfirmId;
 
     // 메뉴 표시 여부 (역할별)
     public bool ShowScheduleTab => IsUser || IsMiddleAdmin;  // 사용자, 중간관리자
@@ -255,5 +260,20 @@ public partial class MainViewModel : ViewModelBase
     {
         IsScheduleReserveOpen = false;
         System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleReserve");
+    }
+
+    // === 일정 확정 화면 (양측 공통) ===
+    public void OpenScheduleConfirm(Guid scheduleId)
+    {
+        _scheduleConfirmId = scheduleId;
+        IsScheduleConfirmOpen = true;
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleConfirm - scheduleId: {scheduleId}");
+    }
+
+    [RelayCommand]
+    private void CloseScheduleConfirm()
+    {
+        IsScheduleConfirmOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleConfirm");
     }
 }

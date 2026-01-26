@@ -89,7 +89,7 @@ public partial class ScheduleReserveViewModel : ViewModelBase
 
     // 이벤트
     public event EventHandler? CloseRequested;
-    public event EventHandler? ScheduleUpdated;
+    public event EventHandler<ScheduleStatusChangedEventArgs>? ScheduleStatusChanged;
 
     public ScheduleReserveViewModel()
     {
@@ -405,11 +405,8 @@ public partial class ScheduleReserveViewModel : ViewModelBase
             SuccessMessage = "예약이 완료되었습니다.";
             System.Diagnostics.Debug.WriteLine($"[ScheduleReserveVM] Reserved: {SelectedDate.Date:yyyy-MM-dd} {SelectedTimeSlot.TimeRangeDisplay}");
 
-            // 이벤트 발생
-            ScheduleUpdated?.Invoke(this, EventArgs.Empty);
-
-            // 잠시 후 화면 닫기
-            await Task.Delay(500);
+            // 상태 변경 이벤트 발생 (reserved, statusOrder=3)
+            ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "reserved", 3));
             CloseRequested?.Invoke(this, EventArgs.Empty);
         }
         catch (Exception ex)
