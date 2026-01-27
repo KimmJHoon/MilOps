@@ -128,6 +128,9 @@ public class MainActivity : AvaloniaMainActivity<App>
             FirebaseApp.InitializeApp(this);
             Log.Info(TAG, "Firebase initialized successfully");
 
+            // FcmService 설정
+            SetupFcmService();
+
             // FCM 토큰 가져오기 (비동기)
             Task.Run(async () =>
             {
@@ -135,6 +138,7 @@ public class MainActivity : AvaloniaMainActivity<App>
                 if (!string.IsNullOrEmpty(token))
                 {
                     Log.Info(TAG, $"FCM Token: {token.Substring(0, Math.Min(20, token.Length))}...");
+                    FcmService.CurrentToken = token;
                 }
             });
         }
@@ -142,6 +146,24 @@ public class MainActivity : AvaloniaMainActivity<App>
         {
             Log.Error(TAG, $"Firebase initialization failed: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// FcmService 설정
+    /// </summary>
+    private void SetupFcmService()
+    {
+        // FCM 토큰 제공자 설정
+        FcmService.TokenProvider = async () =>
+        {
+            return await FcmTokenHolder.GetTokenAsync();
+        };
+
+        // 디바이스 이름 제공자 설정
+        FcmService.DeviceNameProvider = () =>
+        {
+            return Build.Model ?? "Android Device";
+        };
     }
 
     /// <summary>
