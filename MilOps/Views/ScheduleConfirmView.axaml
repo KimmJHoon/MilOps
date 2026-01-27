@@ -50,15 +50,15 @@
             <StackPanel Spacing="16">
               <StackPanel Orientation="Horizontal" Spacing="8">
                 <TextBlock Text="&#x1F4C5;" FontSize="16"/>
-                <TextBlock Text="예약된 일정" FontSize="16" Foreground="White" FontWeight="SemiBold"/>
+                <TextBlock Text="예약된 일정" FontSize="16" Foreground="White"/>
               </StackPanel>
 
               <StackPanel HorizontalAlignment="Center" Spacing="8">
                 <TextBlock Text="{Binding ReservedDateDisplay}"
-                           FontSize="28" Foreground="#4CAF50" FontWeight="Bold"
+                           FontSize="28" Foreground="#4CAF50"
                            HorizontalAlignment="Center"/>
                 <TextBlock Text="{Binding ReservedTimeDisplay}"
-                           FontSize="24" Foreground="#4CAF50" FontWeight="Bold"
+                           FontSize="24" Foreground="#4CAF50"
                            HorizontalAlignment="Center"/>
               </StackPanel>
             </StackPanel>
@@ -269,7 +269,7 @@
         <StackPanel Spacing="20">
           <!-- 제목 -->
           <TextBlock Text="일정을 확정하시겠습니까?"
-                     FontSize="18" Foreground="White" FontWeight="Bold"
+                     FontSize="18" Foreground="White"
                      HorizontalAlignment="Center"/>
 
           <!-- 일정 정보 -->
@@ -279,12 +279,12 @@
                 <TextBlock Grid.Row="0" Grid.Column="0" Text="날짜:"
                            FontSize="14" Foreground="#888888" Margin="0,0,16,8"/>
                 <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ModalDateDisplay}"
-                           FontSize="16" Foreground="#4CAF50" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                           FontSize="16" Foreground="#4CAF50" Margin="0,0,0,8"/>
 
                 <TextBlock Grid.Row="1" Grid.Column="0" Text="시간:"
                            FontSize="14" Foreground="#888888" Margin="0,0,16,8"/>
                 <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ModalTimeDisplay}"
-                           FontSize="16" Foreground="#4CAF50" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                           FontSize="16" Foreground="#4CAF50" Margin="0,0,0,8"/>
 
                 <TextBlock Grid.Row="2" Grid.Column="0" Text="업체:"
                            FontSize="14" Foreground="#888888" Margin="0,0,16,0"/>

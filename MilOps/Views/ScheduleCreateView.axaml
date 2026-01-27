@@ -65,7 +65,7 @@
           <!-- 새 일정 생성 섹션 -->
           <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
             <StackPanel Spacing="14">
-              <TextBlock Text="새 일정 생성" FontSize="15" Foreground="White" FontWeight="Bold"/>
+              <TextBlock Text="새 일정 생성" FontSize="15" Foreground="White"/>
 
               <!-- 지자체 (시/도) -->
               <StackPanel Spacing="4">
@@ -241,7 +241,7 @@
                     Padding="16"
                     CornerRadius="8"
                     IsVisible="{Binding CanCreate}">
-              <TextBlock Text="일정 생성" FontSize="16" Foreground="White" FontWeight="Bold"/>
+              <TextBlock Text="일정 생성" FontSize="16" Foreground="White" />
             </Button>
             <Button Background="#555555"
                     HorizontalAlignment="Stretch"
@@ -250,7 +250,7 @@
                     CornerRadius="8"
                     IsEnabled="False"
                     IsVisible="{Binding !CanCreate}">
-              <TextBlock Text="일정 생성" FontSize="16" Foreground="#888888" FontWeight="Bold"/>
+              <TextBlock Text="일정 생성" FontSize="16" Foreground="#888888" />
             </Button>
           </Panel>
 

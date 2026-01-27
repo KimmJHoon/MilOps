@@ -246,7 +246,7 @@
         <StackPanel Spacing="20">
           <!-- 제목 -->
           <TextBlock Text="일정을 삭제하시겠습니까?"
-                     FontSize="18" Foreground="White" FontWeight="Bold"
+                     FontSize="18" Foreground="White"
                      HorizontalAlignment="Center"/>
 
           <!-- 일정 정보 -->
