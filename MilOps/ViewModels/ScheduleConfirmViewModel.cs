@@ -178,6 +178,11 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     {
         _scheduleId = scheduleId;
 
+        // 초기화 시 모달 상태 리셋 (이전 상태가 남아있을 수 있음)
+        ShowConfirmModal = false;
+        CanConfirm = false;
+        AlreadyConfirmedByMe = false;
+
         var currentUser = AuthService.CurrentUser;
         if (currentUser == null) return;
 
@@ -413,10 +418,18 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         bool isLocalUser = _currentUserRole == "user_local";
         bool isMilitaryUser = _currentUserRole == "user_military";
 
-        AlreadyConfirmedByMe = (isLocalUser && LocalConfirmed) || (isMilitaryUser && MilitaryConfirmed);
-
-        // 확정 버튼 활성화 (예약 상태이고 아직 확정하지 않은 경우)
-        CanConfirm = _schedule.Status == "reserved" && !AlreadyConfirmedByMe;
+        // "confirmed" 상태면 이미 양측 모두 확정한 것
+        if (_schedule.Status == "confirmed")
+        {
+            AlreadyConfirmedByMe = true;
+            CanConfirm = false;
+        }
+        else
+        {
+            AlreadyConfirmedByMe = (isLocalUser && LocalConfirmed) || (isMilitaryUser && MilitaryConfirmed);
+            // 확정 버튼 활성화 (예약 상태이고 아직 확정하지 않은 경우)
+            CanConfirm = _schedule.Status == "reserved" && !AlreadyConfirmedByMe;
+        }
 
         System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] UpdateConfirmationStatus - isLocalUser: {isLocalUser}, isMilitaryUser: {isMilitaryUser}");
         System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] UpdateConfirmationStatus - AlreadyConfirmedByMe: {AlreadyConfirmedByMe}, CanConfirm: {CanConfirm}");
@@ -462,7 +475,14 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     [RelayCommand]
     private void ShowConfirmDialog()
     {
-        if (!CanConfirm) return;
+        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ShowConfirmDialog - CanConfirm: {CanConfirm}, Status: {_schedule?.Status}, AlreadyConfirmedByMe: {AlreadyConfirmedByMe}");
+
+        // 이미 확정된 일정이거나 확정 불가능한 상태면 모달 표시 안 함
+        if (!CanConfirm || _schedule?.Status == "confirmed")
+        {
+            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ShowConfirmDialog - Cannot confirm, returning");
+            return;
+        }
 
         // 모달에 표시할 정보 설정
         ModalDateDisplay = ReservedDateDisplay;

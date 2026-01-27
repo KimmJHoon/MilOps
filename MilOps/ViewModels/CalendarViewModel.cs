@@ -80,6 +80,13 @@ public partial class CalendarViewModel : ViewModelBase
 
     public CalendarViewModel()
     {
+        // 42개의 CalendarDay 객체를 미리 생성 (6주 x 7일)
+        // XAML에서 Days[0]~Days[41] 인덱스로 바인딩하므로 항상 42개 유지해야 함
+        for (int i = 0; i < 42; i++)
+        {
+            Days.Add(new CalendarDay { Day = 0, IsCurrentMonth = false });
+        }
+
         var today = DateTime.Today;
         CurrentYear = today.Year;
         CurrentMonth = today.Month;
@@ -123,18 +130,32 @@ public partial class CalendarViewModel : ViewModelBase
     {
         if (day == null || day.Day == 0) return;
 
-        // 이전 선택 해제
-        if (SelectedDay != null)
+        // 일정이 하나만 있으면 바로 상세 화면으로 이동
+        if (day.Schedules != null && day.Schedules.Count == 1)
         {
-            SelectedDay.IsSelected = false;
+            OnScheduleSelected?.Invoke(day.Schedules[0].Id);
+            return;
         }
 
-        // 새로운 선택
-        day.IsSelected = true;
-        SelectedDay = day;
+        // 일정이 여러 개면 첫 번째 일정으로 이동 (또는 선택 UI 표시 가능)
+        if (day.Schedules != null && day.Schedules.Count > 1)
+        {
+            // 일정 여러 개일 때 첫 번째 일정 상세로 이동
+            OnScheduleSelected?.Invoke(day.Schedules[0].Id);
+            return;
+        }
 
-        // 선택된 날짜의 일정 표시
-        UpdateSelectedDaySchedules(day);
+        // 일정이 없는 날짜는 무시
+    }
+
+    /// <summary>
+    /// 캘린더 셀 내의 일정 아이템 클릭 시 바로 상세 화면으로 이동
+    /// </summary>
+    [RelayCommand]
+    private void OpenScheduleFromCell(CalendarDayScheduleDisplay? item)
+    {
+        if (item == null) return;
+        OnScheduleSelected?.Invoke(item.ScheduleId);
     }
 
     [RelayCommand]
@@ -160,40 +181,45 @@ public partial class CalendarViewModel : ViewModelBase
     {
         CurrentMonthYear = $"{CurrentYear}년 {CurrentMonth}월";
 
-        Days.Clear();
-
         var firstDay = new DateTime(CurrentYear, CurrentMonth, 1);
         var daysInMonth = DateTime.DaysInMonth(CurrentYear, CurrentMonth);
 
         // 첫째 날의 요일 (일요일=0)
         int startDayOfWeek = (int)firstDay.DayOfWeek;
+        var today = DateTime.Today;
+
+        int index = 0;
 
         // 이전 달의 빈 칸
         for (int i = 0; i < startDayOfWeek; i++)
         {
-            Days.Add(new CalendarDay { Day = 0, IsCurrentMonth = false });
+            Days[index].Reset();
+            Days[index].Day = 0;
+            Days[index].IsCurrentMonth = false;
+            index++;
         }
 
         // 현재 달의 날짜
-        var today = DateTime.Today;
         for (int day = 1; day <= daysInMonth; day++)
         {
             var date = new DateTime(CurrentYear, CurrentMonth, day);
-            Days.Add(new CalendarDay
-            {
-                Day = day,
-                Date = date,
-                IsCurrentMonth = true,
-                IsToday = date == today,
-                IsSunday = date.DayOfWeek == DayOfWeek.Sunday,
-                IsSaturday = date.DayOfWeek == DayOfWeek.Saturday
-            });
+            Days[index].Reset();
+            Days[index].Day = day;
+            Days[index].Date = date;
+            Days[index].IsCurrentMonth = true;
+            Days[index].IsToday = date == today;
+            Days[index].IsSunday = date.DayOfWeek == DayOfWeek.Sunday;
+            Days[index].IsSaturday = date.DayOfWeek == DayOfWeek.Saturday;
+            index++;
         }
 
         // 다음 달의 빈 칸 (6주 = 42칸 채우기)
-        while (Days.Count < 42)
+        while (index < 42)
         {
-            Days.Add(new CalendarDay { Day = 0, IsCurrentMonth = false });
+            Days[index].Reset();
+            Days[index].Day = 0;
+            Days[index].IsCurrentMonth = false;
+            index++;
         }
 
         // 선택 상태 초기화
@@ -634,12 +660,27 @@ public partial class CalendarViewModel : ViewModelBase
 /// </summary>
 public partial class CalendarDay : ObservableObject
 {
-    public int Day { get; set; }
-    public DateTime Date { get; set; }
-    public bool IsCurrentMonth { get; set; }
-    public bool IsToday { get; set; }
-    public bool IsSunday { get; set; }
-    public bool IsSaturday { get; set; }
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DayText))]
+    private int _day;
+
+    [ObservableProperty]
+    private DateTime _date;
+
+    [ObservableProperty]
+    private bool _isCurrentMonth;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DayColor))]
+    private bool _isToday;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DayColor))]
+    private bool _isSunday;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(DayColor))]
+    private bool _isSaturday;
 
     [ObservableProperty]
     private bool _isSelected;
@@ -660,6 +701,26 @@ public partial class CalendarDay : ObservableObject
     private ObservableCollection<CalendarDayScheduleDisplay> _scheduleDisplays = new();
 
     public List<Schedule> Schedules { get; set; } = new();
+
+    /// <summary>
+    /// 날짜 데이터 초기화 (재사용을 위해)
+    /// </summary>
+    public void Reset()
+    {
+        Day = 0;
+        Date = default;
+        IsCurrentMonth = false;
+        IsToday = false;
+        IsSunday = false;
+        IsSaturday = false;
+        IsSelected = false;
+        HasSchedules = false;
+        ScheduleCount = 0;
+        HasConfirmedSchedule = false;
+        HasReservedSchedule = false;
+        ScheduleDisplays.Clear();
+        Schedules.Clear();
+    }
 
     public string DayText => Day > 0 ? Day.ToString() : "";
 
@@ -708,7 +769,7 @@ public partial class CalendarDay : ObservableObject
     public string MoreSchedulesText => HasMoreSchedules ? $"+{MoreScheduleCount}" : "";
 
     /// <summary>
-    /// 일정 표시 데이터 업데이트
+    /// 일정 표시 데이터 업데이트 (2번째 이미지처럼: 시간, 대대명, 업체명)
     /// </summary>
     public void UpdateScheduleDisplays(UserRole currentRole)
     {
@@ -716,16 +777,20 @@ public partial class CalendarDay : ObservableObject
 
         if (Schedules == null || !Schedules.Any()) return;
 
-        foreach (var schedule in Schedules.OrderBy(s => s.ReservedStartTime).Take(2)) // 모바일 화면 고려 최대 2개만 표시
+        foreach (var schedule in Schedules.OrderBy(s => s.ReservedStartTime).Take(3)) // 최대 3개 표시
         {
             var display = new CalendarDayScheduleDisplay
             {
                 ScheduleId = schedule.Id,
                 IsConfirmed = schedule.Status == "confirmed",
+                // 시간 (예: 10:00)
                 TimeText = schedule.ReservedStartTime.HasValue
                     ? schedule.ReservedStartTime.Value.ToString(@"hh\:mm")
                     : "",
+                // 업체명
                 CompanyName = schedule.Company?.Name ?? "",
+                // 대대명
+                BattalionName = schedule.MilitaryUser?.Battalion?.Name ?? "",
                 StatusColor = schedule.StatusColor
             };
 
@@ -733,17 +798,17 @@ public partial class CalendarDay : ObservableObject
             if (currentRole == UserRole.UserLocal)
             {
                 // 지자체담당자: 대대 정보 표시
-                display.CounterpartInfo = schedule.MilitaryUser?.Battalion?.Name ?? "대대";
+                display.CounterpartInfo = schedule.MilitaryUser?.Battalion?.Name ?? "";
             }
             else if (currentRole == UserRole.UserMilitary)
             {
                 // 대대담당자: 지자체(구) 정보 표시
-                display.CounterpartInfo = schedule.LocalUser?.District?.Name ?? "지자체";
+                display.CounterpartInfo = schedule.LocalUser?.District?.Name ?? "";
             }
             else
             {
-                // 중간관리자/최종관리자: 양쪽 모두 표시
-                display.CounterpartInfo = schedule.MilitaryUser?.Battalion?.Name ?? "대대";
+                // 중간관리자/최종관리자: 대대 정보 표시
+                display.CounterpartInfo = schedule.MilitaryUser?.Battalion?.Name ?? "";
             }
 
             ScheduleDisplays.Add(display);
@@ -752,19 +817,28 @@ public partial class CalendarDay : ObservableObject
 }
 
 /// <summary>
-/// 캘린더 셀 내 일정 표시용 클래스
+/// 캘린더 셀 내 일정 표시용 클래스 (2번째 이미지처럼: 시간, 대대명, 업체명)
 /// </summary>
 public class CalendarDayScheduleDisplay
 {
     public Guid ScheduleId { get; set; }
     public bool IsConfirmed { get; set; }
-    public string TimeText { get; set; } = "";
-    public string CounterpartInfo { get; set; } = "";  // 대대 or 지자체
-    public string CompanyName { get; set; } = "";
+    public string TimeText { get; set; } = "";           // 예: "10:00"
+    public string BattalionName { get; set; } = "";      // 예: "101대대"
+    public string CounterpartInfo { get; set; } = "";    // 대대 or 지자체
+    public string CompanyName { get; set; } = "";        // 예: "해태제과"
     public string StatusColor { get; set; } = "#FF9800";
 
     public string ConfirmMark => IsConfirmed ? "✓" : "";
-    public string DisplayText => $"{ConfirmMark}{TimeText}";
+
+    // 첫 줄: ✓시간 (예: ✓10:00)
+    public string Line1 => $"{ConfirmMark}{TimeText}";
+
+    // 둘째 줄: 대대명 (예: 101대대)
+    public string Line2 => BattalionName;
+
+    // 셋째 줄: 업체명 (예: 해태제과)
+    public string Line3 => CompanyName;
 }
 
 /// <summary>

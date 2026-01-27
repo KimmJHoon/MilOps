@@ -34,10 +34,11 @@ public partial class CalendarView : UserControl
     private void OnScheduleSelected(Guid scheduleId)
     {
         // MainView를 통해 일정 확정 화면 열기
+        // 중요: MainView.OpenScheduleConfirm을 호출해야 ViewModel이 초기화됨
         var mainView = this.FindAncestorOfType<MainView>();
-        if (mainView?.DataContext is MainViewModel mainVm)
+        if (mainView != null)
         {
-            mainVm.OpenScheduleConfirm(scheduleId);
+            mainView.OpenScheduleConfirm(scheduleId);
         }
     }
 
