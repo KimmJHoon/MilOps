@@ -72,6 +72,33 @@ public partial class MainView : UserControl
         // NotificationView의 이벤트 구독
         NotificationView.CloseRequested += OnNotificationCloseRequested;
         NotificationView.OnScheduleSelected += OnNotificationScheduleSelected;
+
+        // 새 알림 수신 이벤트 (토스트 알림 등에 사용)
+        NotificationView.OnNewNotificationReceived += OnNewNotificationReceived;
+    }
+
+    private void OnNewNotificationReceived(MilOps.Models.Notification notification)
+    {
+        // 새 알림이 수신되면 로그 출력 (추후 토스트 알림 등 추가 가능)
+        System.Diagnostics.Debug.WriteLine($"[MainView] New notification received: {notification.Title}");
+    }
+
+    /// <summary>
+    /// 로그인 후 실시간 알림 구독 시작 (외부에서 호출)
+    /// </summary>
+    public void StartRealtimeNotifications()
+    {
+        NotificationView.StartRealtimeSubscription();
+        System.Diagnostics.Debug.WriteLine("[MainView] StartRealtimeNotifications called");
+    }
+
+    /// <summary>
+    /// 로그아웃 시 실시간 알림 구독 중지 및 정리
+    /// </summary>
+    public void StopRealtimeNotifications()
+    {
+        NotificationView.Cleanup();
+        System.Diagnostics.Debug.WriteLine("[MainView] StopRealtimeNotifications called");
     }
 
     private void OnNotificationCloseRequested(object? sender, EventArgs e)
@@ -287,13 +314,13 @@ public partial class MainView : UserControl
 
             // 동시에 애니메이션
             _ = AnimateOpacity(DrawerOverlay, 0, 0.5, duration);
-            await AnimateTranslateX(_drawerTransform, -250, 0, duration);
+            await AnimateTranslateX(_drawerTransform, -280, 0, duration);
         }
         else
         {
             // 동시에 애니메이션
             _ = AnimateOpacity(DrawerOverlay, 0.5, 0, duration);
-            await AnimateTranslateX(_drawerTransform, 0, -250, duration);
+            await AnimateTranslateX(_drawerTransform, 0, -280, duration);
 
             DrawerOverlay.IsVisible = false;
             DrawerPanel.IsVisible = false;
