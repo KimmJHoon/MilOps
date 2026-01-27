@@ -150,6 +150,10 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     [ObservableProperty]
     private bool _alreadyConfirmedByMe = false;
 
+    // 중간관리자 여부 (뷰어 전용 - 하단 버튼 숨김)
+    [ObservableProperty]
+    private bool _isMiddleAdmin = false;
+
     // 확정 확인 모달
     [ObservableProperty]
     private bool _showConfirmModal = false;
@@ -187,6 +191,9 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         if (currentUser == null) return;
 
         _currentUserRole = currentUser.Role ?? "";
+
+        // 중간관리자 여부 설정 (뷰어 전용)
+        IsMiddleAdmin = _currentUserRole == "middle_local" || _currentUserRole == "middle_military";
 
         await LoadScheduleAsync();
     }
@@ -417,9 +424,17 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         // 현재 사용자의 확정 여부
         bool isLocalUser = _currentUserRole == "user_local";
         bool isMilitaryUser = _currentUserRole == "user_military";
+        bool isMiddleAdmin = _currentUserRole == "middle_local" || _currentUserRole == "middle_military";
 
+        // 중간관리자는 뷰어 전용 - 확정 버튼 비활성화
+        if (isMiddleAdmin)
+        {
+            AlreadyConfirmedByMe = true;  // 버튼 숨김
+            CanConfirm = false;
+            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Middle admin ({_currentUserRole}) - view-only mode");
+        }
         // "confirmed" 상태면 이미 양측 모두 확정한 것
-        if (_schedule.Status == "confirmed")
+        else if (_schedule.Status == "confirmed")
         {
             AlreadyConfirmedByMe = true;
             CanConfirm = false;

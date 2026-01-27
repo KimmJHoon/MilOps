@@ -205,8 +205,9 @@
         </StackPanel>
       </ScrollViewer>
 
-      <!-- 하단 버튼 -->
-      <Border Grid.Row="2" Background="#1A1A1A" Padding="16">
+      <!-- 하단 버튼 (중간관리자는 숨김) -->
+      <Border Grid.Row="2" Background="#1A1A1A" Padding="16"
+              IsVisible="{Binding !IsMiddleAdmin}">
         <StackPanel Spacing="12">
           <Grid ColumnDefinitions="*,*" IsVisible="{Binding !IsLoading}">
             <Button Grid.Column="0" Command="{Binding CloseCommand}"
