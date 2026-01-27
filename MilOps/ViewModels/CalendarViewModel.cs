@@ -654,6 +654,17 @@ public partial class CalendarViewModel : ViewModelBase
                             .From<Battalion>()
                             .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, userResponse.BattalionId.Value.ToString())
                             .Single();
+
+                        if (battalionResponse != null)
+                        {
+                            // 사단 정보 로드 (최종관리자용)
+                            var divisionResponse = await SupabaseService.Client
+                                .From<Division>()
+                                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, battalionResponse.DivisionId.ToString())
+                                .Single();
+                            battalionResponse.Division = divisionResponse;
+                        }
+
                         userResponse.Battalion = battalionResponse;
                     }
 
@@ -682,6 +693,17 @@ public partial class CalendarViewModel : ViewModelBase
                             .From<District>()
                             .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, userResponse.DistrictId.Value.ToString())
                             .Single();
+
+                        if (districtResponse != null)
+                        {
+                            // 시/도 정보 로드 (최종관리자용)
+                            var regionResponse = await SupabaseService.Client
+                                .From<Region>()
+                                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, districtResponse.RegionId.ToString())
+                                .Single();
+                            districtResponse.Region = regionResponse;
+                        }
+
                         userResponse.District = districtResponse;
                     }
 
@@ -862,6 +884,8 @@ public partial class CalendarDay : ObservableObject
     /// - 대대담당자(user_military): 시간 / 군,구명 / 업체명
     /// - 지자체(도) 중간관리자(middle_local): 시간 / 시군구명 / 업체명
     /// - 사단담당자(middle_military): 시간 / 대대명 / 업체명
+    /// - 행정안전부(super_admin_mois): 시간 / 시도명 / 업체명 (시도별 색상)
+    /// - 육군본부(super_admin_army): 시간 / 사단명 / 업체명 (사단별 색상)
     /// </summary>
     public void UpdateScheduleDisplays(UserRole currentRole)
     {
@@ -886,6 +910,12 @@ public partial class CalendarDay : ObservableObject
                 BattalionName = schedule.MilitaryUser?.Battalion?.Name ?? "",
                 // 군,구명 (대대담당자, 지자체(도) 중간관리자용)
                 DistrictName = schedule.LocalUser?.District?.Name ?? "",
+                // 시/도명 (행정안전부용)
+                RegionName = schedule.LocalUser?.District?.Region?.Name ?? "",
+                RegionId = schedule.LocalUser?.District?.RegionId,
+                // 사단명 (육군본부용)
+                DivisionName = schedule.MilitaryUser?.Battalion?.Division?.Name ?? "",
+                DivisionId = schedule.MilitaryUser?.Battalion?.DivisionId,
                 StatusColor = schedule.StatusColor
             };
 
@@ -900,6 +930,8 @@ public partial class CalendarDay : ObservableObject
 /// - 대대담당자(user_military): 시간 / 군,구명 / 업체명
 /// - 지자체(도) 중간관리자(middle_local): 시간 / 시군구명 / 업체명
 /// - 사단담당자(middle_military): 시간 / 대대명 / 업체명
+/// - 행정안전부(super_admin_mois): 시간 / 시도명 / 업체명 (시도별 색상)
+/// - 육군본부(super_admin_army): 시간 / 사단명 / 업체명 (사단별 색상)
 /// </summary>
 public class CalendarDayScheduleDisplay
 {
@@ -908,9 +940,15 @@ public class CalendarDayScheduleDisplay
     public string TimeText { get; set; } = "";           // 예: "10:00"
     public string BattalionName { get; set; } = "";      // 예: "101대대"
     public string DistrictName { get; set; } = "";       // 예: "강남구"
+    public string RegionName { get; set; } = "";         // 예: "경기도" (최종관리자용)
+    public string DivisionName { get; set; } = "";       // 예: "제1사단" (최종관리자용)
     public string CompanyName { get; set; } = "";        // 예: "해태제과"
     public string StatusColor { get; set; } = "#FF9800";
     public UserRole CurrentRole { get; set; } = UserRole.None;
+
+    // 시/도 및 사단 ID (색상 구분용)
+    public Guid? RegionId { get; set; }
+    public Guid? DivisionId { get; set; }
 
     public string ConfirmMark => IsConfirmed ? "✓" : "";
 
@@ -918,25 +956,82 @@ public class CalendarDayScheduleDisplay
     public string Line1 => $"{ConfirmMark}{TimeText}";
 
     // 둘째 줄: 역할에 따라 다름
-    // - 지자체담당자, 사단담당자, 최종관리자: 대대명
-    // - 대대담당자, 지자체(도) 중간관리자: 시군구명
-    // - 지자체담당자, 사단담당자, 최종관리자: 대대명
     public string Line2
     {
         get
         {
             return CurrentRole switch
             {
-                UserRole.UserMilitary => DistrictName,      // 대대담당자: 시군구명
-                UserRole.MiddleLocal => DistrictName,       // 지자체(도): 시군구명
-                UserRole.MiddleMilitary => BattalionName,   // 사단담당자: 대대명
-                _ => BattalionName                          // 그 외(지자체담당자, 최종관리자): 대대명
+                UserRole.UserMilitary => DistrictName,       // 대대담당자: 시군구명
+                UserRole.MiddleLocal => DistrictName,        // 지자체(도): 시군구명
+                UserRole.MiddleMilitary => BattalionName,    // 사단담당자: 대대명
+                UserRole.SuperAdminMois => RegionName,       // 행정안전부: 시도명
+                UserRole.SuperAdminArmy => DivisionName,     // 육군본부: 사단명
+                _ => BattalionName                           // 그 외(지자체담당자): 대대명
             };
         }
     }
 
     // 셋째 줄: 업체명 (예: 해태제과)
     public string Line3 => CompanyName;
+
+    // 시/도별 색상 (행정안전부용)
+    private static readonly Dictionary<int, string> RegionColors = new()
+    {
+        { 0, "#E57373" },  // 빨강
+        { 1, "#81C784" },  // 초록
+        { 2, "#64B5F6" },  // 파랑
+        { 3, "#FFB74D" },  // 주황
+        { 4, "#BA68C8" },  // 보라
+        { 5, "#4DD0E1" },  // 청록
+        { 6, "#F06292" },  // 분홍
+        { 7, "#AED581" },  // 연두
+        { 8, "#FFD54F" },  // 노랑
+        { 9, "#90A4AE" },  // 회색
+        { 10, "#7986CB" }, // 인디고
+        { 11, "#4DB6AC" }, // 틸
+        { 12, "#FF8A65" }, // 딥오렌지
+        { 13, "#A1887F" }, // 브라운
+        { 14, "#9575CD" }, // 딥퍼플
+        { 15, "#4FC3F7" }, // 라이트블루
+        { 16, "#FFF176" }, // 라이트옐로
+    };
+
+    // 사단별 색상 (육군본부용)
+    private static readonly Dictionary<int, string> DivisionColors = new()
+    {
+        { 0, "#42A5F5" },  // 파랑
+        { 1, "#66BB6A" },  // 초록
+        { 2, "#FFA726" },  // 주황
+        { 3, "#AB47BC" },  // 보라
+        { 4, "#EF5350" },  // 빨강
+        { 5, "#26C6DA" },  // 시안
+        { 6, "#EC407A" },  // 핑크
+        { 7, "#8D6E63" },  // 브라운
+        { 8, "#78909C" },  // 블루그레이
+        { 9, "#FFCA28" },  // 앰버
+    };
+
+    /// <summary>
+    /// 최종관리자용 색상 (시/도별 또는 사단별)
+    /// </summary>
+    public string GroupColor
+    {
+        get
+        {
+            if (CurrentRole == UserRole.SuperAdminMois && RegionId.HasValue)
+            {
+                int index = Math.Abs(RegionId.Value.GetHashCode()) % RegionColors.Count;
+                return RegionColors[index];
+            }
+            else if (CurrentRole == UserRole.SuperAdminArmy && DivisionId.HasValue)
+            {
+                int index = Math.Abs(DivisionId.Value.GetHashCode()) % DivisionColors.Count;
+                return DivisionColors[index];
+            }
+            return StatusColor;
+        }
+    }
 }
 
 /// <summary>

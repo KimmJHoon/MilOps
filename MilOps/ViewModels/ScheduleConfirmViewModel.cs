@@ -192,8 +192,9 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
 
         _currentUserRole = currentUser.Role ?? "";
 
-        // 중간관리자 여부 설정 (뷰어 전용)
-        IsMiddleAdmin = _currentUserRole == "middle_local" || _currentUserRole == "middle_military";
+        // 중간관리자/최종관리자 여부 설정 (뷰어 전용)
+        IsMiddleAdmin = _currentUserRole == "middle_local" || _currentUserRole == "middle_military"
+                     || _currentUserRole == "super_admin_mois" || _currentUserRole == "super_admin_army";
 
         await LoadScheduleAsync();
     }
