@@ -548,6 +548,24 @@ public partial class CalendarViewModel : ViewModelBase
 
         try
         {
+            // 업체 정보 로드
+            var companyIds = schedules.Select(s => s.CompanyId).Distinct().ToList();
+            foreach (var companyId in companyIds)
+            {
+                var companyResponse = await SupabaseService.Client
+                    .From<Company>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, companyId.ToString())
+                    .Single();
+
+                if (companyResponse != null)
+                {
+                    foreach (var schedule in schedules.Where(s => s.CompanyId == companyId))
+                    {
+                        schedule.Company = companyResponse;
+                    }
+                }
+            }
+
             // 대대담당자 정보 로드
             var militaryUserIds = schedules.Select(s => s.MilitaryUserId).Distinct().ToList();
             foreach (var userId in militaryUserIds)
@@ -769,7 +787,9 @@ public partial class CalendarDay : ObservableObject
     public string MoreSchedulesText => HasMoreSchedules ? $"+{MoreScheduleCount}" : "";
 
     /// <summary>
-    /// 일정 표시 데이터 업데이트 (2번째 이미지처럼: 시간, 대대명, 업체명)
+    /// 일정 표시 데이터 업데이트
+    /// - 지자체담당자: 시간 / 대대명 / 업체명
+    /// - 대대담당자: 시간 / 군,구명 / 업체명
     /// </summary>
     public void UpdateScheduleDisplays(UserRole currentRole)
     {
@@ -777,39 +797,27 @@ public partial class CalendarDay : ObservableObject
 
         if (Schedules == null || !Schedules.Any()) return;
 
+        bool isMilitaryUser = currentRole == UserRole.UserMilitary;
+
         foreach (var schedule in Schedules.OrderBy(s => s.ReservedStartTime).Take(3)) // 최대 3개 표시
         {
             var display = new CalendarDayScheduleDisplay
             {
                 ScheduleId = schedule.Id,
                 IsConfirmed = schedule.Status == "confirmed",
+                IsMilitaryUser = isMilitaryUser,
                 // 시간 (예: 10:00)
                 TimeText = schedule.ReservedStartTime.HasValue
                     ? schedule.ReservedStartTime.Value.ToString(@"hh\:mm")
                     : "",
                 // 업체명
                 CompanyName = schedule.Company?.Name ?? "",
-                // 대대명
+                // 대대명 (지자체담당자용)
                 BattalionName = schedule.MilitaryUser?.Battalion?.Name ?? "",
+                // 군,구명 (대대담당자용)
+                DistrictName = schedule.LocalUser?.District?.Name ?? "",
                 StatusColor = schedule.StatusColor
             };
-
-            // 역할에 따라 상대방 정보 표시
-            if (currentRole == UserRole.UserLocal)
-            {
-                // 지자체담당자: 대대 정보 표시
-                display.CounterpartInfo = schedule.MilitaryUser?.Battalion?.Name ?? "";
-            }
-            else if (currentRole == UserRole.UserMilitary)
-            {
-                // 대대담당자: 지자체(구) 정보 표시
-                display.CounterpartInfo = schedule.LocalUser?.District?.Name ?? "";
-            }
-            else
-            {
-                // 중간관리자/최종관리자: 대대 정보 표시
-                display.CounterpartInfo = schedule.MilitaryUser?.Battalion?.Name ?? "";
-            }
 
             ScheduleDisplays.Add(display);
         }
@@ -817,25 +825,30 @@ public partial class CalendarDay : ObservableObject
 }
 
 /// <summary>
-/// 캘린더 셀 내 일정 표시용 클래스 (2번째 이미지처럼: 시간, 대대명, 업체명)
+/// 캘린더 셀 내 일정 표시용 클래스
+/// - 지자체담당자: 시간 / 대대명 / 업체명
+/// - 대대담당자: 시간 / 군,구명 / 업체명
 /// </summary>
 public class CalendarDayScheduleDisplay
 {
     public Guid ScheduleId { get; set; }
     public bool IsConfirmed { get; set; }
     public string TimeText { get; set; } = "";           // 예: "10:00"
-    public string BattalionName { get; set; } = "";      // 예: "101대대"
-    public string CounterpartInfo { get; set; } = "";    // 대대 or 지자체
+    public string BattalionName { get; set; } = "";      // 예: "101대대" (지자체담당자용)
+    public string DistrictName { get; set; } = "";       // 예: "강남구" (대대담당자용)
     public string CompanyName { get; set; } = "";        // 예: "해태제과"
     public string StatusColor { get; set; } = "#FF9800";
+    public bool IsMilitaryUser { get; set; } = false;    // 대대담당자 여부
 
     public string ConfirmMark => IsConfirmed ? "✓" : "";
 
     // 첫 줄: ✓시간 (예: ✓10:00)
     public string Line1 => $"{ConfirmMark}{TimeText}";
 
-    // 둘째 줄: 대대명 (예: 101대대)
-    public string Line2 => BattalionName;
+    // 둘째 줄: 역할에 따라 다름
+    // - 지자체담당자: 대대명 (예: 101대대)
+    // - 대대담당자: 군,구명 (예: 강남구)
+    public string Line2 => IsMilitaryUser ? DistrictName : BattalionName;
 
     // 셋째 줄: 업체명 (예: 해태제과)
     public string Line3 => CompanyName;
