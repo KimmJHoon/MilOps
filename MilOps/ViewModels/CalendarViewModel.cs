@@ -155,6 +155,7 @@ public partial class CalendarViewModel : ViewModelBase
     private void OpenScheduleFromCell(CalendarDayScheduleDisplay? item)
     {
         if (item == null) return;
+
         OnScheduleSelected?.Invoke(item.ScheduleId);
     }
 
@@ -162,6 +163,7 @@ public partial class CalendarViewModel : ViewModelBase
     private void OpenScheduleDetail(CalendarScheduleItem? item)
     {
         if (item == null) return;
+
         OnScheduleSelected?.Invoke(item.ScheduleId);
     }
 
@@ -401,27 +403,60 @@ public partial class CalendarViewModel : ViewModelBase
 
     /// <summary>
     /// 지자체(도) 중간관리자용: 관할 전체 일정 조회
+    /// - 본인이 속한 도(region) 하위의 모든 시/군/구 일정을 조회
     /// </summary>
     private async Task<List<Schedule>> LoadMiddleLocalSchedulesAsync(User currentUser, DateTime monthStart, DateTime monthEnd)
     {
         try
         {
-            // 먼저 관할 지자체담당자 ID 목록 조회
-            var localUsersResponse = await SupabaseService.Client
-                .From<User>()
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadMiddleLocalSchedulesAsync: regionId={currentUser.RegionId}");
+
+            if (!currentUser.RegionId.HasValue)
+            {
+                System.Diagnostics.Debug.WriteLine("[CalendarViewModel] LoadMiddleLocalSchedulesAsync: No regionId");
+                return new List<Schedule>();
+            }
+
+            // 1. 해당 도(region)에 속한 모든 시/군/구(district) 조회
+            var districtsResponse = await SupabaseService.Client
+                .From<District>()
                 .Select("id")
-                .Filter("parent_id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.Id.ToString())
-                .Filter("role", Supabase.Postgrest.Constants.Operator.Equals, "user_local")
+                .Filter("region_id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.RegionId.Value.ToString())
+                .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
                 .Get();
 
-            var localUserIds = localUsersResponse.Models.Select(u => u.Id).ToList();
+            var districtIds = districtsResponse.Models.Select(d => d.Id).ToList();
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadMiddleLocalSchedulesAsync: Found {districtIds.Count} districts");
+
+            if (!districtIds.Any())
+            {
+                return new List<Schedule>();
+            }
+
+            // 2. 해당 시/군/구에 소속된 지자체담당자(user_local) 조회
+            var localUsers = new List<User>();
+            foreach (var districtId in districtIds)
+            {
+                var usersResponse = await SupabaseService.Client
+                    .From<User>()
+                    .Select("id")
+                    .Filter("district_id", Supabase.Postgrest.Constants.Operator.Equals, districtId.ToString())
+                    .Filter("role", Supabase.Postgrest.Constants.Operator.Equals, "user_local")
+                    .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
+                    .Get();
+
+                localUsers.AddRange(usersResponse.Models);
+            }
+
+            var localUserIds = localUsers.Select(u => u.Id).Distinct().ToList();
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadMiddleLocalSchedulesAsync: Found {localUserIds.Count} local users");
 
             if (!localUserIds.Any())
             {
                 return new List<Schedule>();
             }
 
-            // 관할 담당자들의 일정 조회
+            // 3. 해당 담당자들의 일정 조회 (예약됨 + 확정됨)
             var schedules = new List<Schedule>();
             foreach (var userId in localUserIds)
             {
@@ -429,7 +464,8 @@ public partial class CalendarViewModel : ViewModelBase
                 schedules.AddRange(userSchedules);
             }
 
-            return schedules.OrderBy(s => s.ReservedDate).ToList();
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadMiddleLocalSchedulesAsync: Total {schedules.Count} schedules");
+            return schedules.OrderBy(s => s.ReservedDate).ThenBy(s => s.ReservedStartTime).ToList();
         }
         catch (Exception ex)
         {
@@ -440,27 +476,60 @@ public partial class CalendarViewModel : ViewModelBase
 
     /// <summary>
     /// 사단담당자용: 관할 전체 일정 조회
+    /// - 본인이 속한 사단(division) 하위의 모든 대대 일정을 조회
     /// </summary>
     private async Task<List<Schedule>> LoadMiddleMilitarySchedulesAsync(User currentUser, DateTime monthStart, DateTime monthEnd)
     {
         try
         {
-            // 먼저 관할 대대담당자 ID 목록 조회
-            var militaryUsersResponse = await SupabaseService.Client
-                .From<User>()
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadMiddleMilitarySchedulesAsync: divisionId={currentUser.DivisionId}");
+
+            if (!currentUser.DivisionId.HasValue)
+            {
+                System.Diagnostics.Debug.WriteLine("[CalendarViewModel] LoadMiddleMilitarySchedulesAsync: No divisionId");
+                return new List<Schedule>();
+            }
+
+            // 1. 해당 사단(division)에 속한 모든 대대(battalion) 조회
+            var battalionsResponse = await SupabaseService.Client
+                .From<Battalion>()
                 .Select("id")
-                .Filter("parent_id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.Id.ToString())
-                .Filter("role", Supabase.Postgrest.Constants.Operator.Equals, "user_military")
+                .Filter("division_id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.DivisionId.Value.ToString())
+                .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
                 .Get();
 
-            var militaryUserIds = militaryUsersResponse.Models.Select(u => u.Id).ToList();
+            var battalionIds = battalionsResponse.Models.Select(b => b.Id).ToList();
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadMiddleMilitarySchedulesAsync: Found {battalionIds.Count} battalions");
+
+            if (!battalionIds.Any())
+            {
+                return new List<Schedule>();
+            }
+
+            // 2. 해당 대대에 소속된 대대담당자(user_military) 조회
+            var militaryUsers = new List<User>();
+            foreach (var battalionId in battalionIds)
+            {
+                var usersResponse = await SupabaseService.Client
+                    .From<User>()
+                    .Select("id")
+                    .Filter("battalion_id", Supabase.Postgrest.Constants.Operator.Equals, battalionId.ToString())
+                    .Filter("role", Supabase.Postgrest.Constants.Operator.Equals, "user_military")
+                    .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
+                    .Get();
+
+                militaryUsers.AddRange(usersResponse.Models);
+            }
+
+            var militaryUserIds = militaryUsers.Select(u => u.Id).Distinct().ToList();
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadMiddleMilitarySchedulesAsync: Found {militaryUserIds.Count} military users");
 
             if (!militaryUserIds.Any())
             {
                 return new List<Schedule>();
             }
 
-            // 관할 담당자들의 일정 조회
+            // 3. 해당 담당자들의 일정 조회 (예약됨 + 확정됨)
             var schedules = new List<Schedule>();
             foreach (var userId in militaryUserIds)
             {
@@ -468,7 +537,8 @@ public partial class CalendarViewModel : ViewModelBase
                 schedules.AddRange(userSchedules);
             }
 
-            return schedules.OrderBy(s => s.ReservedDate).ToList();
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadMiddleMilitarySchedulesAsync: Total {schedules.Count} schedules");
+            return schedules.OrderBy(s => s.ReservedDate).ThenBy(s => s.ReservedStartTime).ToList();
         }
         catch (Exception ex)
         {
@@ -788,8 +858,10 @@ public partial class CalendarDay : ObservableObject
 
     /// <summary>
     /// 일정 표시 데이터 업데이트
-    /// - 지자체담당자: 시간 / 대대명 / 업체명
-    /// - 대대담당자: 시간 / 군,구명 / 업체명
+    /// - 지자체담당자(user_local): 시간 / 대대명 / 업체명
+    /// - 대대담당자(user_military): 시간 / 군,구명 / 업체명
+    /// - 지자체(도) 중간관리자(middle_local): 시간 / 시군구명 / 업체명
+    /// - 사단담당자(middle_military): 시간 / 대대명 / 업체명
     /// </summary>
     public void UpdateScheduleDisplays(UserRole currentRole)
     {
@@ -797,24 +869,22 @@ public partial class CalendarDay : ObservableObject
 
         if (Schedules == null || !Schedules.Any()) return;
 
-        bool isMilitaryUser = currentRole == UserRole.UserMilitary;
-
         foreach (var schedule in Schedules.OrderBy(s => s.ReservedStartTime).Take(3)) // 최대 3개 표시
         {
             var display = new CalendarDayScheduleDisplay
             {
                 ScheduleId = schedule.Id,
                 IsConfirmed = schedule.Status == "confirmed",
-                IsMilitaryUser = isMilitaryUser,
+                CurrentRole = currentRole,
                 // 시간 (예: 10:00)
                 TimeText = schedule.ReservedStartTime.HasValue
                     ? schedule.ReservedStartTime.Value.ToString(@"hh\:mm")
                     : "",
                 // 업체명
                 CompanyName = schedule.Company?.Name ?? "",
-                // 대대명 (지자체담당자용)
+                // 대대명 (지자체담당자, 사단담당자용)
                 BattalionName = schedule.MilitaryUser?.Battalion?.Name ?? "",
-                // 군,구명 (대대담당자용)
+                // 군,구명 (대대담당자, 지자체(도) 중간관리자용)
                 DistrictName = schedule.LocalUser?.District?.Name ?? "",
                 StatusColor = schedule.StatusColor
             };
@@ -826,19 +896,21 @@ public partial class CalendarDay : ObservableObject
 
 /// <summary>
 /// 캘린더 셀 내 일정 표시용 클래스
-/// - 지자체담당자: 시간 / 대대명 / 업체명
-/// - 대대담당자: 시간 / 군,구명 / 업체명
+/// - 지자체담당자(user_local): 시간 / 대대명 / 업체명
+/// - 대대담당자(user_military): 시간 / 군,구명 / 업체명
+/// - 지자체(도) 중간관리자(middle_local): 시간 / 시군구명 / 업체명
+/// - 사단담당자(middle_military): 시간 / 대대명 / 업체명
 /// </summary>
 public class CalendarDayScheduleDisplay
 {
     public Guid ScheduleId { get; set; }
     public bool IsConfirmed { get; set; }
     public string TimeText { get; set; } = "";           // 예: "10:00"
-    public string BattalionName { get; set; } = "";      // 예: "101대대" (지자체담당자용)
-    public string DistrictName { get; set; } = "";       // 예: "강남구" (대대담당자용)
+    public string BattalionName { get; set; } = "";      // 예: "101대대"
+    public string DistrictName { get; set; } = "";       // 예: "강남구"
     public string CompanyName { get; set; } = "";        // 예: "해태제과"
     public string StatusColor { get; set; } = "#FF9800";
-    public bool IsMilitaryUser { get; set; } = false;    // 대대담당자 여부
+    public UserRole CurrentRole { get; set; } = UserRole.None;
 
     public string ConfirmMark => IsConfirmed ? "✓" : "";
 
@@ -846,9 +918,22 @@ public class CalendarDayScheduleDisplay
     public string Line1 => $"{ConfirmMark}{TimeText}";
 
     // 둘째 줄: 역할에 따라 다름
-    // - 지자체담당자: 대대명 (예: 101대대)
-    // - 대대담당자: 군,구명 (예: 강남구)
-    public string Line2 => IsMilitaryUser ? DistrictName : BattalionName;
+    // - 지자체담당자, 사단담당자, 최종관리자: 대대명
+    // - 대대담당자, 지자체(도) 중간관리자: 시군구명
+    // - 지자체담당자, 사단담당자, 최종관리자: 대대명
+    public string Line2
+    {
+        get
+        {
+            return CurrentRole switch
+            {
+                UserRole.UserMilitary => DistrictName,      // 대대담당자: 시군구명
+                UserRole.MiddleLocal => DistrictName,       // 지자체(도): 시군구명
+                UserRole.MiddleMilitary => BattalionName,   // 사단담당자: 대대명
+                _ => BattalionName                          // 그 외(지자체담당자, 최종관리자): 대대명
+            };
+        }
+    }
 
     // 셋째 줄: 업체명 (예: 해태제과)
     public string Line3 => CompanyName;
