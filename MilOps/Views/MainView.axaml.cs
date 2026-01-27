@@ -30,6 +30,7 @@ public partial class MainView : UserControl
         SetupScheduleInputView();
         SetupScheduleReserveView();
         SetupScheduleConfirmView();
+        SetupNotificationView();
     }
 
     private void SetupCompanyRegisterView()
@@ -64,6 +65,25 @@ public partial class MainView : UserControl
         // ScheduleConfirmView의 이벤트 구독
         ScheduleConfirmView.CloseRequested += OnScheduleConfirmCloseRequested;
         ScheduleConfirmView.ScheduleStatusChanged += OnScheduleConfirmStatusChanged;
+    }
+
+    private void SetupNotificationView()
+    {
+        // NotificationView의 이벤트 구독
+        NotificationView.CloseRequested += OnNotificationCloseRequested;
+        NotificationView.OnScheduleSelected += OnNotificationScheduleSelected;
+    }
+
+    private void OnNotificationCloseRequested(object? sender, EventArgs e)
+    {
+        // 알림 화면에서 닫기 시 캘린더로 이동
+        _viewModel.SelectTabCommand.Execute("calendar");
+    }
+
+    private void OnNotificationScheduleSelected(Guid scheduleId)
+    {
+        // 알림 클릭 시 일정 상세 화면으로 이동
+        OpenScheduleInput(scheduleId, "view");
     }
 
     private void OnCompanyRegisterCloseRequested(object? sender, EventArgs e)

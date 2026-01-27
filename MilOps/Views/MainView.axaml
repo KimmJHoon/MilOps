@@ -48,7 +48,7 @@
         <views:ManagerView/>
       </Border>
       <Border IsVisible="{Binding IsNotificationSelected}">
-        <views:NotificationView/>
+        <views:NotificationView x:Name="NotificationView"/>
       </Border>
       <Border IsVisible="{Binding IsSettingsSelected}">
         <views:SettingsView/>
