@@ -752,10 +752,10 @@ public class CalendarScheduleItem
     {
         get
         {
-            if (IsConfirmed) return "✓ 확정완료";
-            if (LocalConfirmed && !MilitaryConfirmed) return "🏛️✓ 🎖️⏳";
-            if (!LocalConfirmed && MilitaryConfirmed) return "🏛️⏳ 🎖️✓";
-            return "⏳ 확정대기";
+            if (IsConfirmed) return "● 확정완료";
+            if (LocalConfirmed && !MilitaryConfirmed) return "[민]● [군]○";
+            if (!LocalConfirmed && MilitaryConfirmed) return "[민]○ [군]●";
+            return "○ 확정대기";
         }
     }
 }

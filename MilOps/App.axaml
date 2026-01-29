@@ -12,9 +12,17 @@
 
     <Application.Styles>
         <FluentTheme />
+
+        <!-- Material Icons 스타일 -->
+        <Style Selector="TextBlock.mi">
+            <Setter Property="FontFamily" Value="avares://MilOps/Assets/Fonts/MaterialIcons-Regular.ttf#Material Icons"/>
+            <Setter Property="FontSize" Value="20"/>
+        </Style>
     </Application.Styles>
 
     <Application.Resources>
+        <!-- Material Icons 폰트 리소스 -->
+        <FontFamily x:Key="MaterialIcons">avares://MilOps/Assets/Fonts/MaterialIcons-Regular.ttf#Material Icons</FontFamily>
         <converters:StatusFilterConverter x:Key="StatusFilterConverter"/>
         <converters:BoolToTabBgConverter x:Key="BoolToTabBgConverter"/>
         <converters:BoolToTabFgConverter x:Key="BoolToTabFgConverter"/>

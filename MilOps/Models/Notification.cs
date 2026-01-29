@@ -55,15 +55,18 @@ public class Notification : BaseModel
         _ => "알림"
     };
 
+    // Material Icons 코드 (XAML에서 FontFamily="{StaticResource MaterialIcons}" 사용)
+    // &#xe0ee; = list_alt, &#xe3c9; = edit, &#xe935; = calendar_today
+    // &#xe86c; = check_circle, &#xe855; = alarm, &#xe7f4; = notifications
     [JsonIgnore]
     public string TypeIcon => Type switch
     {
-        "schedule_created" => "📋",
-        "schedule_inputted" => "📝",
-        "schedule_reserved" => "📅",
-        "schedule_confirmed" => "✅",
-        "schedule_reminder" => "⏰",
-        _ => "🔔"
+        "schedule_created" => "\ue0ee",    // list_alt
+        "schedule_inputted" => "\ue3c9",   // edit
+        "schedule_reserved" => "\ue935",   // calendar_today
+        "schedule_confirmed" => "\ue86c",  // check_circle
+        "schedule_reminder" => "\ue855",   // alarm
+        _ => "\ue7f4"                       // notifications
     };
 
     [JsonIgnore]

@@ -70,7 +70,7 @@
         <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📅" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="캘린더" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsCalendarSelected}"/>
@@ -84,7 +84,7 @@
         <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="schedule"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📋" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe0ee;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="일정" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsScheduleSelected}"/>
@@ -98,7 +98,7 @@
         <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="notification"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="🔔" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe7f4;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="알림" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsNotificationSelected}"/>
@@ -122,7 +122,7 @@
         <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📅" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="캘린더" FontSize="11" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsCalendarSelected}"/>
@@ -136,7 +136,7 @@
         <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="schedule"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📋" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe0ee;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="일정" FontSize="11" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsScheduleSelected}"/>
@@ -150,7 +150,7 @@
         <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="notification"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="🔔" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe7f4;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="알림" FontSize="11" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsNotificationSelected}"/>
@@ -164,7 +164,7 @@
         <Button Grid.Column="3" Command="{Binding SelectTabCommand}" CommandParameter="manager"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="👥" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe7ef;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="담당자" FontSize="11" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsManagerSelected}"/>
@@ -187,7 +187,7 @@
         <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📅" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="캘린더" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsCalendarSelected}"/>
@@ -201,7 +201,7 @@
         <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="notification"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="🔔" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe7f4;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="알림" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsNotificationSelected}"/>
@@ -215,7 +215,7 @@
         <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="manager"
                 Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
           <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="👥" FontSize="14" HorizontalAlignment="Center"/>
+            <TextBlock Text="&#xe7ef;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" HorizontalAlignment="Center"/>
             <Panel>
               <TextBlock Text="관리" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
                          IsVisible="{Binding IsManagerSelected}"/>

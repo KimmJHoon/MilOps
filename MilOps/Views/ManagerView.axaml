@@ -76,7 +76,7 @@
                             Padding="4,0"
                             Margin="4,0,0,0"
                             IsVisible="{Binding IsValid}">
-                      <TextBlock Text="📋" FontSize="12"/>
+                      <TextBlock Text="&#xe0ee;" FontFamily="{StaticResource MaterialIcons}" FontSize="14"/>
                     </Button>
                   </Grid>
 

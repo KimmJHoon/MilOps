@@ -9,39 +9,31 @@
              x:DataType="vm:NotificationViewModel"
              DataContext="{x:Null}">
 
-  <Grid Background="#000000">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="*"/>
-    </Grid.RowDefinitions>
-
-    <!-- 헤더 -->
-    <Border Grid.Row="0" Background="#1A1A1A" Padding="16">
-      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
-        <Button Grid.Column="0" Command="{Binding CloseCommand}"
-                Background="Transparent" Padding="8,4">
-          <TextBlock Text="&lt;" FontSize="20" Foreground="White"/>
-        </Button>
-
-        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
-          <TextBlock Text="알림" FontSize="18" Foreground="White"/>
-          <Border Background="#F44336" CornerRadius="10" Padding="8,2" Margin="8,0,0,0"
-                  IsVisible="{Binding !!UnreadCount}">
-            <TextBlock Text="{Binding UnreadCount}" FontSize="12" Foreground="White"/>
+  <Grid Background="#000000" RowDefinitions="Auto,*">
+    <!-- 액션 바 -->
+    <Border Grid.Row="0" Background="#1A1A1A" Padding="12,8">
+      <Grid ColumnDefinitions="*,Auto,Auto">
+        <!-- 읽지 않은 개수 -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="6">
+          <TextBlock Text="읽지 않음" FontSize="13" Foreground="#888888" VerticalAlignment="Center"/>
+          <Border Background="#F44336" CornerRadius="10" MinWidth="20" Height="20"
+                  Padding="6,0" HorizontalAlignment="Center">
+            <TextBlock Text="{Binding UnreadCount}" FontSize="12" Foreground="White"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
         </StackPanel>
 
         <!-- 모두 읽음 버튼 -->
-        <Button Grid.Column="2" Command="{Binding MarkAllAsReadCommand}"
+        <Button Grid.Column="1" Command="{Binding MarkAllAsReadCommand}"
                 Background="Transparent" Padding="8,4"
                 IsVisible="{Binding !!UnreadCount}">
           <TextBlock Text="모두 읽음" FontSize="13" Foreground="#4CAF50"/>
         </Button>
 
         <!-- 새로고침 버튼 -->
-        <Button Grid.Column="3" Command="{Binding RefreshCommand}"
+        <Button Grid.Column="2" Command="{Binding RefreshCommand}"
                 Background="Transparent" Padding="8,4">
-          <TextBlock Text="&#x21BB;" FontSize="18" Foreground="White"/>
+          <TextBlock Text="&#xe5d5;" FontFamily="{StaticResource MaterialIcons}" FontSize="18" Foreground="White"/>
         </Button>
       </Grid>
     </Border>
@@ -51,7 +43,7 @@
       <!-- 빈 상태 -->
       <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                   IsVisible="{Binding !HasNotifications}">
-        <TextBlock Text="&#x1F514;" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+        <TextBlock Text="&#xe7f4;" FontFamily="{StaticResource MaterialIcons}" FontSize="48" Foreground="#888888" HorizontalAlignment="Center" Opacity="0.5"/>
         <TextBlock Text="{Binding EmptyMessage}" FontSize="16" Foreground="#888888"
                    HorizontalAlignment="Center" Margin="0,16,0,0"/>
       </StackPanel>
@@ -75,7 +67,10 @@
                             Background="{Binding TypeColor}" Margin="0,0,12,0"
                             VerticalAlignment="Top">
                       <TextBlock Text="{Binding TypeIcon}" FontSize="18"
-                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                 FontFamily="{StaticResource MaterialIcons}"
+                                 Foreground="White"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"
+                                 Padding="0,2,0,0"/>
                     </Border>
 
                     <!-- 내용 -->

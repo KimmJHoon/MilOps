@@ -30,7 +30,7 @@
                   Background="Transparent" Padding="8,4">
             <TextBlock Text="← 뒤로" Foreground="White" FontSize="14"/>
           </Button>
-          <TextBlock Grid.Column="1" Text="🗓️ 일정 생성" FontSize="16" Foreground="White"
+          <TextBlock Grid.Column="1" Text="일정 생성" FontSize="16" Foreground="White"
                      HorizontalAlignment="Center" VerticalAlignment="Center" Margin="-50,0,0,0"/>
         </Grid>
       </Border>
@@ -188,7 +188,10 @@
           <Border Background="#1A1A1A" CornerRadius="10" Padding="16"
                   IsVisible="{Binding ShowAutoInfo}">
             <StackPanel Spacing="12">
-              <TextBlock Text="👁️ 자동 연결 정보" FontSize="14" Foreground="#888888"/>
+              <StackPanel Orientation="Horizontal" Spacing="6">
+                <TextBlock Text="&#xe8f4;" FontFamily="{StaticResource MaterialIcons}" FontSize="16" Foreground="#888888" VerticalAlignment="Center"/>
+                <TextBlock Text="자동 연결 정보" FontSize="14" Foreground="#888888" VerticalAlignment="Center"/>
+              </StackPanel>
 
               <!-- 업체 정보 -->
               <StackPanel Spacing="4"
