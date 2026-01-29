@@ -458,13 +458,28 @@ public partial class ScheduleListViewModel : ViewModelBase
 
             System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] CreateScheduleListItem - Schedule: {schedule.Id}, Status: {schedule.Status}, Role: {currentUser.Role}, CanDelete: {item.CanDelete}");
 
-            // 확정 상태 설정
-            if (schedule.Status == "reserved")
+            // 상태별 미확정 정보 표시
+            if (schedule.Status == "created")
             {
-                item.LocalConfirmStatus = schedule.LocalConfirmed ? "✅" : "⏳";
-                item.MilitaryConfirmStatus = schedule.MilitaryConfirmed ? "✅" : "⏳";
-
-                // 현재 사용자 기준 확정 필요 여부
+                // 생성됨: 양측 미확정
+                item.UnconfirmedInfo = "양측 미확정";
+            }
+            else if (schedule.Status == "inputted")
+            {
+                // 입력됨: 사용자 역할에 따라 표시
+                if (currentUser.Role == "user_local" || currentUser.Role == "middle_local" || currentUser.Role == "super_admin_mois")
+                {
+                    item.UnconfirmedInfo = "대대 미확정";
+                }
+                else if (currentUser.Role == "user_military" || currentUser.Role == "middle_military" || currentUser.Role == "super_admin_army")
+                {
+                    item.UnconfirmedInfo = "지자체 미확정";
+                }
+            }
+            else if (schedule.Status == "reserved")
+            {
+                // 예약됨: 표시 없음 (확정 대기 상태)
+                // 현재 사용자 기준 확정 필요 여부만 설정
                 if (currentUser.Role == "user_local")
                 {
                     item.NeedsMyConfirm = !schedule.LocalConfirmed;
@@ -472,23 +487,6 @@ public partial class ScheduleListViewModel : ViewModelBase
                 else if (currentUser.Role == "user_military")
                 {
                     item.NeedsMyConfirm = !schedule.MilitaryConfirmed;
-                }
-
-                // 중간관리자용: 미확정자 표시
-                if (currentUser.Role == "middle_military" || currentUser.Role == "middle_local")
-                {
-                    if (!schedule.LocalConfirmed && !schedule.MilitaryConfirmed)
-                    {
-                        item.UnconfirmedInfo = "⚠️ 양측 미확정";
-                    }
-                    else if (!schedule.LocalConfirmed)
-                    {
-                        item.UnconfirmedInfo = "⚠️ 지자체 미확정";
-                    }
-                    else if (!schedule.MilitaryConfirmed)
-                    {
-                        item.UnconfirmedInfo = "⚠️ 대대 미확정";
-                    }
                 }
             }
         }
@@ -518,16 +516,16 @@ public partial class ScheduleListViewModel : ViewModelBase
     {
         return (schedule.Status, currentUser.Role) switch
         {
-            ("created", "user_local") => "📝 일정 입력하기",
-            ("inputted", "user_military") => "📅 일정 예약하기",
-            ("reserved", "user_local") when !schedule.LocalConfirmed => "✅ 확정 필요",
-            ("reserved", "user_military") when !schedule.MilitaryConfirmed => "✅ 확정 필요",
-            ("reserved", _) when schedule.LocalConfirmed && schedule.MilitaryConfirmed => "🔒 확정 완료",
-            ("reserved", "user_local") when schedule.LocalConfirmed => "⏳ 상대방 대기",
-            ("reserved", "user_military") when schedule.MilitaryConfirmed => "⏳ 상대방 대기",
-            ("confirmed", _) => "📄 상세보기",
-            ("created", "middle_military") => "🗑️ 삭제하기",
-            _ => "📄 상세보기"
+            ("created", "user_local") => "일정 입력하기",
+            ("inputted", "user_military") => "일정 예약하기",
+            ("reserved", "user_local") when !schedule.LocalConfirmed => "확정 필요",
+            ("reserved", "user_military") when !schedule.MilitaryConfirmed => "확정 필요",
+            ("reserved", _) when schedule.LocalConfirmed && schedule.MilitaryConfirmed => "확정 완료",
+            ("reserved", "user_local") when schedule.LocalConfirmed => "상대방 대기",
+            ("reserved", "user_military") when schedule.MilitaryConfirmed => "상대방 대기",
+            ("confirmed", _) => "상세보기",
+            ("created", "middle_military") => "삭제하기",
+            _ => "상세보기"
         };
     }
 
