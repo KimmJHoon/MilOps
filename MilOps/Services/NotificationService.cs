@@ -1,7 +1,4 @@
 using MilOps.Models;
-using Supabase.Realtime;
-using Supabase.Realtime.PostgresChanges;
-using EventType = Supabase.Realtime.Constants.EventType;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -11,24 +8,10 @@ namespace MilOps.Services;
 
 /// <summary>
 /// 알림 서비스
+/// FCM이 푸시 알림을 처리하므로 Realtime 구독 제거됨
 /// </summary>
 public static class NotificationService
 {
-    private static RealtimeChannel? _realtimeChannel;
-    private static bool _isSubscribed = false;
-    private static bool _isSubscribing = false;
-    private static readonly object _subscribeLock = new object();
-
-    /// <summary>
-    /// 새 알림 수신 이벤트
-    /// </summary>
-    public static event Action<Notification>? OnNewNotification;
-
-    /// <summary>
-    /// 알림 업데이트 이벤트 (읽음 처리 등)
-    /// </summary>
-    public static event Action<Notification>? OnNotificationUpdated;
-
     /// <summary>
     /// 현재 사용자의 알림 목록 조회
     /// </summary>
@@ -175,169 +158,4 @@ public static class NotificationService
         }
     }
 
-    /// <summary>
-    /// 현재 구독 중인 사용자 ID
-    /// </summary>
-    private static Guid _subscribedUserId = Guid.Empty;
-
-    /// <summary>
-    /// 실시간 알림 구독 시작
-    /// </summary>
-    public static async Task SubscribeToRealtimeAsync()
-    {
-        System.Diagnostics.Debug.WriteLine($"[NotificationService] SubscribeToRealtimeAsync called, _isSubscribed: {_isSubscribed}, _isSubscribing: {_isSubscribing}");
-
-        // 중복 호출 방지
-        lock (_subscribeLock)
-        {
-            if (_isSubscribed || _isSubscribing)
-            {
-                System.Diagnostics.Debug.WriteLine("[NotificationService] Already subscribed or subscribing, skipping");
-                return;
-            }
-            _isSubscribing = true;
-        }
-
-        var currentUser = AuthService.CurrentUser;
-        if (currentUser == null)
-        {
-            System.Diagnostics.Debug.WriteLine("[NotificationService] Cannot subscribe - no current user");
-            _isSubscribing = false;
-            return;
-        }
-
-        // 사용자 ID 저장 (핸들러에서 사용)
-        _subscribedUserId = currentUser.Id;
-
-        System.Diagnostics.Debug.WriteLine($"[NotificationService] Current user: {currentUser.Id} ({currentUser.LoginId})");
-
-        try
-        {
-            var client = SupabaseService.Client;
-            if (client?.Realtime == null)
-            {
-                System.Diagnostics.Debug.WriteLine("[NotificationService] Realtime client not available");
-                _isSubscribing = false;
-                return;
-            }
-
-            System.Diagnostics.Debug.WriteLine("[NotificationService] Connecting to Realtime...");
-
-            // Realtime 연결
-            await SupabaseService.ConnectRealtimeAsync();
-
-            System.Diagnostics.Debug.WriteLine("[NotificationService] Realtime connected, creating channel...");
-
-            // 채널 이름에 고유 식별자 추가 (중복 방지)
-            var channelName = $"notifications-{currentUser.Id}";
-            _realtimeChannel = client.Realtime.Channel(channelName);
-
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] Channel created: {channelName}");
-
-            // PostgresChanges 옵션 설정
-            var pgOptions = new PostgresChangesOptions("public", "notifications");
-
-            // 핸들러 등록 - 모든 이벤트 수신
-            _realtimeChannel
-                .Register(pgOptions)
-                .AddPostgresChangeHandler(PostgresChangesOptions.ListenType.All, HandlePostgresChange);
-
-            System.Diagnostics.Debug.WriteLine("[NotificationService] Postgres change handler registered");
-
-            System.Diagnostics.Debug.WriteLine("[NotificationService] Subscribing to channel...");
-
-            await _realtimeChannel.Subscribe();
-            _isSubscribed = true;
-            _isSubscribing = false;
-
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] Subscribed to realtime notifications for user {currentUser.Id}");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] SubscribeToRealtimeAsync error: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] StackTrace: {ex.StackTrace}");
-            _isSubscribed = false;
-            _isSubscribing = false;
-        }
-    }
-
-    /// <summary>
-    /// Postgres 변경 이벤트 핸들러
-    /// </summary>
-    private static void HandlePostgresChange(object sender, PostgresChangesResponse change)
-    {
-        System.Diagnostics.Debug.WriteLine($"[NotificationService] Postgres change received! Event: {change.Event}, Payload type: {change.Payload?.GetType().Name}");
-
-        try
-        {
-            var model = change.Model<Notification>();
-            if (model == null)
-            {
-                System.Diagnostics.Debug.WriteLine("[NotificationService] Could not parse notification model");
-                return;
-            }
-
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] Notification: {model.Title}, UserId: {model.UserId}, CurrentUser: {_subscribedUserId}");
-
-            // 현재 사용자의 알림만 처리
-            if (model.UserId != _subscribedUserId)
-            {
-                System.Diagnostics.Debug.WriteLine($"[NotificationService] Ignoring - not my notification");
-                return;
-            }
-
-            // Event 타입으로 INSERT/UPDATE 구분
-            // EventType enum: Insert, Update, Delete, PostgresChanges
-            var isInsert = change.Event == EventType.Insert || change.Event == EventType.PostgresChanges;
-            var isUpdate = change.Event == EventType.Update;
-
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] Event: {change.Event}, IsInsert: {isInsert}, IsUpdate: {isUpdate}");
-
-            if (isInsert)
-            {
-                System.Diagnostics.Debug.WriteLine($"[NotificationService] Invoking OnNewNotification for: {model.Title}");
-                OnNewNotification?.Invoke(model);
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"[NotificationService] Invoking OnNotificationUpdated for: {model.Id}");
-                OnNotificationUpdated?.Invoke(model);
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] HandlePostgresChange error: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] StackTrace: {ex.StackTrace}");
-        }
-    }
-
-    /// <summary>
-    /// 실시간 알림 구독 해제
-    /// </summary>
-    public static void UnsubscribeFromRealtime()
-    {
-        if (!_isSubscribed || _realtimeChannel == null)
-        {
-            return;
-        }
-
-        try
-        {
-            _realtimeChannel.Unsubscribe();
-            _realtimeChannel = null;
-            _isSubscribed = false;
-            _subscribedUserId = Guid.Empty;
-
-            System.Diagnostics.Debug.WriteLine("[NotificationService] Unsubscribed from realtime notifications");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[NotificationService] UnsubscribeFromRealtime error: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// 구독 상태 확인
-    /// </summary>
-    public static bool IsSubscribed => _isSubscribed;
 }
