@@ -130,22 +130,27 @@ public partial class CalendarViewModel : ViewModelBase
     {
         if (day == null || day.Day == 0) return;
 
-        // 일정이 하나만 있으면 바로 상세 화면으로 이동
-        if (day.Schedules != null && day.Schedules.Count == 1)
+        // 이전 선택 해제
+        if (SelectedDay != null)
         {
-            OnScheduleSelected?.Invoke(day.Schedules[0].Id);
+            SelectedDay.IsSelected = false;
+        }
+
+        // 일정이 없는 날짜
+        if (day.Schedules == null || day.Schedules.Count == 0)
+        {
+            HasSelectedDaySchedules = false;
+            SelectedDaySchedules.Clear();
+            SelectedDay = null;
             return;
         }
 
-        // 일정이 여러 개면 첫 번째 일정으로 이동 (또는 선택 UI 표시 가능)
-        if (day.Schedules != null && day.Schedules.Count > 1)
-        {
-            // 일정 여러 개일 때 첫 번째 일정 상세로 이동
-            OnScheduleSelected?.Invoke(day.Schedules[0].Id);
-            return;
-        }
+        // 새 날짜 선택
+        day.IsSelected = true;
+        SelectedDay = day;
 
-        // 일정이 없는 날짜는 무시
+        // 일정 목록 패널 업데이트
+        UpdateSelectedDaySchedules(day);
     }
 
     /// <summary>

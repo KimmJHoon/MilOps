@@ -158,112 +158,60 @@ public partial class ScheduleInputViewModel : ViewModelBase
             var client = SupabaseService.Client;
             if (client == null) return;
 
-            // 일정 로드
-            var scheduleResponse = await client.From<Schedule>()
-                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
-                .Single();
+            // RPC 함수로 모든 데이터를 한 번에 조회
+            var response = await client.Rpc<List<ScheduleInputDetailDto>>(
+                "get_schedule_input_detail",
+                new Dictionary<string, object> { { "p_schedule_id", _scheduleId.ToString() } });
 
-            _schedule = scheduleResponse;
-            if (_schedule == null)
+            var detail = response?.FirstOrDefault();
+            if (detail == null)
             {
                 ErrorMessage = "일정을 찾을 수 없습니다.";
                 return;
             }
 
-            // 관련 데이터 로드
-            var companyTask = client.From<Company>()
-                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _schedule.CompanyId.ToString())
-                .Single();
-
-            var localUserTask = client.From<User>()
-                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _schedule.LocalUserId.ToString())
-                .Single();
-
-            var militaryUserTask = client.From<User>()
-                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _schedule.MilitaryUserId.ToString())
-                .Single();
-
-            await Task.WhenAll(companyTask, localUserTask, militaryUserTask);
-
-            var company = companyTask.Result;
-            var localUser = localUserTask.Result;
-            var militaryUser = militaryUserTask.Result;
+            // Schedule 객체 생성 (Update용)
+            _schedule = new Schedule
+            {
+                Id = detail.ScheduleId,
+                Status = detail.ScheduleStatus,
+                AvailableStart = detail.AvailableStart,
+                AvailableEnd = detail.AvailableEnd,
+                Memo = detail.Memo,
+                CompanyId = detail.CompanyId,
+                LocalUserId = detail.LocalUserId,
+                MilitaryUserId = detail.MilitaryUserId
+            };
 
             // 업체 정보 설정
-            if (company != null)
-            {
-                CompanyName = company.Name;
-                CompanyProducts = company.Products ?? "";
-
-                // District 로드
-                if (company.DistrictId != Guid.Empty)
-                {
-                    var district = await client.From<District>()
-                        .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, company.DistrictId.ToString())
-                        .Single();
-
-                    if (district != null)
-                    {
-                        DistrictName = district.Name;
-
-                        // Region 로드
-                        var region = await client.From<Region>()
-                            .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, district.RegionId.ToString())
-                            .Single();
-
-                        if (region != null)
-                        {
-                            RegionName = region.Name;
-                        }
-                    }
-                }
-            }
+            CompanyName = detail.CompanyName ?? "";
+            CompanyProducts = detail.CompanyProducts ?? "";
+            DistrictName = detail.DistrictName ?? "";
+            RegionName = detail.RegionName ?? "";
 
             // 대대담당자 정보
-            if (militaryUser != null)
-            {
-                MilitaryUserName = militaryUser.FullDisplayName;
-                MilitaryUserPhone = militaryUser.Phone ?? "";
-
-                // Battalion 로드
-                if (militaryUser.BattalionId.HasValue)
-                {
-                    var battalion = await client.From<Battalion>()
-                        .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, militaryUser.BattalionId.Value.ToString())
-                        .Single();
-
-                    if (battalion != null)
-                    {
-                        // Division 로드
-                        var division = await client.From<Division>()
-                            .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, battalion.DivisionId.ToString())
-                            .Single();
-
-                        BattalionName = division != null
-                            ? $"{division.Name} {battalion.Name}"
-                            : battalion.Name;
-                    }
-                }
-            }
+            MilitaryUserName = detail.MilitaryUserFullDisplayName;
+            MilitaryUserPhone = detail.MilitaryUserPhone ?? "";
+            BattalionName = detail.BattalionFullName;
 
             // 현재 사용자 표시 설정
             var currentUser = AuthService.CurrentUser;
-            if (currentUser != null && localUser != null)
+            if (currentUser != null)
             {
-                CurrentUserDisplay = $"{localUser.FullDisplayName} ({RegionName} {DistrictName} 지자체담당자)";
+                CurrentUserDisplay = $"{detail.LocalUserFullDisplayName} ({detail.RegionName} {detail.DistrictName} 지자체담당자)";
             }
 
             // 기존 메모 로드
-            Memo = _schedule.Memo ?? "";
+            Memo = detail.Memo ?? "";
 
             // 기존 가능 일자 로드 (지자체담당자가 이미 입력한 경우)
-            if (_schedule.AvailableStart.HasValue)
+            if (detail.AvailableStart.HasValue)
             {
-                AvailableStartDate = _schedule.AvailableStart.Value;
+                AvailableStartDate = detail.AvailableStart.Value;
             }
-            if (_schedule.AvailableEnd.HasValue)
+            if (detail.AvailableEnd.HasValue)
             {
-                AvailableEndDate = _schedule.AvailableEnd.Value;
+                AvailableEndDate = detail.AvailableEnd.Value;
             }
 
             // 기존 선택된 시간 슬롯 로드
