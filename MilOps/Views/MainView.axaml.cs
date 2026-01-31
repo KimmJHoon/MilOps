@@ -1,8 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Media;
-using MilOps.Services;
 using MilOps.ViewModels;
 using System;
 using System.Threading.Tasks;
@@ -24,6 +22,8 @@ public partial class MainView : UserControl
         _viewModel = new MainViewModel();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _viewModel.LogoutCompleted += OnLogoutCompleted;
+        _viewModel.TabChanged += OnTabChanged;
+        _viewModel.ScheduleNavigationRequested += OnScheduleNavigationRequested;
         DataContext = _viewModel;
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
@@ -35,6 +35,51 @@ public partial class MainView : UserControl
         SetupScheduleReserveView();
         SetupScheduleConfirmView();
         SetupNotificationView();
+    }
+
+    /// <summary>
+    /// ViewModel에서 일정 화면 이동 요청 시 호출 (MVVM 패턴: View는 화면 전환만 담당)
+    /// </summary>
+    private async void OnScheduleNavigationRequested(ScheduleNavigationArgs args)
+    {
+        System.Diagnostics.Debug.WriteLine($"[MainView] OnScheduleNavigationRequested - Type: {args.NavigationType}, Id: {args.ScheduleId}");
+
+        switch (args.NavigationType)
+        {
+            case ScheduleNavigationType.Input:
+                _viewModel.OpenScheduleInput(args.ScheduleId);
+                await ScheduleInputView.InitializeAsync(args.ScheduleId, "input");
+                break;
+            case ScheduleNavigationType.Reserve:
+                _viewModel.OpenScheduleReserve(args.ScheduleId);
+                await ScheduleReserveView.InitializeAsync(args.ScheduleId);
+                break;
+            case ScheduleNavigationType.Confirm:
+                _viewModel.OpenScheduleConfirm(args.ScheduleId);
+                await ScheduleConfirmView.InitializeAsync(args.ScheduleId);
+                break;
+        }
+    }
+
+    /// <summary>
+    /// 탭 변경 시 호출 - 해당 View 초기화
+    /// </summary>
+    private void OnTabChanged(string tabName)
+    {
+        System.Diagnostics.Debug.WriteLine($"[MainView] OnTabChanged: {tabName}");
+
+        switch (tabName)
+        {
+            case "calendar":
+                CalendarView.OnTabEntered();
+                break;
+            case "notification":
+                NotificationView.OnTabEntered();
+                break;
+            case "schedule":
+                ScheduleListView.ForceInitialize();
+                break;
+        }
     }
 
     private void OnLogoutCompleted()
@@ -145,77 +190,15 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// 일정 상세 화면 열기 (역할과 상태에 따라 입력/예약/확정 화면으로 분기)
+    /// 일정 상세 화면 열기 (MVVM 패턴: ViewModel에 위임하여 DB 조회 및 화면 분기 처리)
+    /// View에서는 직접 DB를 호출하지 않음
     /// </summary>
-    public async void OpenScheduleInput(Guid scheduleId, string mode)
+    public void OpenScheduleInput(Guid scheduleId, string mode)
     {
-        var currentUser = AuthService.CurrentUser;
-        if (currentUser == null) return;
+        System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - scheduleId: {scheduleId}, mode: {mode}");
 
-        System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - scheduleId: {scheduleId}, mode: {mode}, role: {currentUser.Role}");
-
-        // 먼저 일정 상태 확인
-        try
-        {
-            var client = SupabaseService.Client;
-            if (client == null) return;
-
-            var schedule = await client.From<MilOps.Models.Schedule>()
-                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, scheduleId.ToString())
-                .Single();
-
-            if (schedule == null)
-            {
-                System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Schedule not found");
-                return;
-            }
-
-            System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Schedule status: {schedule.Status}");
-
-            // 예약됨 상태 -> 확정 화면
-            if (schedule.Status == "reserved")
-            {
-                OpenScheduleConfirm(scheduleId);
-                return;
-            }
-
-            // 확정됨 상태 -> 확정 화면 (읽기 전용으로 보여줌)
-            if (schedule.Status == "confirmed")
-            {
-                OpenScheduleConfirm(scheduleId);
-                return;
-            }
-
-            // 역할에 따라 분기
-            if (currentUser.Role == "user_local")
-            {
-                // 지자체담당자 -> 일정 입력 화면
-                _viewModel.OpenScheduleInput(scheduleId);
-                await ScheduleInputView.InitializeAsync(scheduleId, "input");
-            }
-            else if (currentUser.Role == "user_military")
-            {
-                // 대대담당자 -> 일정 예약 화면 (입력됨 상태일 때만)
-                if (schedule.Status == "inputted")
-                {
-                    _viewModel.OpenScheduleReserve(scheduleId);
-                    await ScheduleReserveView.InitializeAsync(scheduleId);
-                }
-                else
-                {
-                    // 생성됨 상태 등 -> 아직 지자체담당자가 입력 안 함
-                    System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Schedule not ready for reservation (status: {schedule.Status})");
-                }
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Unsupported role: {currentUser.Role}");
-            }
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Error: {ex.Message}");
-        }
+        // ViewModel에 일정 상세 화면 열기 요청 (백그라운드에서 DB 조회 후 이벤트로 통지)
+        _viewModel.RequestOpenScheduleDetail(scheduleId, mode);
     }
 
     private void OnScheduleInputCloseRequested(object? sender, EventArgs e)
@@ -253,6 +236,9 @@ public partial class MainView : UserControl
         // 확정 완료 시 해당 일정의 상태만 직접 업데이트 (리프레시 없이)
         System.Diagnostics.Debug.WriteLine($"[MainView] OnScheduleConfirmStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
         ScheduleListView.ViewModel?.UpdateScheduleStatus(e.ScheduleId, e.NewStatus, e.NewStatusOrder);
+
+        // 캘린더도 새로고침 (확정 상태 반영)
+        CalendarView.RefreshCalendar();
     }
 
     /// <summary>
@@ -273,12 +259,54 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// 로그인 후 사용자 역할 정보 갱신
+    /// 로그인 후 사용자 역할 정보 갱신 - async Task로 변경하여 완료까지 대기 가능
+    /// </summary>
+    public async Task RefreshUserRoleAsync()
+    {
+        _viewModel.RefreshUserRole();
+        System.Diagnostics.Debug.WriteLine($"[MainView] RefreshUserRoleAsync called - IsSuperAdmin: {_viewModel.IsSuperAdmin}");
+
+        // 로그인 후 현재 선택된 탭의 View 강제 초기화 (완료까지 대기)
+        await InitializeCurrentTabAsync();
+        System.Diagnostics.Debug.WriteLine("[MainView] RefreshUserRoleAsync completed");
+    }
+
+    /// <summary>
+    /// 로그인 후 사용자 역할 정보 갱신 (기존 호환성 유지)
     /// </summary>
     public void RefreshUserRole()
     {
-        _viewModel.RefreshUserRole();
-        System.Diagnostics.Debug.WriteLine($"[MainView] RefreshUserRole called - IsSuperAdmin: {_viewModel.IsSuperAdmin}");
+        _ = RefreshUserRoleAsync();
+    }
+
+    /// <summary>
+    /// 현재 선택된 탭의 View 초기화 (로그인 직후 호출) - async Task로 변경하여 완료까지 대기 가능
+    /// </summary>
+    private async Task InitializeCurrentTabAsync()
+    {
+        System.Diagnostics.Debug.WriteLine($"[MainView] InitializeCurrentTabAsync - Calendar: {_viewModel.IsCalendarSelected}, Schedule: {_viewModel.IsScheduleSelected}, Manager: {_viewModel.IsManagerSelected}");
+
+        if (_viewModel.IsCalendarSelected)
+        {
+            System.Diagnostics.Debug.WriteLine("[MainView] InitializeCurrentTabAsync - Initializing CalendarView");
+            await CalendarView.OnTabEnteredAsync();
+            System.Diagnostics.Debug.WriteLine("[MainView] InitializeCurrentTabAsync - CalendarView initialized");
+        }
+        else if (_viewModel.IsScheduleSelected)
+        {
+            System.Diagnostics.Debug.WriteLine("[MainView] InitializeCurrentTabAsync - Initializing ScheduleListView");
+            ScheduleListView.ForceInitialize();
+        }
+        else if (_viewModel.IsManagerSelected)
+        {
+            System.Diagnostics.Debug.WriteLine("[MainView] InitializeCurrentTabAsync - Initializing ManagerView");
+            ManagerView.ForceInitialize();
+        }
+        else if (_viewModel.IsNotificationSelected)
+        {
+            System.Diagnostics.Debug.WriteLine("[MainView] InitializeCurrentTabAsync - Initializing NotificationView");
+            NotificationView.OnTabEntered();
+        }
     }
 
     private void OnOverlayPressed(object? sender, PointerPressedEventArgs e)
