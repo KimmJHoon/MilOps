@@ -28,10 +28,11 @@
       <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
         <StackPanel Spacing="16" Margin="16">
 
-          <!-- 현재 사용자 정보 -->
-          <Border Background="#2A5F2A" CornerRadius="20" Padding="16,10">
+          <!-- 현재 사용자 정보 (중간관리자는 숨김) -->
+          <Border Background="#2A5F2A" CornerRadius="20" Padding="16,10"
+                  IsVisible="{Binding !IsMiddleAdmin}">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-              <TextBlock Text="&#x1F464;" FontSize="14"/>
+              <TextBlock Text="&#xe7fd;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
               <TextBlock Text="{Binding CurrentUserDisplay}"
                          FontSize="13" Foreground="White"/>
             </StackPanel>
@@ -49,8 +50,8 @@
           <Border Background="#1A1A1A" CornerRadius="10" Padding="20">
             <StackPanel Spacing="16">
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="&#x1F4C5;" FontSize="16"/>
-                <TextBlock Text="예약된 일정" FontSize="16" Foreground="White"/>
+                <TextBlock Text="&#xe8df;" FontFamily="{StaticResource MaterialIcons}" FontSize="16" Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock Text="예약된 일정" FontSize="16" Foreground="White" VerticalAlignment="Center"/>
               </StackPanel>
 
               <StackPanel HorizontalAlignment="Center" Spacing="8">
@@ -68,8 +69,8 @@
           <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
             <StackPanel Spacing="12">
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="&#x1F3ED;" FontSize="14"/>
-                <TextBlock Text="업체 정보" FontSize="14" Foreground="White"/>
+                <TextBlock Text="&#xe0af;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock Text="업체 정보" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
               </StackPanel>
 
               <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
@@ -100,8 +101,8 @@
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Grid.Column="0" Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Text="&#x1F3DB;" FontSize="14"/>
-                  <TextBlock Text="지자체담당자" FontSize="14" Foreground="White"/>
+                  <TextBlock Text="&#xe84f;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+                  <TextBlock Text="지자체담당자" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Margin="22,0,0,0" Spacing="2">
                   <TextBlock FontSize="13" Foreground="#AAAAAA">
@@ -131,8 +132,8 @@
             <Grid ColumnDefinitions="*,Auto">
               <StackPanel Grid.Column="0" Spacing="4">
                 <StackPanel Orientation="Horizontal" Spacing="8">
-                  <TextBlock Text="&#x1F396;" FontSize="14"/>
-                  <TextBlock Text="대대담당자" FontSize="14" Foreground="White"/>
+                  <TextBlock Text="&#xe7fd;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+                  <TextBlock Text="대대담당자" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
                 </StackPanel>
                 <StackPanel Margin="22,0,0,0" Spacing="2">
                   <TextBlock FontSize="13" Foreground="#AAAAAA">
@@ -180,8 +181,8 @@
                   IsVisible="{Binding HasMemo}">
             <StackPanel Spacing="8">
               <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="&#x1F4DD;" FontSize="14"/>
-                <TextBlock Text="메모" FontSize="14" Foreground="White"/>
+                <TextBlock Text="&#xe873;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+                <TextBlock Text="메모" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
               </StackPanel>
               <TextBlock Text="{Binding Memo}" FontSize="13" Foreground="#AAAAAA" TextWrapping="Wrap"/>
             </StackPanel>
@@ -259,8 +260,9 @@
 
     <!-- 확정 확인 모달 오버레이 -->
     <Grid IsVisible="{Binding ShowConfirmModal}">
-      <!-- 배경 오버레이 -->
-      <Border Background="#000000" Opacity="0.7"/>
+      <!-- 배경 오버레이 (클릭 시 모달 닫기) -->
+      <Border Background="#000000" Opacity="0.7"
+              PointerPressed="OnModalOverlayPressed"/>
 
       <!-- 모달 다이얼로그 -->
       <Border Background="#1A1A1A" CornerRadius="16"
@@ -298,7 +300,7 @@
           <!-- 경고 메시지 -->
           <Border Background="#5F3F2A" CornerRadius="8" Padding="12">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-              <TextBlock Text="&#x26A0;" FontSize="14"/>
+              <TextBlock Text="&#xe002;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="#FFAA88" VerticalAlignment="Center"/>
               <TextBlock Text="확정 후에는 취소할 수 없습니다"
                          FontSize="13" Foreground="#FFAA88"/>
             </StackPanel>
