@@ -171,8 +171,9 @@ public partial class ManagerViewModel : ViewModelBase
             {
                 await SubscribeToRealtimeAsync();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
+                // Realtime 연결 실패 시 무시 (주기적 새로고침이 백업)
             }
         });
 
