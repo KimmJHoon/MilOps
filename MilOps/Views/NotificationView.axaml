@@ -1,10 +1,108 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             x:Class="MilOps.Views.NotificationView">
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:MilOps.ViewModels"
+             xmlns:models="using:MilOps.Models"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
+             x:Class="MilOps.Views.NotificationView"
+             x:DataType="vm:NotificationViewModel"
+             DataContext="{x:Null}">
+
   <Grid Background="#000000">
-    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="10">
-      <TextBlock Text="알림 화면" FontSize="28" Foreground="White" HorizontalAlignment="Center"/>
-      <TextBlock Text="알림 목록이 표시될 영역입니다" FontSize="14" Foreground="#888888" HorizontalAlignment="Center"/>
-    </StackPanel>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+
+    <!-- 헤더 -->
+    <Border Grid.Row="0" Background="#1A1A1A" Padding="16">
+      <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+        <Button Grid.Column="0" Command="{Binding CloseCommand}"
+                Background="Transparent" Padding="8,4">
+          <TextBlock Text="&lt;" FontSize="20" Foreground="White"/>
+        </Button>
+
+        <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center">
+          <TextBlock Text="알림" FontSize="18" Foreground="White"/>
+          <Border Background="#F44336" CornerRadius="10" Padding="8,2" Margin="8,0,0,0"
+                  IsVisible="{Binding !!UnreadCount}">
+            <TextBlock Text="{Binding UnreadCount}" FontSize="12" Foreground="White"/>
+          </Border>
+        </StackPanel>
+
+        <!-- 모두 읽음 버튼 -->
+        <Button Grid.Column="2" Command="{Binding MarkAllAsReadCommand}"
+                Background="Transparent" Padding="8,4"
+                IsVisible="{Binding !!UnreadCount}">
+          <TextBlock Text="모두 읽음" FontSize="13" Foreground="#4CAF50"/>
+        </Button>
+
+        <!-- 새로고침 버튼 -->
+        <Button Grid.Column="3" Command="{Binding RefreshCommand}"
+                Background="Transparent" Padding="8,4">
+          <TextBlock Text="&#x21BB;" FontSize="18" Foreground="White"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- 알림 목록 -->
+    <Grid Grid.Row="1">
+      <!-- 빈 상태 -->
+      <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                  IsVisible="{Binding !HasNotifications}">
+        <TextBlock Text="&#x1F514;" FontSize="48" HorizontalAlignment="Center" Opacity="0.5"/>
+        <TextBlock Text="{Binding EmptyMessage}" FontSize="16" Foreground="#888888"
+                   HorizontalAlignment="Center" Margin="0,16,0,0"/>
+      </StackPanel>
+
+      <!-- 알림 리스트 -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    IsVisible="{Binding HasNotifications}">
+        <ItemsControl ItemsSource="{Binding Notifications}" Margin="0,8">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:Notification">
+              <Button Command="{Binding $parent[ItemsControl].((vm:NotificationViewModel)DataContext).SelectNotificationCommand}"
+                      CommandParameter="{Binding}"
+                      Background="Transparent" Padding="0" Margin="0"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Stretch">
+                <Border Background="{Binding BackgroundColor}" Padding="16,12" Margin="0,0,0,1"
+                        BorderBrush="#333333" BorderThickness="0,0,0,1">
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- 아이콘 -->
+                    <Border Grid.Column="0" Width="40" Height="40" CornerRadius="20"
+                            Background="{Binding TypeColor}" Margin="0,0,12,0"
+                            VerticalAlignment="Top">
+                      <TextBlock Text="{Binding TypeIcon}" FontSize="18"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- 내용 -->
+                    <StackPanel Grid.Column="1" Spacing="4">
+                      <TextBlock Text="{Binding Title}" FontSize="14" Foreground="White"/>
+                      <TextBlock Text="{Binding Message}" FontSize="13" Foreground="#AAAAAA"
+                                 TextWrapping="Wrap" MaxLines="2" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Text="{Binding TimeAgo}" FontSize="11" Foreground="#666666"/>
+                    </StackPanel>
+
+                    <!-- 읽지 않음 표시 -->
+                    <Ellipse Grid.Column="2" Width="8" Height="8" Fill="#4CAF50"
+                             VerticalAlignment="Top" Margin="8,4,0,0"
+                             IsVisible="{Binding !IsRead}"/>
+                  </Grid>
+                </Border>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- 로딩 -->
+      <Border Background="#CC000000" IsVisible="{Binding IsLoading}">
+        <TextBlock Text="로딩 중..." FontSize="16" Foreground="White"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      </Border>
+    </Grid>
   </Grid>
 </UserControl>

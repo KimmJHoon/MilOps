@@ -19,22 +19,34 @@ public partial class AppShell : UserControl
         // 로그인 이벤트 연결 - DataContext가 설정된 후 연결
         System.Diagnostics.Debug.WriteLine($"[AppShell] LoginViewControl.DataContext: {LoginViewControl.DataContext?.GetType().Name ?? "null"}");
 
+        // DataContextChanged 이벤트로 확실하게 연결
+        LoginViewControl.DataContextChanged += (s, e) =>
+        {
+            if (LoginViewControl.DataContext is LoginViewModel vm)
+            {
+                vm.LoginSuccessful += OnLoginSuccess;
+                vm.SignUpRequested += OnSignUpRequested;
+                System.Diagnostics.Debug.WriteLine("[AppShell] LoginView events connected (on DataContextChanged)");
+            }
+        };
+
+        // 이미 DataContext가 설정되어 있는 경우
         if (LoginViewControl.DataContext is LoginViewModel loginVm)
         {
             loginVm.LoginSuccessful += OnLoginSuccess;
             loginVm.SignUpRequested += OnSignUpRequested;
-            System.Diagnostics.Debug.WriteLine("[AppShell] LoginSuccessful event connected");
+            System.Diagnostics.Debug.WriteLine("[AppShell] LoginView events connected (immediate)");
         }
         else
         {
-            // DataContext가 아직 설정되지 않은 경우, Loaded 이벤트에서 연결
+            // Loaded 이벤트에서도 시도
             LoginViewControl.Loaded += (s, e) =>
             {
                 if (LoginViewControl.DataContext is LoginViewModel vm)
                 {
                     vm.LoginSuccessful += OnLoginSuccess;
                     vm.SignUpRequested += OnSignUpRequested;
-                    System.Diagnostics.Debug.WriteLine("[AppShell] LoginSuccessful event connected (on Loaded)");
+                    System.Diagnostics.Debug.WriteLine("[AppShell] LoginView events connected (on Loaded)");
                 }
             };
         }
@@ -298,12 +310,28 @@ public partial class AppShell : UserControl
         }
     }
 
-    private void OnLoginSuccess()
+    private async void OnLoginSuccess()
     {
         System.Diagnostics.Debug.WriteLine("[AppShell] OnLoginSuccess called");
 
         // MainView의 역할 정보 갱신
         MainViewControl.RefreshUserRole();
+
+        // 실시간 알림 구독 시작
+        MainViewControl.StartRealtimeNotifications();
+
+        // FCM 토큰 서버에 저장 (Android에서만 작동)
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await FcmService.SaveTokenToServerAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AppShell] FCM token save error: {ex.Message}");
+            }
+        });
 
         LoginViewControl.IsVisible = false;
         InviteCodeViewControl.IsVisible = false;

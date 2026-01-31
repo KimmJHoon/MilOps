@@ -48,7 +48,7 @@
         <views:ManagerView/>
       </Border>
       <Border IsVisible="{Binding IsNotificationSelected}">
-        <views:NotificationView/>
+        <views:NotificationView x:Name="NotificationView"/>
       </Border>
       <Border IsVisible="{Binding IsSettingsSelected}">
         <views:SettingsView/>
@@ -241,19 +241,53 @@
     <!-- 사이드 드로어 -->
     <Border x:Name="DrawerPanel"
             Background="#222222"
-            Width="250"
+            Width="280"
             HorizontalAlignment="Left"
             IsVisible="False">
       <Border.RenderTransform>
-        <TranslateTransform X="-250"/>
+        <TranslateTransform X="-280"/>
       </Border.RenderTransform>
       <Grid RowDefinitions="Auto,*,Auto">
-        <!-- 드로어 헤더 -->
+        <!-- 드로어 헤더 - 사용자 정보 -->
         <Border Grid.Row="0" Background="#333333" Padding="20">
-          <StackPanel Spacing="8">
-            <TextBlock Text="사용자 정보" FontSize="18" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
-            <TextBlock Text="{Binding CurrentUserName}" FontSize="16" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
-            <TextBlock Text="{Binding CurrentUserId}" FontSize="14" Foreground="#00FF00"/>
+          <StackPanel Spacing="12">
+            <TextBlock Text="내 정보" FontSize="20" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
+
+            <!-- 이름 -->
+            <StackPanel Spacing="2">
+              <TextBlock Text="이름" FontSize="12" Foreground="#888888"/>
+              <TextBlock Text="{Binding CurrentUserName}" FontSize="16" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
+            </StackPanel>
+
+            <!-- 직책/계급 -->
+            <StackPanel Spacing="2" IsVisible="{Binding CurrentUserPosition, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Text="직책" FontSize="12" Foreground="#888888"/>
+              <TextBlock Text="{Binding CurrentUserPosition}" FontSize="14" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
+            </StackPanel>
+
+            <!-- 역할 -->
+            <StackPanel Spacing="2">
+              <TextBlock Text="역할" FontSize="12" Foreground="#888888"/>
+              <TextBlock Text="{Binding CurrentUserRole}" FontSize="14" Foreground="#00FF00" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
+            </StackPanel>
+
+            <!-- 소속/지역 -->
+            <StackPanel Spacing="2" IsVisible="{Binding CurrentUserRegion, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Text="소속" FontSize="12" Foreground="#888888"/>
+              <TextBlock Text="{Binding CurrentUserRegion}" FontSize="14" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif" TextWrapping="Wrap"/>
+            </StackPanel>
+
+            <!-- 아이디 -->
+            <StackPanel Spacing="2">
+              <TextBlock Text="아이디" FontSize="12" Foreground="#888888"/>
+              <TextBlock Text="{Binding CurrentUserId}" FontSize="14" Foreground="#AAAAAA"/>
+            </StackPanel>
+
+            <!-- 연락처 -->
+            <StackPanel Spacing="2" IsVisible="{Binding CurrentUserPhone, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Text="연락처" FontSize="12" Foreground="#888888"/>
+              <TextBlock Text="{Binding CurrentUserPhone}" FontSize="14" Foreground="White"/>
+            </StackPanel>
           </StackPanel>
         </Border>
 

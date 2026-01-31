@@ -26,7 +26,7 @@
                 <Border Background="{Binding GroupColor}" CornerRadius="2" Padding="3,2" Margin="0,1">
                   <StackPanel Spacing="0">
                     <!-- 1줄: ✓시간 -->
-                    <TextBlock Text="{Binding Line1}" FontSize="10" Foreground="White" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding Line1}" FontSize="10" Foreground="White"/>
                     <!-- 2줄: 역할별 (대대명/시군구명/시도명/사단명) -->
                     <TextBlock Text="{Binding Line2}" FontSize="9" Foreground="#EEEEEE" TextTrimming="CharacterEllipsis"/>
                     <!-- 3줄: 업체명 -->

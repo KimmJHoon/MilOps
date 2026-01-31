@@ -48,6 +48,18 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _currentUserName = "";
 
+    [ObservableProperty]
+    private string _currentUserPhone = "";
+
+    [ObservableProperty]
+    private string _currentUserRole = "";
+
+    [ObservableProperty]
+    private string _currentUserPosition = "";
+
+    [ObservableProperty]
+    private string _currentUserRegion = "";
+
     // 오버레이 화면 열림 상태
     [ObservableProperty]
     private bool _isCompanyRegisterOpen = false;
@@ -85,13 +97,82 @@ public partial class MainViewModel : ViewModelBase
     public void RefreshUserRole()
     {
         UpdateUserRole();
-        CurrentUserId = AuthService.CurrentUserId ?? "";
-        CurrentUserName = AuthService.CurrentUser?.Name ?? "";
+        var user = AuthService.CurrentUser;
+
+        CurrentUserId = user?.LoginId ?? "";
+        CurrentUserName = user?.Name ?? "";
+        CurrentUserPhone = user?.Phone ?? "";
+        CurrentUserRole = user?.RoleDisplayName ?? "";
+        CurrentUserPosition = user?.PositionDisplay ?? "";
+
+        // 지역 정보 로드 (비동기)
+        _ = LoadUserRegionAsync();
 
         // 현재 선택된 탭이 해당 역할에서 접근 불가능하면 기본 탭(캘린더)으로 리셋
         ResetToValidTab();
 
         System.Diagnostics.Debug.WriteLine($"[MainViewModel] RefreshUserRole - IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
+    }
+
+    private async Task LoadUserRegionAsync()
+    {
+        try
+        {
+            var user = AuthService.CurrentUser;
+            if (user == null) return;
+
+            var client = SupabaseService.Client;
+            if (client == null) return;
+
+            string regionName = "";
+
+            // 지역 정보 로드 (role에 따라 다름)
+            if (user.RegionId.HasValue)
+            {
+                var regionResult = await client
+                    .From<Models.Region>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.RegionId.ToString())
+                    .Single();
+                if (regionResult != null)
+                    regionName = regionResult.Name;
+            }
+
+            if (user.DistrictId.HasValue)
+            {
+                var districtResult = await client
+                    .From<Models.District>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.DistrictId.ToString())
+                    .Single();
+                if (districtResult != null)
+                    regionName += (string.IsNullOrEmpty(regionName) ? "" : " ") + districtResult.Name;
+            }
+
+            if (user.DivisionId.HasValue)
+            {
+                var divisionResult = await client
+                    .From<Models.Division>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.DivisionId.ToString())
+                    .Single();
+                if (divisionResult != null)
+                    regionName += (string.IsNullOrEmpty(regionName) ? "" : " ") + divisionResult.Name;
+            }
+
+            if (user.BattalionId.HasValue)
+            {
+                var battalionResult = await client
+                    .From<Models.Battalion>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.BattalionId.ToString())
+                    .Single();
+                if (battalionResult != null)
+                    regionName += (string.IsNullOrEmpty(regionName) ? "" : " ") + battalionResult.Name;
+            }
+
+            CurrentUserRegion = regionName;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadUserRegionAsync error: {ex.Message}");
+        }
     }
 
     /// <summary>
