@@ -106,7 +106,10 @@ public partial class AppShell : UserControl
             inviteCodeVm.CodeValidated += (invitation) =>
             {
                 System.Diagnostics.Debug.WriteLine($"[AppShell] Invite code validated: {invitation?.InviteCode}, proceeding to registration");
-                ShowInviteAcceptViewWithInvitation(invitation);
+                if (invitation != null)
+                {
+                    ShowInviteAcceptViewWithInvitation(invitation);
+                }
             };
             System.Diagnostics.Debug.WriteLine("[AppShell] SetupInviteCodeView completed");
         }
@@ -245,7 +248,7 @@ public partial class AppShell : UserControl
             InviteAcceptViewControl.IsVisible = true;
 
             // 초대 정보로 ViewModel 초기화
-            if (InviteAcceptViewControl.DataContext is InviteAcceptViewModel inviteVm)
+            if (InviteAcceptViewControl.DataContext is InviteAcceptViewModel inviteVm && invitation != null)
             {
                 System.Diagnostics.Debug.WriteLine("[AppShell] Initializing InviteAcceptViewModel with invitation");
                 inviteVm.InitializeWithInvitation(invitation);

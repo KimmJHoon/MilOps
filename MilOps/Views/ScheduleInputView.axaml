@@ -1,0 +1,214 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:MilOps.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+             x:Class="MilOps.Views.ScheduleInputView"
+             x:DataType="vm:ScheduleInputViewModel"
+             DataContext="{x:Null}">
+
+  <Grid Background="#000000" RowDefinitions="Auto,*,Auto">
+    <!-- 헤더 -->
+    <Border Grid.Row="0" Background="#1A1A1A" Padding="16">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <Button Grid.Column="0" Command="{Binding CloseCommand}"
+                Background="Transparent" Padding="8,4">
+          <TextBlock Text="&lt;" FontSize="20" Foreground="White"/>
+        </Button>
+        <TextBlock Grid.Column="1" Text="가능 일정 입력"
+                   FontSize="18" Foreground="White"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+      </Grid>
+    </Border>
+
+    <!-- 메인 컨텐츠 -->
+    <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+      <StackPanel Spacing="16" Margin="16">
+
+        <!-- 현재 사용자 정보 -->
+        <Border Background="#2A3F5F" CornerRadius="20" Padding="16,10">
+          <TextBlock Text="{Binding CurrentUserDisplay}"
+                     FontSize="13" Foreground="White"
+                     HorizontalAlignment="Center"/>
+        </Border>
+
+        <!-- 일정 정보 -->
+        <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
+          <StackPanel Spacing="12">
+            <TextBlock Text="&#x1F4CB; 일정 정보" FontSize="14" Foreground="White"/>
+
+            <Grid ColumnDefinitions="*,*">
+              <StackPanel Grid.Column="0" Spacing="2">
+                <TextBlock Text="지역" FontSize="11" Foreground="#888888"/>
+                <TextBlock Text="{Binding RegionName}" FontSize="13" Foreground="White"
+                           IsVisible="{Binding RegionName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                <TextBlock Text="{Binding DistrictName}" FontSize="13" Foreground="White"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="업체" FontSize="11" Foreground="#888888"/>
+                <TextBlock Text="{Binding CompanyName}" FontSize="13" Foreground="White"/>
+              </StackPanel>
+            </Grid>
+
+            <Grid ColumnDefinitions="*,*">
+              <StackPanel Grid.Column="0" Spacing="2">
+                <TextBlock Text="생산품" FontSize="11" Foreground="#888888"/>
+                <TextBlock Text="{Binding CompanyProducts}" FontSize="13" Foreground="White"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="담당 대대" FontSize="11" Foreground="#888888"/>
+                <TextBlock Text="{Binding BattalionName}" FontSize="13" Foreground="White"/>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- 대대담당자 정보 -->
+        <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
+          <StackPanel Spacing="8">
+            <TextBlock Text="&#x1F396; 대대담당자 정보" FontSize="14" Foreground="White"/>
+            <Grid ColumnDefinitions="*,*">
+              <StackPanel Grid.Column="0" Spacing="2">
+                <TextBlock Text="담당자" FontSize="11" Foreground="#888888"/>
+                <TextBlock Text="{Binding MilitaryUserName}" FontSize="13" Foreground="White"/>
+              </StackPanel>
+              <StackPanel Grid.Column="1" Spacing="2">
+                <TextBlock Text="연락처" FontSize="11" Foreground="#888888"/>
+                <TextBlock Text="{Binding MilitaryUserPhone}" FontSize="13" Foreground="White"/>
+              </StackPanel>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- 가능 일자 입력 -->
+        <StackPanel Spacing="8">
+          <TextBlock Text="&#x1F4C5; 가능 일자" FontSize="14" Foreground="White"/>
+          <Grid ColumnDefinitions="*,Auto,*">
+            <CalendarDatePicker Grid.Column="0"
+                                SelectedDate="{Binding AvailableStartDate}"
+                                Background="#333333"
+                                Foreground="White"
+                                HorizontalAlignment="Stretch"/>
+            <TextBlock Grid.Column="1" Text="~" FontSize="16" Foreground="White"
+                       VerticalAlignment="Center" Margin="10,0"/>
+            <CalendarDatePicker Grid.Column="2"
+                                SelectedDate="{Binding AvailableEndDate}"
+                                DisplayDateStart="{Binding MinEndDate}"
+                                Background="#333333"
+                                Foreground="White"
+                                HorizontalAlignment="Stretch"/>
+          </Grid>
+          <!-- 날짜 유효성 경고 -->
+          <TextBlock Text="{Binding DateValidationMessage}"
+                     FontSize="12" Foreground="#FF8888"
+                     IsVisible="{Binding HasDateValidationError}"
+                     Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- 가능 시간 (복수 선택) -->
+        <StackPanel Spacing="8">
+          <TextBlock Text="&#x23F0; 가능 시간 (복수 선택)" FontSize="14" Foreground="White"/>
+          <ItemsControl ItemsSource="{Binding TimeSlots}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Command="{Binding $parent[ItemsControl].((vm:ScheduleInputViewModel)DataContext).ToggleTimeSlotCommand}"
+                        CommandParameter="{Binding}"
+                        Background="{Binding IsSelected, Converter={StaticResource BoolToSlotBgConverter}}"
+                        BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToSlotBorderConverter}}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12,8"
+                        Margin="0,0,8,8">
+                  <TextBlock Text="{Binding TimeRangeDisplay}"
+                             FontSize="13"
+                             Foreground="{Binding IsSelected, Converter={StaticResource BoolToSlotFgConverter}}"/>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+          <!-- 선택된 시간 표시 -->
+          <Border Background="#2A3F5F" CornerRadius="6" Padding="12,8"
+                  IsVisible="{Binding SelectedTimesDisplay, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding SelectedTimesDisplay}"
+                       FontSize="12" Foreground="#87CEEB"/>
+          </Border>
+        </StackPanel>
+
+        <!-- 메모 -->
+        <StackPanel Spacing="8">
+          <TextBlock Text="&#x1F4DD; 메모 (선택)" FontSize="14" Foreground="White"/>
+          <TextBox Text="{Binding Memo}"
+                   Watermark="업체 요청사항 등"
+                   Background="#333333"
+                   Foreground="White"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   MinHeight="80"
+                   Padding="12"/>
+        </StackPanel>
+
+        <!-- 에러 메시지 -->
+        <Border Background="#5F2A2A" CornerRadius="8" Padding="12"
+                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <TextBlock Text="{Binding ErrorMessage}"
+                     FontSize="13" Foreground="#FF8888"
+                     TextWrapping="Wrap"/>
+        </Border>
+
+        <!-- 성공 메시지 -->
+        <Border Background="#2A5F2A" CornerRadius="8" Padding="12"
+                IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <TextBlock Text="{Binding SuccessMessage}"
+                     FontSize="13" Foreground="#88FF88"
+                     TextWrapping="Wrap"/>
+        </Border>
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- 하단 버튼 -->
+    <Border Grid.Row="2" Background="#1A1A1A" Padding="16">
+      <StackPanel Spacing="12">
+        <Grid ColumnDefinitions="*,*" IsVisible="{Binding !IsLoading}">
+          <Button Grid.Column="0" Command="{Binding CloseCommand}"
+                  Background="#333333" CornerRadius="8"
+                  HorizontalAlignment="Stretch" Padding="16"
+                  HorizontalContentAlignment="Center"
+                  Margin="0,0,8,0">
+            <TextBlock Text="취소" FontSize="15" Foreground="White"/>
+          </Button>
+          <Button Grid.Column="1" Command="{Binding SaveCommand}"
+                  IsEnabled="{Binding CanSave}"
+                  Background="#2196F3"
+                  CornerRadius="8"
+                  HorizontalAlignment="Stretch" Padding="16"
+                  HorizontalContentAlignment="Center"
+                  Margin="8,0,0,0">
+            <TextBlock Text="저장" FontSize="15" Foreground="White"/>
+          </Button>
+        </Grid>
+
+        <!-- 로딩 표시 -->
+        <Border Background="#333333" CornerRadius="8" Padding="16"
+                HorizontalAlignment="Stretch"
+                IsVisible="{Binding IsLoading}">
+          <TextBlock Text="처리 중..." FontSize="15" Foreground="White"
+                     HorizontalAlignment="Center"/>
+        </Border>
+
+        <!-- 안내 문구 -->
+        <TextBlock FontSize="11" Foreground="#666666" HorizontalAlignment="Center"
+                   TextWrapping="Wrap" TextAlignment="Center">
+          저장 시 -> 상태 "입력됨" + 대대담당자/사단담당자에게 알림
+        </TextBlock>
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>

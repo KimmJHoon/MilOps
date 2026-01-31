@@ -48,6 +48,31 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _currentUserName = "";
 
+    // 오버레이 화면 열림 상태
+    [ObservableProperty]
+    private bool _isCompanyRegisterOpen = false;
+
+    [ObservableProperty]
+    private bool _isScheduleCreateOpen = false;
+
+    [ObservableProperty]
+    private bool _isScheduleInputOpen = false;
+
+    [ObservableProperty]
+    private bool _isScheduleReserveOpen = false;
+
+    [ObservableProperty]
+    private bool _isScheduleConfirmOpen = false;
+
+    // 일정 입력/예약/확정 화면에 전달할 데이터
+    private Guid _scheduleInputId;
+    private Guid _scheduleReserveId;
+    private Guid _scheduleConfirmId;
+
+    public Guid ScheduleInputId => _scheduleInputId;
+    public Guid ScheduleReserveId => _scheduleReserveId;
+    public Guid ScheduleConfirmId => _scheduleConfirmId;
+
     // 메뉴 표시 여부 (역할별)
     public bool ShowScheduleTab => IsUser || IsMiddleAdmin;  // 사용자, 중간관리자
     public bool ShowManagerTab => IsMiddleAdmin || IsSuperAdmin;  // 중간관리자, 최종관리자
@@ -175,5 +200,80 @@ public partial class MainViewModel : ViewModelBase
         await AppRestartService.LogoutAndRestartAsync();
 
         System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command completed");
+    }
+
+    // === 업체 등록 화면 ===
+    [RelayCommand]
+    private void OpenCompanyRegister()
+    {
+        IsCompanyRegisterOpen = true;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] OpenCompanyRegister");
+    }
+
+    [RelayCommand]
+    private void CloseCompanyRegister()
+    {
+        IsCompanyRegisterOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseCompanyRegister");
+    }
+
+    // === 일정 생성 화면 ===
+    [RelayCommand]
+    private void OpenScheduleCreate()
+    {
+        IsScheduleCreateOpen = true;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] OpenScheduleCreate");
+    }
+
+    [RelayCommand]
+    private void CloseScheduleCreate()
+    {
+        IsScheduleCreateOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleCreate");
+    }
+
+    // === 일정 입력 화면 (지자체담당자용) ===
+    public void OpenScheduleInput(Guid scheduleId)
+    {
+        _scheduleInputId = scheduleId;
+        IsScheduleInputOpen = true;
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleInput - scheduleId: {scheduleId}");
+    }
+
+    [RelayCommand]
+    private void CloseScheduleInput()
+    {
+        IsScheduleInputOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleInput");
+    }
+
+    // === 일정 예약 화면 (대대담당자용) ===
+    public void OpenScheduleReserve(Guid scheduleId)
+    {
+        _scheduleReserveId = scheduleId;
+        IsScheduleReserveOpen = true;
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleReserve - scheduleId: {scheduleId}");
+    }
+
+    [RelayCommand]
+    private void CloseScheduleReserve()
+    {
+        IsScheduleReserveOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleReserve");
+    }
+
+    // === 일정 확정 화면 (양측 공통) ===
+    public void OpenScheduleConfirm(Guid scheduleId)
+    {
+        _scheduleConfirmId = scheduleId;
+        IsScheduleConfirmOpen = true;
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleConfirm - scheduleId: {scheduleId}");
+    }
+
+    [RelayCommand]
+    private void CloseScheduleConfirm()
+    {
+        IsScheduleConfirmOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleConfirm");
     }
 }

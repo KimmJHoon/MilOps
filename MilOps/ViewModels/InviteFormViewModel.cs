@@ -174,7 +174,7 @@ public partial class InviteFormViewModel : ViewModelBase
     /// <summary>
     /// SW0001 (행정안전부) - 지자체(도) 중간관리자 초대
     /// </summary>
-    private async Task SetupSuperAdminMoisFormAsync()
+    private Task SetupSuperAdminMoisFormAsync()
     {
         CurrentInviteType = InviteType.SuperAdminMois;
         FormTitle = "지자체(도) 중간관리자 초대";
@@ -200,12 +200,13 @@ public partial class InviteFormViewModel : ViewModelBase
             SelectedAffiliation = AffiliationOptions[0];
 
         System.Diagnostics.Debug.WriteLine($"[InviteForm] SuperAdminMois form setup complete. Regions: {AffiliationOptions.Count}");
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// SW0002 (육군본부) - 사단담당자 중간관리자 초대
     /// </summary>
-    private async Task SetupSuperAdminArmyFormAsync()
+    private Task SetupSuperAdminArmyFormAsync()
     {
         CurrentInviteType = InviteType.SuperAdminArmy;
         FormTitle = "사단담당자 중간관리자 초대";
@@ -218,12 +219,13 @@ public partial class InviteFormViewModel : ViewModelBase
         AffiliationSuffix = "사단";
 
         System.Diagnostics.Debug.WriteLine($"[InviteForm] SuperAdminArmy form setup complete");
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// 지자체 중간관리자 - 지자체담당자 초대
     /// </summary>
-    private async Task SetupMiddleLocalFormAsync()
+    private Task SetupMiddleLocalFormAsync()
     {
         CurrentInviteType = InviteType.MiddleLocal;
         FormTitle = "지자체담당자 초대";
@@ -258,12 +260,13 @@ public partial class InviteFormViewModel : ViewModelBase
             SelectedAffiliation = AffiliationOptions[0];
 
         System.Diagnostics.Debug.WriteLine($"[InviteForm] MiddleLocal form setup complete. Districts: {AffiliationOptions.Count} (RegionId: {userRegionId})");
+        return Task.CompletedTask;
     }
 
     /// <summary>
     /// 사단담당자 - 대대담당자 초대
     /// </summary>
-    private async Task SetupMiddleMilitaryFormAsync()
+    private Task SetupMiddleMilitaryFormAsync()
     {
         CurrentInviteType = InviteType.MiddleMilitary;
         FormTitle = "대대담당자 초대";
@@ -276,6 +279,7 @@ public partial class InviteFormViewModel : ViewModelBase
         AffiliationSuffix = "대대";
 
         System.Diagnostics.Debug.WriteLine($"[InviteForm] MiddleMilitary form setup complete");
+        return Task.CompletedTask;
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using System;
+using Newtonsoft.Json;
 using Supabase.Postgrest.Attributes;
 using Supabase.Postgrest.Models;
 
@@ -17,8 +18,8 @@ public class Region : BaseModel
     [Column("name")]
     public string Name { get; set; } = "";
 
-    [Column("code")]
-    public string? Code { get; set; }
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
@@ -40,11 +41,19 @@ public class District : BaseModel
     [Column("name")]
     public string Name { get; set; } = "";
 
-    [Column("code")]
-    public string? Code { get; set; }
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
+
+    // Navigation property (DB에 저장되지 않음)
+    [JsonIgnore]
+    public Region? Region { get; set; }
+
+    // Helper property
+    [JsonIgnore]
+    public string FullName => Region != null ? $"{Region.Name} {Name}" : Name;
 }
 
 /// <summary>
@@ -59,6 +68,9 @@ public class Division : BaseModel
 
     [Column("name")]
     public string Name { get; set; } = "";
+
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
 
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
@@ -80,8 +92,19 @@ public class Battalion : BaseModel
     [Column("name")]
     public string Name { get; set; } = "";
 
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
+
+    // Navigation property (DB에 저장되지 않음)
+    [JsonIgnore]
+    public Division? Division { get; set; }
+
+    // Helper property
+    [JsonIgnore]
+    public string FullName => Division != null ? $"{Division.Name} {Name}" : Name;
 }
 
 /// <summary>
@@ -100,6 +123,15 @@ public class DistrictBattalionMapping : BaseModel
     [Column("battalion_id")]
     public Guid BattalionId { get; set; }
 
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
+
     [Column("created_at")]
     public DateTime CreatedAt { get; set; }
+
+    // Navigation properties (DB에 저장되지 않음)
+    [JsonIgnore]
+    public District? District { get; set; }
+    [JsonIgnore]
+    public Battalion? Battalion { get; set; }
 }
