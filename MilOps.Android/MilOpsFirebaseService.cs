@@ -33,6 +33,10 @@ public class MilOpsFirebaseService : FirebaseMessagingService
     /// <summary>
     /// FCM 메시지 수신 시 호출
     /// Data Message와 Notification Message 모두 여기서 처리
+    ///
+    /// 중요: notification + data 메시지가 올 경우 중복 알림 방지
+    /// - notification이 있으면 시스템이 이미 알림을 표시하므로 data에서는 ShowNotification 스킵
+    /// - data only 메시지일 경우에만 ShowNotification 호출
     /// </summary>
     public override void OnMessageReceived(RemoteMessage message)
     {
@@ -40,15 +44,20 @@ public class MilOpsFirebaseService : FirebaseMessagingService
 
         Log.Info(TAG, $"FCM Message received from: {message.From}");
 
+        // Notification Message가 있는지 확인
+        var hasNotification = message.GetNotification() != null;
+
         // Data Message 처리 (앱이 foreground/background 상관없이 항상 호출)
+        // notification이 함께 왔으면 중복 알림 방지를 위해 showNotification=false
         if (message.Data.Count > 0)
         {
-            Log.Info(TAG, "Data Message received");
-            HandleDataMessage(message.Data);
+            Log.Info(TAG, $"Data Message received (hasNotification: {hasNotification})");
+            HandleDataMessage(message.Data, showNotification: !hasNotification);
         }
 
         // Notification Message 처리 (앱이 foreground일 때만 호출)
-        if (message.GetNotification() != null)
+        // 시스템이 background에서는 자동으로 표시하므로 foreground에서만 수동 표시
+        if (hasNotification)
         {
             var notification = message.GetNotification();
             Log.Info(TAG, $"Notification: {notification.Title} - {notification.Body}");
@@ -60,8 +69,17 @@ public class MilOpsFirebaseService : FirebaseMessagingService
     /// Data Message 처리
     /// 초대 알림, 일정 변경 등 커스텀 데이터 처리
     /// </summary>
-    private void HandleDataMessage(System.Collections.Generic.IDictionary<string, string> data)
+    /// <param name="data">FCM 데이터 페이로드</param>
+    /// <param name="showNotification">알림을 표시할지 여부 (notification 메시지가 함께 왔으면 false)</param>
+    private void HandleDataMessage(System.Collections.Generic.IDictionary<string, string> data, bool showNotification = true)
     {
+        // showNotification이 false면 알림 표시 안 함 (notification 메시지가 함께 왔을 때 중복 방지)
+        if (!showNotification)
+        {
+            Log.Info(TAG, "Skipping notification display (notification message already handled)");
+            // 딥링크 등 다른 처리는 계속 진행
+        }
+
         // 메시지 타입에 따라 분기 처리
         if (data.TryGetValue("type", out var messageType))
         {
@@ -69,7 +87,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
             {
                 case "invitation_accepted":
                     // 초대 수락됨 알림
-                    if (data.TryGetValue("name", out var name) &&
+                    if (showNotification && data.TryGetValue("name", out var name) &&
                         data.TryGetValue("role", out var role))
                     {
                         ShowNotification(
@@ -81,7 +99,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
 
                 case "schedule_created":
                     // 새 일정 생성됨
-                    if (data.TryGetValue("company_name", out var companyName))
+                    if (showNotification && data.TryGetValue("company_name", out var companyName))
                     {
                         ShowNotification(
                             "새 일정 배정",
@@ -92,7 +110,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
 
                 case "schedule_updated":
                     // 일정 상태 변경
-                    if (data.TryGetValue("title", out var title) &&
+                    if (showNotification && data.TryGetValue("title", out var title) &&
                         data.TryGetValue("status", out var status))
                     {
                         ShowNotification(title, $"일정 상태: {status}");
@@ -101,7 +119,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
 
                 case "confirm_needed":
                     // D-1 확정 리마인더
-                    if (data.TryGetValue("company_name", out var company) &&
+                    if (showNotification && data.TryGetValue("company_name", out var company) &&
                         data.TryGetValue("date", out var date))
                     {
                         ShowNotification(
@@ -113,7 +131,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
 
                 case "schedule_inputted":
                     // 일정 입력됨
-                    if (data.TryGetValue("title", out var inputTitle) &&
+                    if (showNotification && data.TryGetValue("title", out var inputTitle) &&
                         data.TryGetValue("body", out var inputBody))
                     {
                         ShowNotification(inputTitle, inputBody);
@@ -122,7 +140,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
 
                 case "schedule_reserved":
                     // 일정 예약됨
-                    if (data.TryGetValue("title", out var reservedTitle) &&
+                    if (showNotification && data.TryGetValue("title", out var reservedTitle) &&
                         data.TryGetValue("body", out var reservedBody))
                     {
                         ShowNotification(reservedTitle, reservedBody);
@@ -131,7 +149,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
 
                 case "schedule_confirmed":
                     // 일정 확정됨
-                    if (data.TryGetValue("title", out var confirmedTitle) &&
+                    if (showNotification && data.TryGetValue("title", out var confirmedTitle) &&
                         data.TryGetValue("body", out var confirmedBody))
                     {
                         ShowNotification(confirmedTitle, confirmedBody);
@@ -140,7 +158,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
 
                 default:
                     // 기본 메시지 처리
-                    if (data.TryGetValue("title", out var defaultTitle) &&
+                    if (showNotification && data.TryGetValue("title", out var defaultTitle) &&
                         data.TryGetValue("body", out var body))
                     {
                         ShowNotification(defaultTitle, body);
