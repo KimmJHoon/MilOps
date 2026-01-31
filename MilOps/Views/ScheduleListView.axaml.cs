@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.VisualTree;
 using MilOps.Models;
@@ -56,6 +57,9 @@ public partial class ScheduleListView : UserControl
             _lastUserId = null;
             _lastUserRole = null;
             DataContext = null;
+
+            // ScheduleDataService 캐시 초기화 (공유 캐시)
+            ScheduleDataService.ClearCache();
         }
         catch (Exception ex)
         {
@@ -168,4 +172,12 @@ public partial class ScheduleListView : UserControl
     }
 
     public ScheduleListViewModel? ViewModel => _viewModel;
+
+    /// <summary>
+    /// 삭제 모달 배경 오버레이 클릭 시 모달 닫기
+    /// </summary>
+    private void OnDeleteModalOverlayPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _viewModel?.CancelDeleteCommand.Execute(null);
+    }
 }
