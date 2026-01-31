@@ -127,8 +127,10 @@ public partial class MainView : UserControl
     /// <summary>
     /// 업체 등록 화면 열기 (외부에서 호출 가능)
     /// </summary>
-    public void OpenCompanyRegister()
+    public async void OpenCompanyRegister()
     {
+        // 먼저 ViewModel 초기화 (사용자 변경 시 재생성)
+        await CompanyRegisterView.ForceInitializeAsync();
         _viewModel.OpenCompanyRegisterCommand.Execute(null);
     }
 

@@ -276,7 +276,7 @@
     </ScrollViewer>
 
     <!-- 삭제 확인 모달 오버레이 -->
-    <Grid IsVisible="{Binding ShowDeleteModal}">
+    <Grid IsVisible="{Binding ShowDeleteModal, FallbackValue=False}">
       <!-- 배경 오버레이 -->
       <Border Background="#000000" Opacity="0.8"/>
 
