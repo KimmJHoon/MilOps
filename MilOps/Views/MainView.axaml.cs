@@ -137,8 +137,10 @@ public partial class MainView : UserControl
     /// <summary>
     /// 일정 생성 화면 열기 (외부에서 호출 가능)
     /// </summary>
-    public void OpenScheduleCreate()
+    public async void OpenScheduleCreate()
     {
+        // 먼저 ViewModel 초기화 (사용자 변경 시 재생성)
+        await ScheduleCreateView.ForceInitializeAsync();
         _viewModel.OpenScheduleCreateCommand.Execute(null);
     }
 
@@ -289,6 +291,19 @@ public partial class MainView : UserControl
         if (e.PropertyName == nameof(MainViewModel.IsDrawerOpen) && !_isAnimating)
         {
             await AnimateDrawer(_viewModel.IsDrawerOpen);
+        }
+
+        // 탭 전환 시 해당 View 초기화 (사용자 변경 대응)
+        if (e.PropertyName == nameof(MainViewModel.IsScheduleSelected) && _viewModel.IsScheduleSelected)
+        {
+            System.Diagnostics.Debug.WriteLine("[MainView] IsScheduleSelected changed to True - initializing ScheduleListView");
+            ScheduleListView.ForceInitialize();
+        }
+
+        if (e.PropertyName == nameof(MainViewModel.IsManagerSelected) && _viewModel.IsManagerSelected)
+        {
+            System.Diagnostics.Debug.WriteLine("[MainView] IsManagerSelected changed to True - initializing ManagerView");
+            ManagerView.ForceInitialize();
         }
     }
 

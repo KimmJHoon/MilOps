@@ -70,7 +70,10 @@ public partial class CompanyRegisterView : UserControl
             _lastUserId = currentUserId;
         }
 
-        await _viewModel.InitializeAsync();
+        if (_viewModel != null)
+        {
+            await _viewModel.InitializeAsync();
+        }
     }
 
     private void OnViewModelCloseRequested(object? sender, EventArgs e)
