@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MilOps.Models;
 using MilOps.Services;
+using MilOps.Services.Abstractions;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,6 +14,10 @@ namespace MilOps.ViewModels;
 
 public partial class ScheduleListViewModel : ViewModelBase
 {
+    // 의존성 주입을 위한 서비스
+    private readonly IAuthService _authService;
+    private readonly ISupabaseService _supabaseService;
+
     // 일정 목록
     [ObservableProperty]
     private ObservableCollection<ScheduleListItem> _schedules = new();
@@ -120,9 +125,26 @@ public partial class ScheduleListViewModel : ViewModelBase
     // 이벤트: 일정 생성 화면으로 이동
     public event Action? NavigateToScheduleCreate;
 
+    /// <summary>
+    /// 기본 생성자 - 프로덕션용 (기존 코드 호환)
+    /// </summary>
     public ScheduleListViewModel()
+        : this(new AuthServiceAdapter(), new SupabaseServiceAdapter())
     {
-        _ = InitializeAsync();
+    }
+
+    /// <summary>
+    /// DI 생성자 - 테스트용
+    /// </summary>
+    public ScheduleListViewModel(IAuthService authService, ISupabaseService supabaseService, bool autoInitialize = true)
+    {
+        _authService = authService;
+        _supabaseService = supabaseService;
+
+        if (autoInitialize)
+        {
+            _ = InitializeAsync();
+        }
     }
 
     private async Task InitializeAsync()
@@ -130,7 +152,7 @@ public partial class ScheduleListViewModel : ViewModelBase
         try
         {
             // 로그인되지 않은 상태면 초기화 중단
-            if (AuthService.CurrentUser == null)
+            if (_authService.CurrentUser == null)
             {
                 System.Diagnostics.Debug.WriteLine("[ScheduleListVM] InitializeAsync skipped - no current user");
                 return;
@@ -151,7 +173,7 @@ public partial class ScheduleListViewModel : ViewModelBase
     /// </summary>
     private void DetermineUserRole()
     {
-        var currentUser = AuthService.CurrentUser;
+        var currentUser = _authService.CurrentUser;
         if (currentUser == null) return;
 
         CurrentUserRole = currentUser.Role;
@@ -236,29 +258,29 @@ public partial class ScheduleListViewModel : ViewModelBase
     /// </summary>
     private async Task LoadCacheDataAsync()
     {
-        if (!SupabaseService.IsInitialized) return;
+        if (!_supabaseService.IsInitialized) return;
 
         try
         {
-            var companiesTask = SupabaseService.Client.From<Company>().Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true").Get();
-            var battalionsTask = SupabaseService.Client.From<Battalion>().Get();
-            var districtsTask = SupabaseService.Client.From<District>().Get();
-            var usersTask = SupabaseService.Client.From<User>().Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true").Get();
+            var companiesTask = _supabaseService.GetActiveCompaniesAsync();
+            var battalionsTask = _supabaseService.GetBattalionsAsync();
+            var districtsTask = _supabaseService.GetDistrictsAsync();
+            var usersTask = _supabaseService.GetActiveUsersAsync();
 
             await Task.WhenAll(companiesTask, battalionsTask, districtsTask, usersTask);
 
-            _companyNames = companiesTask.Result.Models.ToDictionary(c => c.Id, c => c.Name);
-            _battalionNames = battalionsTask.Result.Models.ToDictionary(b => b.Id, b => b.Name);
-            _battalionCache = battalionsTask.Result.Models.ToDictionary(b => b.Id, b => b);
-            _districtNames = districtsTask.Result.Models.ToDictionary(d => d.Id, d => d.Name);
-            _districtCache = districtsTask.Result.Models.ToDictionary(d => d.Id, d => d);
-            _userNames = usersTask.Result.Models.ToDictionary(u => u.Id, u => u.FullDisplayName);
-            _userCache = usersTask.Result.Models.ToDictionary(u => u.Id, u => u);
+            _companyNames = companiesTask.Result.ToDictionary(c => c.Id, c => c.Name);
+            _battalionNames = battalionsTask.Result.ToDictionary(b => b.Id, b => b.Name);
+            _battalionCache = battalionsTask.Result.ToDictionary(b => b.Id, b => b);
+            _districtNames = districtsTask.Result.ToDictionary(d => d.Id, d => d.Name);
+            _districtCache = districtsTask.Result.ToDictionary(d => d.Id, d => d);
+            _userNames = usersTask.Result.ToDictionary(u => u.Id, u => u.FullDisplayName);
+            _userCache = usersTask.Result.ToDictionary(u => u.Id, u => u);
 
             // 현재 사용자 표시 갱신
-            if (AuthService.CurrentUser != null)
+            if (_authService.CurrentUser != null)
             {
-                UpdateCurrentUserDisplay(AuthService.CurrentUser);
+                UpdateCurrentUserDisplay(_authService.CurrentUser);
             }
 
             System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Cache loaded: {_companyNames.Count} companies, {_battalionNames.Count} battalions, {_districtNames.Count} districts, {_userNames.Count} users");
@@ -275,21 +297,19 @@ public partial class ScheduleListViewModel : ViewModelBase
     [RelayCommand]
     public async Task LoadSchedulesAsync()
     {
-        if (!SupabaseService.IsInitialized) return;
-        if (AuthService.CurrentUser == null) return;
+        if (!_supabaseService.IsInitialized) return;
+        if (_authService.CurrentUser == null) return;
 
         IsLoading = true;
         try
         {
-            var currentUser = AuthService.CurrentUser;
+            var currentUser = _authService.CurrentUser;
 
             // 모든 일정을 가져온 후 클라이언트에서 필터링
-            var response = await SupabaseService.Client.From<Schedule>()
-                .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
-                .Get();
+            var schedules = await _supabaseService.GetSchedulesAsync();
 
             // 삭제되지 않은 일정만 필터링
-            _allSchedules = response.Models.Where(s => !s.IsDeleted).ToList();
+            _allSchedules = schedules.Where(s => !s.IsDeleted).ToList();
 
             // 역할에 따른 추가 필터링
             _allSchedules = FilterSchedulesByRole(_allSchedules, currentUser);
@@ -446,7 +466,7 @@ public partial class ScheduleListViewModel : ViewModelBase
         };
 
         // 역할에 따른 액션 텍스트 설정
-        var currentUser = AuthService.CurrentUser;
+        var currentUser = _authService.CurrentUser;
         if (currentUser != null)
         {
             item.ActionText = GetActionText(schedule, currentUser);
@@ -458,13 +478,28 @@ public partial class ScheduleListViewModel : ViewModelBase
 
             System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] CreateScheduleListItem - Schedule: {schedule.Id}, Status: {schedule.Status}, Role: {currentUser.Role}, CanDelete: {item.CanDelete}");
 
-            // 확정 상태 설정
-            if (schedule.Status == "reserved")
+            // 상태별 미확정 정보 표시
+            if (schedule.Status == "created")
             {
-                item.LocalConfirmStatus = schedule.LocalConfirmed ? "✅" : "⏳";
-                item.MilitaryConfirmStatus = schedule.MilitaryConfirmed ? "✅" : "⏳";
-
-                // 현재 사용자 기준 확정 필요 여부
+                // 생성됨: 양측 미확정
+                item.UnconfirmedInfo = "양측 미확정";
+            }
+            else if (schedule.Status == "inputted")
+            {
+                // 입력됨: 사용자 역할에 따라 표시
+                if (currentUser.Role == "user_local" || currentUser.Role == "middle_local" || currentUser.Role == "super_admin_mois")
+                {
+                    item.UnconfirmedInfo = "대대 미확정";
+                }
+                else if (currentUser.Role == "user_military" || currentUser.Role == "middle_military" || currentUser.Role == "super_admin_army")
+                {
+                    item.UnconfirmedInfo = "지자체 미확정";
+                }
+            }
+            else if (schedule.Status == "reserved")
+            {
+                // 예약됨: 표시 없음 (확정 대기 상태)
+                // 현재 사용자 기준 확정 필요 여부만 설정
                 if (currentUser.Role == "user_local")
                 {
                     item.NeedsMyConfirm = !schedule.LocalConfirmed;
@@ -472,23 +507,6 @@ public partial class ScheduleListViewModel : ViewModelBase
                 else if (currentUser.Role == "user_military")
                 {
                     item.NeedsMyConfirm = !schedule.MilitaryConfirmed;
-                }
-
-                // 중간관리자용: 미확정자 표시
-                if (currentUser.Role == "middle_military" || currentUser.Role == "middle_local")
-                {
-                    if (!schedule.LocalConfirmed && !schedule.MilitaryConfirmed)
-                    {
-                        item.UnconfirmedInfo = "⚠️ 양측 미확정";
-                    }
-                    else if (!schedule.LocalConfirmed)
-                    {
-                        item.UnconfirmedInfo = "⚠️ 지자체 미확정";
-                    }
-                    else if (!schedule.MilitaryConfirmed)
-                    {
-                        item.UnconfirmedInfo = "⚠️ 대대 미확정";
-                    }
                 }
             }
         }
@@ -518,16 +536,16 @@ public partial class ScheduleListViewModel : ViewModelBase
     {
         return (schedule.Status, currentUser.Role) switch
         {
-            ("created", "user_local") => "📝 일정 입력하기",
-            ("inputted", "user_military") => "📅 일정 예약하기",
-            ("reserved", "user_local") when !schedule.LocalConfirmed => "✅ 확정 필요",
-            ("reserved", "user_military") when !schedule.MilitaryConfirmed => "✅ 확정 필요",
-            ("reserved", _) when schedule.LocalConfirmed && schedule.MilitaryConfirmed => "🔒 확정 완료",
-            ("reserved", "user_local") when schedule.LocalConfirmed => "⏳ 상대방 대기",
-            ("reserved", "user_military") when schedule.MilitaryConfirmed => "⏳ 상대방 대기",
-            ("confirmed", _) => "📄 상세보기",
-            ("created", "middle_military") => "🗑️ 삭제하기",
-            _ => "📄 상세보기"
+            ("created", "user_local") => "일정 입력하기",
+            ("inputted", "user_military") => "일정 예약하기",
+            ("reserved", "user_local") when !schedule.LocalConfirmed => "확정 필요",
+            ("reserved", "user_military") when !schedule.MilitaryConfirmed => "확정 필요",
+            ("reserved", _) when schedule.LocalConfirmed && schedule.MilitaryConfirmed => "확정 완료",
+            ("reserved", "user_local") when schedule.LocalConfirmed => "상대방 대기",
+            ("reserved", "user_military") when schedule.MilitaryConfirmed => "상대방 대기",
+            ("confirmed", _) => "상세보기",
+            ("created", "middle_military") => "삭제하기",
+            _ => "상세보기"
         };
     }
 
@@ -562,7 +580,7 @@ public partial class ScheduleListViewModel : ViewModelBase
         if (item?.Schedule == null) return;
 
         var schedule = item.Schedule;
-        var currentUser = AuthService.CurrentUser;
+        var currentUser = _authService.CurrentUser;
         if (currentUser == null) return;
 
         // 역할과 상태에 따라 다른 화면으로 이동
@@ -587,7 +605,7 @@ public partial class ScheduleListViewModel : ViewModelBase
         if (item?.Schedule == null) return;
 
         var schedule = item.Schedule;
-        var currentUser = AuthService.CurrentUser;
+        var currentUser = _authService.CurrentUser;
 
         // 권한 확인: 사단담당자가 생성됨 상태의 일정만 삭제 가능
         if (currentUser?.Role != "middle_military" || schedule.Status != "created")
@@ -614,20 +632,14 @@ public partial class ScheduleListViewModel : ViewModelBase
         if (_pendingDeleteItem?.Schedule == null) return;
 
         var schedule = _pendingDeleteItem.Schedule;
-        var currentUser = AuthService.CurrentUser;
+        var currentUser = _authService.CurrentUser;
 
         if (currentUser == null) return;
 
         try
         {
             // Soft delete
-#pragma warning disable CS8603 // Possible null reference return
-            await SupabaseService.Client.From<Schedule>()
-                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, schedule.Id.ToString())
-                .Set(s => s.DeletedAt, DateTime.UtcNow)
-                .Set(s => s.DeletedBy, currentUser.Id)
-                .Update();
-#pragma warning restore CS8603
+            await _supabaseService.SoftDeleteScheduleAsync(schedule.Id, currentUser.Id);
 
             // 목록에서 제거
             _allSchedules.Remove(schedule);
@@ -689,6 +701,10 @@ public partial class ScheduleListViewModel : ViewModelBase
     /// </summary>
     public void ClearCache()
     {
+        // 모달 닫기
+        ShowDeleteModal = false;
+        _pendingDeleteItem = null;
+
         Schedules.Clear();
         _allSchedules.Clear();
         _companyNames.Clear();
@@ -725,7 +741,7 @@ public partial class ScheduleListViewModel : ViewModelBase
             item.UpdateStatusDisplay();
 
             // ActionText도 갱신
-            var currentUser = AuthService.CurrentUser;
+            var currentUser = _authService.CurrentUser;
             if (currentUser != null)
             {
                 item.ActionText = GetActionText(item.Schedule, currentUser);

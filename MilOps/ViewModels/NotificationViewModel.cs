@@ -1,4 +1,3 @@
-using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MilOps.Models;
@@ -10,6 +9,10 @@ using System.Threading.Tasks;
 
 namespace MilOps.ViewModels;
 
+/// <summary>
+/// 알림 ViewModel
+/// FCM이 푸시 알림을 처리하므로 Realtime 구독 제거됨
+/// </summary>
 public partial class NotificationViewModel : ViewModelBase
 {
     [ObservableProperty]
@@ -27,110 +30,15 @@ public partial class NotificationViewModel : ViewModelBase
     [ObservableProperty]
     private string _emptyMessage = "알림이 없습니다";
 
-    [ObservableProperty]
-    private bool _isRealtimeConnected = false;
-
     // 일정 상세 화면으로 이동 이벤트
     public event Action<Guid>? OnScheduleSelected;
 
     // 닫기 이벤트
     public event EventHandler? CloseRequested;
 
-    // 새 알림 수신 이벤트 (UI 업데이트용)
-    public event Action<Notification>? OnNewNotificationReceived;
-
     public NotificationViewModel()
     {
-        // 실시간 알림 이벤트 구독
-        NotificationService.OnNewNotification += HandleNewNotification;
-        NotificationService.OnNotificationUpdated += HandleNotificationUpdated;
-    }
-
-    /// <summary>
-    /// 새 알림 수신 처리
-    /// </summary>
-    private void HandleNewNotification(Notification notification)
-    {
-        // UI 스레드에서 실행
-        Dispatcher.UIThread.Post(() =>
-        {
-            // 목록 맨 앞에 추가
-            Notifications.Insert(0, notification);
-            HasNotifications = true;
-            UnreadCount++;
-
-            System.Diagnostics.Debug.WriteLine($"[NotificationVM] New notification added: {notification.Title}");
-
-            // 외부 알림 (토스트 등)
-            OnNewNotificationReceived?.Invoke(notification);
-        });
-    }
-
-    /// <summary>
-    /// 알림 업데이트 처리
-    /// </summary>
-    private void HandleNotificationUpdated(Notification updatedNotification)
-    {
-        Dispatcher.UIThread.Post(() =>
-        {
-            var existing = Notifications.FirstOrDefault(n => n.Id == updatedNotification.Id);
-            if (existing != null)
-            {
-                var index = Notifications.IndexOf(existing);
-                if (index >= 0)
-                {
-                    Notifications[index] = updatedNotification;
-                    UnreadCount = Notifications.Count(n => !n.IsRead);
-
-                    System.Diagnostics.Debug.WriteLine($"[NotificationVM] Notification updated: {updatedNotification.Id}");
-                }
-            }
-        });
-    }
-
-    /// <summary>
-    /// 실시간 구독 시작
-    /// </summary>
-    public async Task StartRealtimeSubscriptionAsync()
-    {
-        try
-        {
-            await NotificationService.SubscribeToRealtimeAsync();
-            IsRealtimeConnected = NotificationService.IsSubscribed;
-            System.Diagnostics.Debug.WriteLine($"[NotificationVM] Realtime subscription started: {IsRealtimeConnected}");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[NotificationVM] StartRealtimeSubscriptionAsync error: {ex.Message}");
-            IsRealtimeConnected = false;
-        }
-    }
-
-    /// <summary>
-    /// 실시간 구독 중지
-    /// </summary>
-    public void StopRealtimeSubscription()
-    {
-        try
-        {
-            NotificationService.UnsubscribeFromRealtime();
-            IsRealtimeConnected = false;
-            System.Diagnostics.Debug.WriteLine("[NotificationVM] Realtime subscription stopped");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[NotificationVM] StopRealtimeSubscription error: {ex.Message}");
-        }
-    }
-
-    /// <summary>
-    /// ViewModel 정리 (구독 해제)
-    /// </summary>
-    public void Cleanup()
-    {
-        NotificationService.OnNewNotification -= HandleNewNotification;
-        NotificationService.OnNotificationUpdated -= HandleNotificationUpdated;
-        StopRealtimeSubscription();
+        // FCM이 푸시 알림을 처리하므로 Realtime 구독 불필요
     }
 
     /// <summary>

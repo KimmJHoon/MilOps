@@ -57,6 +57,9 @@ public partial class AppShell : UserControl
         // 초대 수락 화면 이벤트 연결
         SetupInviteAcceptView();
 
+        // MainView 로그아웃 이벤트 연결
+        MainViewControl.LogoutRequested += OnLogoutRequested;
+
         // 딥링크 확인 (앱 시작 시)
         CheckForDeepLink();
 
@@ -280,16 +283,25 @@ public partial class AppShell : UserControl
 
     private async void ShowInviteAcceptView(string inviteCode)
     {
-        // 모든 뷰 숨기기
-        LoginViewControl.IsVisible = false;
-        MainViewControl.IsVisible = false;
-        InviteCodeViewControl.IsVisible = false;
-        InviteAcceptViewControl.IsVisible = true;
-
-        // 초대 코드로 ViewModel 초기화
-        if (InviteAcceptViewControl.DataContext is InviteAcceptViewModel inviteVm)
+        try
         {
-            await inviteVm.InitializeWithInviteCodeAsync(inviteCode);
+            // 모든 뷰 숨기기
+            LoginViewControl.IsVisible = false;
+            MainViewControl.IsVisible = false;
+            InviteCodeViewControl.IsVisible = false;
+            InviteAcceptViewControl.IsVisible = true;
+
+            // 초대 코드로 ViewModel 초기화
+            if (InviteAcceptViewControl.DataContext is InviteAcceptViewModel inviteVm)
+            {
+                await inviteVm.InitializeWithInviteCodeAsync(inviteCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteAcceptView error: {ex.Message}");
+            // 에러 발생 시 로그인 화면으로 복귀
+            ShowLoginView();
         }
     }
 
@@ -310,15 +322,12 @@ public partial class AppShell : UserControl
         }
     }
 
-    private async void OnLoginSuccess()
+    private void OnLoginSuccess()
     {
         System.Diagnostics.Debug.WriteLine("[AppShell] OnLoginSuccess called");
 
         // MainView의 역할 정보 갱신
         MainViewControl.RefreshUserRole();
-
-        // 실시간 알림 구독 시작
-        MainViewControl.StartRealtimeNotifications();
 
         // FCM 토큰 서버에 저장 (Android에서만 작동)
         _ = Task.Run(async () =>
@@ -339,6 +348,28 @@ public partial class AppShell : UserControl
         MainViewControl.IsVisible = true;
 
         System.Diagnostics.Debug.WriteLine("[AppShell] OnLoginSuccess completed");
+    }
+
+    private void OnLogoutRequested()
+    {
+        System.Diagnostics.Debug.WriteLine("[AppShell] OnLogoutRequested - navigating to login screen");
+
+        // 모든 화면 숨기고 로그인 화면 표시
+        MainViewControl.IsVisible = false;
+        InviteAcceptViewControl.IsVisible = false;
+        InviteCodeViewControl.IsVisible = false;
+        LoginViewControl.IsVisible = true;
+
+        // 로그인 폼 초기화
+        if (LoginViewControl.DataContext is LoginViewModel loginVm)
+        {
+            loginVm.UserId = "";
+            loginVm.Password = "";
+            loginVm.ErrorMessage = "";
+            loginVm.HasError = false;
+        }
+
+        System.Diagnostics.Debug.WriteLine("[AppShell] OnLogoutRequested completed");
     }
 
 }

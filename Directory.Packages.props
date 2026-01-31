@@ -25,5 +25,13 @@
         <!-- Firebase Cloud Messaging -->
         <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.0.3.1" />
         <PackageVersion Include="Xamarin.GooglePlayServices.Base" Version="118.5.0.3" />
+
+        <!-- Test packages -->
+        <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+        <PackageVersion Include="xunit" Version="2.8.0" />
+        <PackageVersion Include="xunit.runner.visualstudio" Version="2.8.0" />
+        <PackageVersion Include="coverlet.collector" Version="6.0.2" />
+        <PackageVersion Include="Moq" Version="4.20.70" />
+        <PackageVersion Include="FluentAssertions" Version="6.12.0" />
     </ItemGroup>
 </Project>

@@ -271,16 +271,44 @@ public partial class MainViewModel : ViewModelBase
         IsDrawerOpen = false;
     }
 
+    // 로그아웃 완료 이벤트
+    public event Action? LogoutCompleted;
+
     [RelayCommand]
     private async Task Logout()
     {
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command started - initiating app restart");
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command started");
         IsDrawerOpen = false;
 
-        // AppRestartService를 통해 로그아웃 및 앱 재시작
-        await AppRestartService.LogoutAndRestartAsync();
+        try
+        {
+            // 1. 정리 작업 (타이머, Realtime 구독 해제)
+            try
+            {
+                AppRestartService.CleanupBeforeLogout?.Invoke();
+                System.Diagnostics.Debug.WriteLine("[MainViewModel] Cleanup completed");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Cleanup error (continuing): {ex.Message}");
+            }
 
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command completed");
+            // 2. 세션 저장소 클리어
+            SessionStorageService.ClearSession();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] Session cleared");
+
+            // 3. AuthService 로그아웃
+            await AuthService.LogoutAsync();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] AuthService logged out");
+
+            // 4. 로그아웃 완료 이벤트 발생 (UI에서 로그인 화면으로 전환)
+            LogoutCompleted?.Invoke();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] LogoutCompleted event invoked");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Logout error: {ex.Message}");
+        }
     }
 
     // === 업체 등록 화면 ===

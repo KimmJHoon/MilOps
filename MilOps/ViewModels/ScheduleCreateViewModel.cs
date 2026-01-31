@@ -406,13 +406,13 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         if (_selectedLocalUser != null)
         {
             HasLocalUser = true;
-            LocalUserName = $"🏛️ {_selectedLocalUser.FullDisplayName}";
-            LocalUserPhone = $"📞 {_selectedLocalUser.Phone}";
+            LocalUserName = $"[민] {_selectedLocalUser.FullDisplayName}";
+            LocalUserPhone = _selectedLocalUser.Phone;
             System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] Found local user: {_selectedLocalUser.Name}");
         }
         else
         {
-            LocalUserName = "⚠️ 담당자 미지정";
+            LocalUserName = "! 담당자 미지정";
             System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] No local user for district {SelectedDistrict.Name}");
         }
     }
@@ -433,13 +433,13 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         if (_selectedMilitaryUser != null)
         {
             HasMilitaryUser = true;
-            MilitaryUserName = $"🎖️ {_selectedMilitaryUser.FullDisplayName}";
-            MilitaryUserPhone = $"📞 {_selectedMilitaryUser.Phone}";
+            MilitaryUserName = $"[군] {_selectedMilitaryUser.FullDisplayName}";
+            MilitaryUserPhone = _selectedMilitaryUser.Phone;
             System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] Found military user: {_selectedMilitaryUser.Name}");
         }
         else
         {
-            MilitaryUserName = "⚠️ 담당자 미지정";
+            MilitaryUserName = "! 담당자 미지정";
             System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] No military user for battalion {SelectedBattalion.Name}");
         }
     }
