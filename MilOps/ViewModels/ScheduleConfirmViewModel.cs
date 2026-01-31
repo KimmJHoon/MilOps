@@ -150,6 +150,10 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     [ObservableProperty]
     private bool _alreadyConfirmedByMe = false;
 
+    // 중간관리자 여부 (뷰어 전용 - 하단 버튼 숨김)
+    [ObservableProperty]
+    private bool _isMiddleAdmin = false;
+
     // 확정 확인 모달
     [ObservableProperty]
     private bool _showConfirmModal = false;
@@ -178,10 +182,19 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     {
         _scheduleId = scheduleId;
 
+        // 초기화 시 모달 상태 리셋 (이전 상태가 남아있을 수 있음)
+        ShowConfirmModal = false;
+        CanConfirm = false;
+        AlreadyConfirmedByMe = false;
+
         var currentUser = AuthService.CurrentUser;
         if (currentUser == null) return;
 
         _currentUserRole = currentUser.Role ?? "";
+
+        // 중간관리자/최종관리자 여부 설정 (뷰어 전용)
+        IsMiddleAdmin = _currentUserRole == "middle_local" || _currentUserRole == "middle_military"
+                     || _currentUserRole == "super_admin_mois" || _currentUserRole == "super_admin_army";
 
         await LoadScheduleAsync();
     }
@@ -412,11 +425,27 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         // 현재 사용자의 확정 여부
         bool isLocalUser = _currentUserRole == "user_local";
         bool isMilitaryUser = _currentUserRole == "user_military";
+        bool isMiddleAdmin = _currentUserRole == "middle_local" || _currentUserRole == "middle_military";
 
-        AlreadyConfirmedByMe = (isLocalUser && LocalConfirmed) || (isMilitaryUser && MilitaryConfirmed);
-
-        // 확정 버튼 활성화 (예약 상태이고 아직 확정하지 않은 경우)
-        CanConfirm = _schedule.Status == "reserved" && !AlreadyConfirmedByMe;
+        // 중간관리자는 뷰어 전용 - 확정 버튼 비활성화
+        if (isMiddleAdmin)
+        {
+            AlreadyConfirmedByMe = true;  // 버튼 숨김
+            CanConfirm = false;
+            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Middle admin ({_currentUserRole}) - view-only mode");
+        }
+        // "confirmed" 상태면 이미 양측 모두 확정한 것
+        else if (_schedule.Status == "confirmed")
+        {
+            AlreadyConfirmedByMe = true;
+            CanConfirm = false;
+        }
+        else
+        {
+            AlreadyConfirmedByMe = (isLocalUser && LocalConfirmed) || (isMilitaryUser && MilitaryConfirmed);
+            // 확정 버튼 활성화 (예약 상태이고 아직 확정하지 않은 경우)
+            CanConfirm = _schedule.Status == "reserved" && !AlreadyConfirmedByMe;
+        }
 
         System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] UpdateConfirmationStatus - isLocalUser: {isLocalUser}, isMilitaryUser: {isMilitaryUser}");
         System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] UpdateConfirmationStatus - AlreadyConfirmedByMe: {AlreadyConfirmedByMe}, CanConfirm: {CanConfirm}");
@@ -462,7 +491,14 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     [RelayCommand]
     private void ShowConfirmDialog()
     {
-        if (!CanConfirm) return;
+        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ShowConfirmDialog - CanConfirm: {CanConfirm}, Status: {_schedule?.Status}, AlreadyConfirmedByMe: {AlreadyConfirmedByMe}");
+
+        // 이미 확정된 일정이거나 확정 불가능한 상태면 모달 표시 안 함
+        if (!CanConfirm || _schedule?.Status == "confirmed")
+        {
+            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ShowConfirmDialog - Cannot confirm, returning");
+            return;
+        }
 
         // 모달에 표시할 정보 설정
         ModalDateDisplay = ReservedDateDisplay;
