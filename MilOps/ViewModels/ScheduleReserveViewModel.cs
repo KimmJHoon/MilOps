@@ -118,30 +118,19 @@ public partial class ScheduleReserveViewModel : ViewModelBase
             var client = SupabaseService.Client;
             if (client == null) return;
 
-            // 1단계: 일정 + 가능시간 동시 로드
-            var scheduleTask = client.From<Schedule>()
+            // 일정 로드
+            var scheduleResponse = await client.From<Schedule>()
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
                 .Single();
 
-            var availableTimesTask = client.From<ScheduleAvailableTime>()
-                .Filter("schedule_id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
-                .Order("available_date", Supabase.Postgrest.Constants.Ordering.Ascending)
-                .Get();
-
-            await Task.WhenAll(scheduleTask, availableTimesTask);
-
-            _schedule = scheduleTask.Result;
+            _schedule = scheduleResponse;
             if (_schedule == null)
             {
                 ErrorMessage = "일정을 찾을 수 없습니다.";
                 return;
             }
 
-            // 가능 시간 처리 (UI 업데이트)
-            var times = availableTimesTask.Result.Models;
-            ProcessAvailableTimes(times);
-
-            // 2단계: 관련 데이터 모두 병렬 로드
+            // 관련 데이터 로드
             var companyTask = client.From<Company>()
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _schedule.CompanyId.ToString())
                 .Single();
@@ -154,22 +143,11 @@ public partial class ScheduleReserveViewModel : ViewModelBase
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _schedule.MilitaryUserId.ToString())
                 .Single();
 
-            // 모든 지역/대대 정보를 한번에 로드
-            var districtsTask = client.From<District>().Get();
-            var regionsTask = client.From<Region>().Get();
-            var battalionsTask = client.From<Battalion>().Get();
-            var divisionsTask = client.From<Division>().Get();
-
-            await Task.WhenAll(companyTask, localUserTask, militaryUserTask,
-                              districtsTask, regionsTask, battalionsTask, divisionsTask);
+            await Task.WhenAll(companyTask, localUserTask, militaryUserTask);
 
             var company = companyTask.Result;
             var localUser = localUserTask.Result;
             var militaryUser = militaryUserTask.Result;
-            var districts = districtsTask.Result.Models;
-            var regions = regionsTask.Result.Models;
-            var battalions = battalionsTask.Result.Models;
-            var divisions = divisionsTask.Result.Models;
 
             // 업체 정보 설정
             if (company != null)
@@ -178,12 +156,27 @@ public partial class ScheduleReserveViewModel : ViewModelBase
                 CompanyAddress = company.Address ?? "";
                 CompanyProducts = company.Products ?? "";
 
-                var district = districts.FirstOrDefault(d => d.Id == company.DistrictId);
-                if (district != null)
+                // District 로드
+                if (company.DistrictId != Guid.Empty)
                 {
-                    DistrictName = district.Name;
-                    var region = regions.FirstOrDefault(r => r.Id == district.RegionId);
-                    if (region != null) RegionName = region.Name;
+                    var district = await client.From<District>()
+                        .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, company.DistrictId.ToString())
+                        .Single();
+
+                    if (district != null)
+                    {
+                        DistrictName = district.Name;
+
+                        // Region 로드
+                        var region = await client.From<Region>()
+                            .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, district.RegionId.ToString())
+                            .Single();
+
+                        if (region != null)
+                        {
+                            RegionName = region.Name;
+                        }
+                    }
                 }
             }
 
@@ -200,10 +193,16 @@ public partial class ScheduleReserveViewModel : ViewModelBase
                 string battalionDisplay = "";
                 if (militaryUser.BattalionId.HasValue)
                 {
-                    var battalion = battalions.FirstOrDefault(b => b.Id == militaryUser.BattalionId.Value);
+                    var battalion = await client.From<Battalion>()
+                        .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, militaryUser.BattalionId.Value.ToString())
+                        .Single();
+
                     if (battalion != null)
                     {
-                        var division = divisions.FirstOrDefault(d => d.Id == battalion.DivisionId);
+                        var division = await client.From<Division>()
+                            .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, battalion.DivisionId.ToString())
+                            .Single();
+
                         battalionDisplay = division != null
                             ? $"{division.Name} {battalion.Name}"
                             : battalion.Name;
@@ -211,6 +210,9 @@ public partial class ScheduleReserveViewModel : ViewModelBase
                 }
                 CurrentUserDisplay = $"{militaryUser.FullDisplayName} ({battalionDisplay} 대대담당자)";
             }
+
+            // 가능 시간 로드
+            await LoadAvailableTimesAsync();
 
             ValidateCanReserve();
         }
@@ -226,42 +228,60 @@ public partial class ScheduleReserveViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 가능 시간 데이터 처리 (UI 업데이트)
+    /// 가능 시간 로드 (지자체담당자가 입력한 것)
     /// </summary>
-    private void ProcessAvailableTimes(List<ScheduleAvailableTime> times)
+    private async Task LoadAvailableTimesAsync()
     {
-        if (times.Count == 0)
+        try
         {
-            HasNoAvailableDates = true;
-            return;
-        }
+            var client = SupabaseService.Client;
+            if (client == null) return;
 
-        HasNoAvailableDates = false;
+            var response = await client.From<ScheduleAvailableTime>()
+                .Filter("schedule_id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
+                .Order("available_date", Supabase.Postgrest.Constants.Ordering.Ascending)
+                .Get();
 
-        var dateGroups = times
-            .GroupBy(t => t.AvailableDate.Date)
-            .OrderBy(g => g.Key)
-            .ToList();
+            var times = response.Models;
 
-        Dispatcher.UIThread.Post(() =>
-        {
-            AvailableDates.Clear();
-            foreach (var group in dateGroups)
+            if (times.Count == 0)
             {
-                AvailableDates.Add(new ReserveDateItem
-                {
-                    Date = group.Key,
-                    DayDisplay = group.Key.Day.ToString() + "일",
-                    TimeSlots = group.Select(t => new ReserveTimeSlotItem
-                    {
-                        Id = t.Id,
-                        StartTime = t.StartTime,
-                        EndTime = t.EndTime,
-                        IsSelected = false
-                    }).ToList()
-                });
+                HasNoAvailableDates = true;
+                return;
             }
-        });
+
+            HasNoAvailableDates = false;
+
+            // 날짜별로 그룹화
+            var dateGroups = times
+                .GroupBy(t => t.AvailableDate.Date)
+                .OrderBy(g => g.Key)
+                .ToList();
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                AvailableDates.Clear();
+                foreach (var group in dateGroups)
+                {
+                    AvailableDates.Add(new ReserveDateItem
+                    {
+                        Date = group.Key,
+                        DayDisplay = group.Key.Day.ToString() + "일",
+                        TimeSlots = group.Select(t => new ReserveTimeSlotItem
+                        {
+                            Id = t.Id,
+                            StartTime = t.StartTime,
+                            EndTime = t.EndTime,
+                            IsSelected = false
+                        }).ToList()
+                    });
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ScheduleReserveVM] LoadAvailableTimesAsync error: {ex.Message}");
+        }
     }
 
     /// <summary>

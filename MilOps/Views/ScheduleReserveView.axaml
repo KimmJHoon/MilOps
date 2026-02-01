@@ -29,7 +29,7 @@
         <!-- 현재 사용자 정보 (대대담당자) -->
         <Border Background="#2A5F2A" CornerRadius="20" Padding="16,10">
           <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
-            <TextBlock Text="&#xe7fd;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+            <TextBlock Text="&#x1F464;" FontSize="14"/>
             <TextBlock Text="{Binding CurrentUserDisplay}"
                        FontSize="13" Foreground="White"/>
           </StackPanel>
@@ -39,8 +39,8 @@
         <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
           <StackPanel Spacing="12">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="&#xe8b5;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
-              <TextBlock Text="일정 정보" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+              <TextBlock Text="&#x1F4CB;" FontSize="14"/>
+              <TextBlock Text="일정 정보" FontSize="14" Foreground="White"/>
             </StackPanel>
 
             <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
@@ -70,8 +70,8 @@
         <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
           <StackPanel Spacing="8">
             <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="&#xe84f;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
-              <TextBlock Text="지자체담당자 정보" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+              <TextBlock Text="&#x1F3DB;" FontSize="14"/>
+              <TextBlock Text="지자체담당자 정보" FontSize="14" Foreground="White"/>
             </StackPanel>
             <Grid ColumnDefinitions="Auto,*,Auto,*">
               <TextBlock Grid.Column="0" Text="담당자:" FontSize="12" Foreground="#888888" Margin="0,0,8,0"/>
@@ -85,8 +85,8 @@
         <!-- 가능 일자 선택 -->
         <StackPanel Spacing="8">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="&#xe8df;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
-            <TextBlock Text="가능 일자 선택" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+            <TextBlock Text="&#x1F4C5;" FontSize="14"/>
+            <TextBlock Text="가능 일자 선택" FontSize="14" Foreground="White"/>
           </StackPanel>
 
           <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
@@ -125,8 +125,8 @@
         <!-- 시간 선택 -->
         <StackPanel Spacing="8" IsVisible="{Binding SelectedDate, Converter={x:Static ObjectConverters.IsNotNull}}">
           <StackPanel Orientation="Horizontal" Spacing="8">
-            <TextBlock Text="&#xe8b5;" FontFamily="{StaticResource MaterialIcons}" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
-            <TextBlock Text="시간 선택" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
+            <TextBlock Text="&#x23F0;" FontSize="14"/>
+            <TextBlock Text="시간 선택" FontSize="14" Foreground="White"/>
             <TextBlock Text="{Binding AvailableTimeSlotsForDate.Count, StringFormat='({0}개)'}"
                        FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
           </StackPanel>

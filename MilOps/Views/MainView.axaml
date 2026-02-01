@@ -40,13 +40,13 @@
       <!-- 중앙 콘텐츠 영역 -->
       <Grid Grid.Row="1">
         <Border IsVisible="{Binding IsCalendarSelected}">
-          <views:CalendarView x:Name="CalendarView"/>
+          <views:CalendarView/>
         </Border>
         <Border IsVisible="{Binding IsScheduleSelected}">
           <views:ScheduleListView x:Name="ScheduleListView"/>
         </Border>
         <Border IsVisible="{Binding IsManagerSelected}">
-          <views:ManagerView x:Name="ManagerView"/>
+          <views:ManagerView/>
         </Border>
         <Border IsVisible="{Binding IsNotificationSelected}">
           <views:NotificationView x:Name="NotificationView"/>

@@ -98,13 +98,7 @@ public partial class LoginViewModel : ViewModelBase
 
             if (success)
             {
-                System.Diagnostics.Debug.WriteLine("[LoginViewModel] Login successful, starting preload...");
-
-                // 🚀 Preload: 로그인 성공 직후 데이터 미리 로드 시작
-                // UI 전환 전에 백그라운드에서 데이터 로딩 시작
-                PreloadDataAfterLogin();
-
-                System.Diagnostics.Debug.WriteLine("[LoginViewModel] Invoking LoginSuccessful event");
+                System.Diagnostics.Debug.WriteLine("[LoginViewModel] Login successful, invoking LoginSuccessful event");
                 LoginSuccessful?.Invoke();
             }
             else
@@ -124,25 +118,5 @@ public partial class LoginViewModel : ViewModelBase
             IsLoading = false;
             System.Diagnostics.Debug.WriteLine("[LoginViewModel] LoginAsync completed");
         }
-    }
-
-    /// <summary>
-    /// 로그인 성공 직후 데이터 미리 로드 (Preload)
-    /// UI 전환 애니메이션 동안 백그라운드에서 데이터 로딩
-    /// </summary>
-    private void PreloadDataAfterLogin()
-    {
-        var currentUser = AuthService.CurrentUser;
-        if (currentUser == null) return;
-
-        System.Diagnostics.Debug.WriteLine($"[LoginViewModel] [Preload] Starting data preload for {currentUser.LoginId}");
-
-        // 일정 목록 미리 로드 (fire-and-forget)
-        ScheduleDataService.LoadSchedulesInBackground(currentUser);
-
-        // 캘린더 현재 월 미리 로드
-        CalendarDataService.PreloadCurrentMonth();
-
-        System.Diagnostics.Debug.WriteLine("[LoginViewModel] [Preload] Data preload started");
     }
 }

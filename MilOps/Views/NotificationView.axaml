@@ -4,7 +4,6 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="using:MilOps.ViewModels"
              xmlns:models="using:MilOps.Models"
-             xmlns:controls="using:MilOps.Views.Controls"
              mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
              x:Class="MilOps.Views.NotificationView"
              x:DataType="vm:NotificationViewModel"
@@ -111,7 +110,14 @@
       </ScrollViewer>
 
       <!-- 로딩 오버레이 -->
-      <controls:LoadingOverlay IsVisible="{Binding IsLoading}"/>
+      <Border Background="#CC0a0a0a" IsVisible="{Binding IsLoading}" CornerRadius="16">
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+          <TextBlock Text="&#xe627;" FontFamily="{StaticResource MaterialIcons}"
+                     FontSize="36" Foreground="#00a872" HorizontalAlignment="Center"/>
+          <TextBlock Text="로딩 중..." FontSize="16" Foreground="#effdf6"
+                     HorizontalAlignment="Center"/>
+        </StackPanel>
+      </Border>
     </Grid>
   </Grid>
 </UserControl>

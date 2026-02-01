@@ -4,7 +4,6 @@ using Android.Content;
 using Android.Content.PM;
 using Android.OS;
 using Android.Util;
-using Android.Views;
 using AndroidX.Core.App;
 using AndroidX.Core.Content;
 using Avalonia;
@@ -25,7 +24,6 @@ namespace MilOps.Android;
     Icon = "@drawable/icon",
     MainLauncher = true,
     LaunchMode = LaunchMode.SingleTop,
-    WindowSoftInputMode = SoftInput.AdjustResize,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
 [IntentFilter(
     new[] { Intent.ActionView },

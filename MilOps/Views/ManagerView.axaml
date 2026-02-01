@@ -2,7 +2,6 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MilOps.ViewModels"
              xmlns:models="using:MilOps.Models"
-             xmlns:controls="using:MilOps.Views.Controls"
              x:Class="MilOps.Views.ManagerView"
              x:DataType="vm:ManagerViewModel">
 
@@ -50,6 +49,11 @@
           </Button>
         </Grid>
 
+        <!-- 로딩 표시 -->
+        <TextBlock Text="로딩중..."
+                   IsVisible="{Binding IsLoading}"
+                   Foreground="#888888"
+                   HorizontalAlignment="Center"/>
 
         <!-- 초대 목록 -->
         <ItemsControl ItemsSource="{Binding Invitations}">
@@ -143,9 +147,6 @@
 
       </StackPanel>
     </ScrollViewer>
-
-    <!-- 로딩 오버레이 -->
-    <controls:LoadingOverlay IsVisible="{Binding IsLoading}"/>
 
     <!-- 새 초대 다이얼로그 오버레이 -->
     <Border Background="#80000000" IsVisible="{Binding IsNewInviteDialogOpen}"/>

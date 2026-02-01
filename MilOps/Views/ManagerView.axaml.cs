@@ -43,15 +43,6 @@ public partial class ManagerView : UserControl
         InitializeViewModel();
     }
 
-    /// <summary>
-    /// 강제 초기화 (탭 전환 시 호출)
-    /// </summary>
-    public void ForceInitialize()
-    {
-        System.Diagnostics.Debug.WriteLine("[ManagerView] ForceInitialize called");
-        InitializeViewModel();
-    }
-
     private void InitializeViewModel()
     {
         // 현재 사용자 정보가 없으면 무시

@@ -110,7 +110,5 @@
         <converters:BoolToDateFgConverter x:Key="BoolToDateFgConverter"/>
         <converters:BoolToSaveBtnColorConverter x:Key="BoolToSaveBtnColorConverter"/>
         <converters:BoolToSaveBtnTextConverter x:Key="BoolToSaveBtnTextConverter"/>
-        <converters:BoolToFilterBgConverter x:Key="BoolToFilterBgConverter"/>
-        <converters:BoolToFilterFgConverter x:Key="BoolToFilterFgConverter"/>
     </Application.Resources>
 </Application>

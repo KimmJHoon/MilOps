@@ -28,26 +28,11 @@ public class CalendarScheduleDto
     [JsonProperty("reserved_date")]
     public DateTime? ReservedDate { get; set; }
 
-    // PostgreSQL time 타입은 문자열로 직렬화되므로 문자열로 받아서 변환
     [JsonProperty("reserved_start_time")]
-    public string? ReservedStartTimeStr { get; set; }
+    public TimeSpan? ReservedStartTime { get; set; }
 
     [JsonProperty("reserved_end_time")]
-    public string? ReservedEndTimeStr { get; set; }
-
-    // TimeSpan으로 변환된 값
-    [JsonIgnore]
-    public TimeSpan? ReservedStartTime => ParseTime(ReservedStartTimeStr);
-
-    [JsonIgnore]
-    public TimeSpan? ReservedEndTime => ParseTime(ReservedEndTimeStr);
-
-    private static TimeSpan? ParseTime(string? timeStr)
-    {
-        if (string.IsNullOrEmpty(timeStr)) return null;
-        if (TimeSpan.TryParse(timeStr, out var ts)) return ts;
-        return null;
-    }
+    public TimeSpan? ReservedEndTime { get; set; }
 
     [JsonProperty("local_confirmed")]
     public bool LocalConfirmed { get; set; }
