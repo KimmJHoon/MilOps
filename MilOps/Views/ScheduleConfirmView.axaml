@@ -1,0 +1,328 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:MilOps.ViewModels"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+             x:Class="MilOps.Views.ScheduleConfirmView"
+             x:DataType="vm:ScheduleConfirmViewModel"
+             DataContext="{x:Null}">
+
+  <Grid Background="#000000">
+    <!-- 메인 레이아웃 -->
+    <Grid RowDefinitions="Auto,*,Auto">
+      <!-- 헤더 -->
+      <Border Grid.Row="0" Background="#1A1A1A" Padding="16">
+        <Grid ColumnDefinitions="Auto,*,Auto">
+          <Button Grid.Column="0" Command="{Binding CloseCommand}"
+                  Background="Transparent" Padding="8,4">
+            <TextBlock Text="&lt;" FontSize="20" Foreground="White"/>
+          </Button>
+          <TextBlock Grid.Column="1" Text="일정 확정"
+                     FontSize="18" Foreground="White"
+                     HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Grid>
+      </Border>
+
+      <!-- 메인 컨텐츠 -->
+      <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="16" Margin="16">
+
+          <!-- 현재 사용자 정보 -->
+          <Border Background="#2A5F2A" CornerRadius="20" Padding="16,10">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+              <TextBlock Text="&#x1F464;" FontSize="14"/>
+              <TextBlock Text="{Binding CurrentUserDisplay}"
+                         FontSize="13" Foreground="White"/>
+            </StackPanel>
+          </Border>
+
+          <!-- 상태 배지 -->
+          <Border Background="#5F4F2A" CornerRadius="20" Padding="16,10"
+                  HorizontalAlignment="Center">
+            <TextBlock Text="{Binding StatusDisplay}"
+                       FontSize="14" Foreground="#FFD54F"
+                       HorizontalAlignment="Center"/>
+          </Border>
+
+          <!-- 예약된 일정 정보 (크게 표시) -->
+          <Border Background="#1A1A1A" CornerRadius="10" Padding="20">
+            <StackPanel Spacing="16">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="&#x1F4C5;" FontSize="16"/>
+                <TextBlock Text="예약된 일정" FontSize="16" Foreground="White"/>
+              </StackPanel>
+
+              <StackPanel HorizontalAlignment="Center" Spacing="8">
+                <TextBlock Text="{Binding ReservedDateDisplay}"
+                           FontSize="28" Foreground="#4CAF50"
+                           HorizontalAlignment="Center"/>
+                <TextBlock Text="{Binding ReservedTimeDisplay}"
+                           FontSize="24" Foreground="#4CAF50"
+                           HorizontalAlignment="Center"/>
+              </StackPanel>
+            </StackPanel>
+          </Border>
+
+          <!-- 업체 정보 -->
+          <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
+            <StackPanel Spacing="12">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="&#x1F3ED;" FontSize="14"/>
+                <TextBlock Text="업체 정보" FontSize="14" Foreground="White"/>
+              </StackPanel>
+
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="지역:" FontSize="12" Foreground="#888888" Margin="0,0,12,8"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" FontSize="13" Foreground="White" Margin="0,0,0,8">
+                  <TextBlock.Text>
+                    <MultiBinding StringFormat="{}{0} {1}">
+                      <Binding Path="RegionName"/>
+                      <Binding Path="DistrictName"/>
+                    </MultiBinding>
+                  </TextBlock.Text>
+                </TextBlock>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="업체:" FontSize="12" Foreground="#888888" Margin="0,0,12,8"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CompanyName}" FontSize="13" Foreground="#4CAF50" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="생산품:" FontSize="12" Foreground="#888888" Margin="0,0,12,8"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CompanyProducts}" FontSize="13" Foreground="White" TextWrapping="Wrap" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="3" Grid.Column="0" Text="주소:" FontSize="12" Foreground="#888888" Margin="0,0,12,0"/>
+                <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding CompanyAddress}" FontSize="12" Foreground="#AAAAAA" TextWrapping="Wrap"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- 지자체담당자 확정 상태 -->
+          <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="&#x1F3DB;" FontSize="14"/>
+                  <TextBlock Text="지자체담당자" FontSize="14" Foreground="White"/>
+                </StackPanel>
+                <StackPanel Margin="22,0,0,0" Spacing="2">
+                  <TextBlock FontSize="13" Foreground="#AAAAAA">
+                    <TextBlock.Text>
+                      <MultiBinding StringFormat="{}{0} {1}">
+                        <Binding Path="LocalUserName"/>
+                        <Binding Path="LocalUserRank"/>
+                      </MultiBinding>
+                    </TextBlock.Text>
+                  </TextBlock>
+                  <TextBlock Text="{Binding LocalUserPhone}" FontSize="12" Foreground="#888888"
+                             IsVisible="{Binding LocalUserPhone, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+              </StackPanel>
+              <Border Grid.Column="1" CornerRadius="15" Padding="12,6"
+                      Background="{Binding LocalConfirmedBg}"
+                      VerticalAlignment="Center">
+                <TextBlock Text="{Binding LocalConfirmedText}"
+                           FontSize="12"
+                           Foreground="{Binding LocalConfirmedFg}"/>
+              </Border>
+            </Grid>
+          </Border>
+
+          <!-- 대대담당자 확정 상태 -->
+          <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="&#x1F396;" FontSize="14"/>
+                  <TextBlock Text="대대담당자" FontSize="14" Foreground="White"/>
+                </StackPanel>
+                <StackPanel Margin="22,0,0,0" Spacing="2">
+                  <TextBlock FontSize="13" Foreground="#AAAAAA">
+                    <TextBlock.Text>
+                      <MultiBinding StringFormat="{}{0} {1}">
+                        <Binding Path="MilitaryUserName"/>
+                        <Binding Path="MilitaryUserRank"/>
+                      </MultiBinding>
+                    </TextBlock.Text>
+                  </TextBlock>
+                  <TextBlock Text="{Binding MilitaryUserPhone}" FontSize="12" Foreground="#888888"
+                             IsVisible="{Binding MilitaryUserPhone, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                </StackPanel>
+              </StackPanel>
+              <Border Grid.Column="1" CornerRadius="15" Padding="12,6"
+                      Background="{Binding MilitaryConfirmedBg}"
+                      VerticalAlignment="Center">
+                <TextBlock Text="{Binding MilitaryConfirmedText}"
+                           FontSize="12"
+                           Foreground="{Binding MilitaryConfirmedFg}"/>
+              </Border>
+            </Grid>
+          </Border>
+
+          <!-- 상대방 확정 대기 메시지 -->
+          <Border Background="#2A3F5F" CornerRadius="8" Padding="16"
+                  IsVisible="{Binding ShowWaitingMessage}">
+            <TextBlock Text="{Binding WaitingMessage}"
+                       FontSize="14" Foreground="#88AAFF"
+                       TextWrapping="Wrap" HorizontalAlignment="Center"
+                       TextAlignment="Center"/>
+          </Border>
+
+          <!-- 확정 요청 메시지 -->
+          <Border Background="#5F3F2A" CornerRadius="8" Padding="16"
+                  IsVisible="{Binding ShowConfirmRequestMessage}">
+            <TextBlock Text="{Binding ConfirmRequestMessage}"
+                       FontSize="14" Foreground="#FFAA88"
+                       TextWrapping="Wrap" HorizontalAlignment="Center"
+                       TextAlignment="Center"/>
+          </Border>
+
+          <!-- 메모 -->
+          <Border Background="#1A1A1A" CornerRadius="10" Padding="16"
+                  IsVisible="{Binding HasMemo}">
+            <StackPanel Spacing="8">
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="&#x1F4DD;" FontSize="14"/>
+                <TextBlock Text="메모" FontSize="14" Foreground="White"/>
+              </StackPanel>
+              <TextBlock Text="{Binding Memo}" FontSize="13" Foreground="#AAAAAA" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Border>
+
+          <!-- 에러 메시지 -->
+          <Border Background="#5F2A2A" CornerRadius="8" Padding="12"
+                  IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       FontSize="13" Foreground="#FF8888"
+                       TextWrapping="Wrap"/>
+          </Border>
+
+          <!-- 성공 메시지 -->
+          <Border Background="#2A5F2A" CornerRadius="8" Padding="12"
+                  IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding SuccessMessage}"
+                       FontSize="13" Foreground="#88FF88"
+                       TextWrapping="Wrap"/>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
+
+      <!-- 하단 버튼 (중간관리자는 숨김) -->
+      <Border Grid.Row="2" Background="#1A1A1A" Padding="16"
+              IsVisible="{Binding !IsMiddleAdmin}">
+        <StackPanel Spacing="12">
+          <Grid ColumnDefinitions="*,*" IsVisible="{Binding !IsLoading}">
+            <Button Grid.Column="0" Command="{Binding CloseCommand}"
+                    Background="#333333" CornerRadius="8"
+                    HorizontalAlignment="Stretch" Padding="16"
+                    HorizontalContentAlignment="Center"
+                    Margin="0,0,8,0">
+              <TextBlock Text="닫기" FontSize="15" Foreground="White"/>
+            </Button>
+            <Button Grid.Column="1" Command="{Binding ShowConfirmDialogCommand}"
+                    IsEnabled="{Binding CanConfirm}"
+                    IsVisible="{Binding !AlreadyConfirmedByMe}"
+                    Background="#4CAF50"
+                    CornerRadius="8"
+                    HorizontalAlignment="Stretch" Padding="16"
+                    HorizontalContentAlignment="Center"
+                    Margin="8,0,0,0">
+              <TextBlock Text="일정 확정하기" FontSize="15" Foreground="White"/>
+            </Button>
+            <!-- 이미 확정한 경우 표시 -->
+            <Border Grid.Column="1"
+                    IsVisible="{Binding AlreadyConfirmedByMe}"
+                    Background="#2A5F2A"
+                    CornerRadius="8"
+                    Padding="16"
+                    Margin="8,0,0,0"
+                    HorizontalAlignment="Stretch">
+              <TextBlock Text="확정 완료" FontSize="15" Foreground="#88FF88"
+                         HorizontalAlignment="Center"/>
+            </Border>
+          </Grid>
+
+          <!-- 로딩 표시 -->
+          <Border Background="#333333" CornerRadius="8" Padding="16"
+                  HorizontalAlignment="Stretch"
+                  IsVisible="{Binding IsLoading}">
+            <TextBlock Text="처리 중..." FontSize="15" Foreground="White"
+                       HorizontalAlignment="Center"/>
+          </Border>
+
+          <!-- 안내 문구 -->
+          <TextBlock FontSize="11" Foreground="#666666" HorizontalAlignment="Center"
+                     TextWrapping="Wrap" TextAlignment="Center">
+            양측 모두 확정 시 상태가 "확정됨"으로 변경됩니다
+          </TextBlock>
+        </StackPanel>
+      </Border>
+    </Grid>
+
+    <!-- 확정 확인 모달 오버레이 -->
+    <Grid IsVisible="{Binding ShowConfirmModal}">
+      <!-- 배경 오버레이 -->
+      <Border Background="#000000" Opacity="0.7"/>
+
+      <!-- 모달 다이얼로그 -->
+      <Border Background="#1A1A1A" CornerRadius="16"
+              Padding="24" Margin="32"
+              VerticalAlignment="Center"
+              HorizontalAlignment="Stretch">
+        <StackPanel Spacing="20">
+          <!-- 제목 -->
+          <TextBlock Text="일정을 확정하시겠습니까?"
+                     FontSize="18" Foreground="White"
+                     HorizontalAlignment="Center"/>
+
+          <!-- 일정 정보 -->
+          <Border Background="#252525" CornerRadius="10" Padding="16">
+            <StackPanel Spacing="12">
+              <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Grid.Column="0" Text="날짜:"
+                           FontSize="14" Foreground="#888888" Margin="0,0,16,8"/>
+                <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding ModalDateDisplay}"
+                           FontSize="16" Foreground="#4CAF50" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Text="시간:"
+                           FontSize="14" Foreground="#888888" Margin="0,0,16,8"/>
+                <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding ModalTimeDisplay}"
+                           FontSize="16" Foreground="#4CAF50" Margin="0,0,0,8"/>
+
+                <TextBlock Grid.Row="2" Grid.Column="0" Text="업체:"
+                           FontSize="14" Foreground="#888888" Margin="0,0,16,0"/>
+                <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding ModalCompanyDisplay}"
+                           FontSize="14" Foreground="White"/>
+              </Grid>
+            </StackPanel>
+          </Border>
+
+          <!-- 경고 메시지 -->
+          <Border Background="#5F3F2A" CornerRadius="8" Padding="12">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
+              <TextBlock Text="&#x26A0;" FontSize="14"/>
+              <TextBlock Text="확정 후에는 취소할 수 없습니다"
+                         FontSize="13" Foreground="#FFAA88"/>
+            </StackPanel>
+          </Border>
+
+          <!-- 버튼 -->
+          <Grid ColumnDefinitions="*,*" Margin="0,8,0,0">
+            <Button Grid.Column="0" Command="{Binding CancelConfirmDialogCommand}"
+                    Background="#333333" CornerRadius="8"
+                    HorizontalAlignment="Stretch" Padding="16"
+                    HorizontalContentAlignment="Center"
+                    Margin="0,0,8,0">
+              <TextBlock Text="취소" FontSize="15" Foreground="White"/>
+            </Button>
+            <Button Grid.Column="1" Command="{Binding ConfirmCommand}"
+                    Background="#4CAF50" CornerRadius="8"
+                    HorizontalAlignment="Stretch" Padding="16"
+                    HorizontalContentAlignment="Center"
+                    Margin="8,0,0,0">
+              <TextBlock Text="확정" FontSize="15" Foreground="White"/>
+            </Button>
+          </Grid>
+        </StackPanel>
+      </Border>
+    </Grid>
+  </Grid>
+</UserControl>

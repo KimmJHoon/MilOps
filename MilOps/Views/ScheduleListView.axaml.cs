@@ -15,32 +15,58 @@ public partial class ScheduleListView : UserControl
     private Guid? _lastUserId;
     private string? _lastUserRole;
 
+    private bool _cleanupRegistered = false;
+
     public ScheduleListView()
     {
         InitializeComponent();
+    }
 
-        // 로그아웃 전 정리 작업 등록
-        AppRestartService.CleanupBeforeLogout += OnCleanupBeforeLogout;
+    private void RegisterCleanupHandler()
+    {
+        if (!_cleanupRegistered)
+        {
+            AppRestartService.CleanupBeforeLogout += OnCleanupBeforeLogout;
+            _cleanupRegistered = true;
+        }
+    }
+
+    private void UnregisterCleanupHandler()
+    {
+        if (_cleanupRegistered)
+        {
+            AppRestartService.CleanupBeforeLogout -= OnCleanupBeforeLogout;
+            _cleanupRegistered = false;
+        }
     }
 
     private void OnCleanupBeforeLogout()
     {
         System.Diagnostics.Debug.WriteLine("[ScheduleListView] CleanupBeforeLogout - clearing cache");
-        if (_viewModel != null)
+        try
         {
-            _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
-            _viewModel.NavigateToScheduleCreate -= OnNavigateToScheduleCreate;
-            _viewModel.NavigateToScheduleDetail -= OnNavigateToScheduleDetail;
+            if (_viewModel != null)
+            {
+                _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
+                _viewModel.NavigateToScheduleCreate -= OnNavigateToScheduleCreate;
+                _viewModel.NavigateToScheduleDetail -= OnNavigateToScheduleDetail;
+            }
+            _viewModel?.ClearCache();
+            _viewModel = null;
+            _lastUserId = null;
+            _lastUserRole = null;
+            DataContext = null;
         }
-        _viewModel?.ClearCache();
-        _viewModel = null;
-        _lastUserId = null;
-        _lastUserRole = null;
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[ScheduleListView] CleanupBeforeLogout error: {ex.Message}");
+        }
     }
 
     protected override void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
+        RegisterCleanupHandler();
         InitializeViewModel();
     }
 
@@ -114,7 +140,8 @@ public partial class ScheduleListView : UserControl
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        // View가 제거될 때 캐시 정리 (리소스 절약)
+        // View가 제거될 때 정리
+        UnregisterCleanupHandler();
         if (_viewModel != null)
         {
             _viewModel.NavigateToCompanyRegister -= OnNavigateToCompanyRegister;
@@ -122,18 +149,6 @@ public partial class ScheduleListView : UserControl
             _viewModel.NavigateToScheduleDetail -= OnNavigateToScheduleDetail;
         }
         _viewModel?.ClearCache();
-    }
-
-    private void OnNavigateToCompanyRegister()
-    {
-        var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
-        mainView?.OpenCompanyRegister();
-    }
-
-    private void OnNavigateToScheduleCreate()
-    {
-        var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
-        mainView?.OpenScheduleCreate();
     }
 
     private void OnNavigateToScheduleDetail(Schedule schedule, string mode)

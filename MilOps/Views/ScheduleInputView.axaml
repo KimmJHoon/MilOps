@@ -16,7 +16,7 @@
                 Background="Transparent" Padding="8,4">
           <TextBlock Text="&lt;" FontSize="20" Foreground="White"/>
         </Button>
-        <TextBlock Grid.Column="1" Text="일정입력 / 예약"
+        <TextBlock Grid.Column="1" Text="가능 일정 입력"
                    FontSize="18" Foreground="White"
                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
       </Grid>
@@ -25,34 +25,6 @@
     <!-- 메인 컨텐츠 -->
     <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
       <StackPanel Spacing="16" Margin="16">
-
-        <!-- 탭 선택 -->
-        <Border Background="#1A1A1A" CornerRadius="10" Padding="4">
-          <Grid ColumnDefinitions="*,*">
-            <Button Grid.Column="0" Command="{Binding SwitchTabCommand}" CommandParameter="input"
-                    Background="{Binding IsInputTabSelected, Converter={StaticResource BoolToTabBgConverter}}"
-                    CornerRadius="8" Padding="12,10" HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="&#x1F4DD;" FontSize="14"/>
-                <TextBlock Text="일정입력 (지자체담당자)"
-                           FontSize="12"
-                           Foreground="{Binding IsInputTabSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
-              </StackPanel>
-            </Button>
-            <Button Grid.Column="1" Command="{Binding SwitchTabCommand}" CommandParameter="reserve"
-                    Background="{Binding IsReserveTabSelected, Converter={StaticResource BoolToTabBgConverter}}"
-                    CornerRadius="8" Padding="12,10" HorizontalAlignment="Stretch"
-                    HorizontalContentAlignment="Center">
-              <StackPanel Orientation="Horizontal" Spacing="6">
-                <TextBlock Text="&#x2714;" FontSize="14"/>
-                <TextBlock Text="일정예약 (대대담당자)"
-                           FontSize="12"
-                           Foreground="{Binding IsReserveTabSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
-              </StackPanel>
-            </Button>
-          </Grid>
-        </Border>
 
         <!-- 현재 사용자 정보 -->
         <Border Background="#2A3F5F" CornerRadius="20" Padding="16,10">
@@ -64,7 +36,7 @@
         <!-- 일정 정보 -->
         <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
           <StackPanel Spacing="12">
-            <TextBlock Text="&#x1F4CB; 일정 정보" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
+            <TextBlock Text="&#x1F4CB; 일정 정보" FontSize="14" Foreground="White"/>
 
             <Grid ColumnDefinitions="*,*">
               <StackPanel Grid.Column="0" Spacing="2">
@@ -90,21 +62,13 @@
                 <TextBlock Text="{Binding BattalionName}" FontSize="13" Foreground="White"/>
               </StackPanel>
             </Grid>
-
-            <!-- 업체 주소 (예약 탭에서만) -->
-            <StackPanel Spacing="2" IsVisible="{Binding IsReserveTabSelected}">
-              <TextBlock Text="업체 주소" FontSize="11" Foreground="#888888"/>
-              <TextBlock Text="{Binding CompanyAddress}" FontSize="12" Foreground="#CCCCCC"
-                         TextWrapping="Wrap" TextTrimming="CharacterEllipsis"/>
-            </StackPanel>
           </StackPanel>
         </Border>
 
-        <!-- 대대담당자 정보 (입력 탭) / 지자체담당자 정보 (예약 탭) -->
-        <Border Background="#1A1A1A" CornerRadius="10" Padding="16"
-                IsVisible="{Binding IsInputTabSelected}">
+        <!-- 대대담당자 정보 -->
+        <Border Background="#1A1A1A" CornerRadius="10" Padding="16">
           <StackPanel Spacing="8">
-            <TextBlock Text="&#x1F396; 대대담당자 정보" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
+            <TextBlock Text="&#x1F396; 대대담당자 정보" FontSize="14" Foreground="White"/>
             <Grid ColumnDefinitions="*,*">
               <StackPanel Grid.Column="0" Spacing="2">
                 <TextBlock Text="담당자" FontSize="11" Foreground="#888888"/>
@@ -118,167 +82,77 @@
           </StackPanel>
         </Border>
 
-        <Border Background="#1A1A1A" CornerRadius="10" Padding="16"
-                IsVisible="{Binding IsReserveTabSelected}">
-          <StackPanel Spacing="8">
-            <TextBlock Text="&#x1F3DB; 지자체담당자 정보" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
-            <Grid ColumnDefinitions="*,*">
-              <StackPanel Grid.Column="0" Spacing="2">
-                <TextBlock Text="담당자" FontSize="11" Foreground="#888888"/>
-                <TextBlock Text="{Binding LocalUserName}" FontSize="13" Foreground="White"/>
-              </StackPanel>
-              <StackPanel Grid.Column="1" Spacing="2">
-                <TextBlock Text="연락처" FontSize="11" Foreground="#888888"/>
-                <TextBlock Text="{Binding LocalUserPhone}" FontSize="13" Foreground="White"/>
-              </StackPanel>
-            </Grid>
-          </StackPanel>
-        </Border>
-
-        <!-- ========== 지자체담당자용: 가능 일자 입력 ========== -->
-        <StackPanel Spacing="16" IsVisible="{Binding IsInputTabSelected}">
-          <!-- 가능 일자 -->
-          <StackPanel Spacing="8">
-            <TextBlock Text="&#x1F4C5; 가능 일자" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
-            <Grid ColumnDefinitions="*,Auto,*">
-              <CalendarDatePicker Grid.Column="0"
-                                  SelectedDate="{Binding AvailableStartDate}"
-                                  Background="#333333"
-                                  Foreground="White"
-                                  HorizontalAlignment="Stretch"/>
-              <TextBlock Grid.Column="1" Text="~" FontSize="16" Foreground="White"
-                         VerticalAlignment="Center" Margin="10,0"/>
-              <CalendarDatePicker Grid.Column="2"
-                                  SelectedDate="{Binding AvailableEndDate}"
-                                  Background="#333333"
-                                  Foreground="White"
-                                  HorizontalAlignment="Stretch"/>
-            </Grid>
-          </StackPanel>
-
-          <!-- 가능 시간 (복수 선택) -->
-          <StackPanel Spacing="8">
-            <TextBlock Text="&#x23F0; 가능 시간 (복수 선택)" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
-            <ItemsControl ItemsSource="{Binding TimeSlots}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <WrapPanel Orientation="Horizontal"/>
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Button Command="{Binding $parent[ItemsControl].((vm:ScheduleInputViewModel)DataContext).ToggleTimeSlotCommand}"
-                          CommandParameter="{Binding}"
-                          Background="{Binding IsSelected, Converter={StaticResource BoolToSlotBgConverter}}"
-                          BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToSlotBorderConverter}}"
-                          BorderThickness="1"
-                          CornerRadius="6"
-                          Padding="12,8"
-                          Margin="0,0,8,8">
-                    <TextBlock Text="{Binding TimeRangeDisplay}"
-                               FontSize="13"
-                               Foreground="{Binding IsSelected, Converter={StaticResource BoolToSlotFgConverter}}"/>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-
-            <!-- 선택된 시간 표시 -->
-            <Border Background="#2A3F5F" CornerRadius="6" Padding="12,8"
-                    IsVisible="{Binding SelectedTimesDisplay, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-              <TextBlock Text="{Binding SelectedTimesDisplay}"
-                         FontSize="12" Foreground="#87CEEB"/>
-            </Border>
-          </StackPanel>
-
-          <!-- 메모 -->
-          <StackPanel Spacing="8">
-            <TextBlock Text="&#x1F4DD; 메모 (선택)" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
-            <TextBox Text="{Binding Memo}"
-                     Watermark="업체 요청사항 등"
-                     Background="#333333"
-                     Foreground="White"
-                     AcceptsReturn="True"
-                     TextWrapping="Wrap"
-                     MinHeight="80"
-                     Padding="12"/>
-          </StackPanel>
+        <!-- 가능 일자 입력 -->
+        <StackPanel Spacing="8">
+          <TextBlock Text="&#x1F4C5; 가능 일자" FontSize="14" Foreground="White"/>
+          <Grid ColumnDefinitions="*,Auto,*">
+            <CalendarDatePicker Grid.Column="0"
+                                SelectedDate="{Binding AvailableStartDate}"
+                                Background="#333333"
+                                Foreground="White"
+                                HorizontalAlignment="Stretch"/>
+            <TextBlock Grid.Column="1" Text="~" FontSize="16" Foreground="White"
+                       VerticalAlignment="Center" Margin="10,0"/>
+            <CalendarDatePicker Grid.Column="2"
+                                SelectedDate="{Binding AvailableEndDate}"
+                                DisplayDateStart="{Binding MinEndDate}"
+                                Background="#333333"
+                                Foreground="White"
+                                HorizontalAlignment="Stretch"/>
+          </Grid>
+          <!-- 날짜 유효성 경고 -->
+          <TextBlock Text="{Binding DateValidationMessage}"
+                     FontSize="12" Foreground="#FF8888"
+                     IsVisible="{Binding HasDateValidationError}"
+                     Margin="0,4,0,0"/>
         </StackPanel>
 
-        <!-- ========== 대대담당자용: 예약 일자/시간 선택 ========== -->
-        <StackPanel Spacing="16" IsVisible="{Binding IsReserveTabSelected}">
-          <!-- 가능 일자 선택 -->
-          <StackPanel Spacing="8">
-            <TextBlock Text="&#x1F4C5; 가능 일자 선택" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
-            <ItemsControl ItemsSource="{Binding AvailableDates}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <StackPanel Orientation="Horizontal"/>
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Button Command="{Binding $parent[ItemsControl].((vm:ScheduleInputViewModel)DataContext).SelectDateCommand}"
-                          CommandParameter="{Binding}"
-                          Background="{Binding IsSelected, Converter={StaticResource BoolToDateBgConverter}}"
-                          CornerRadius="8"
-                          Padding="20,12"
-                          Margin="0,0,8,0"
-                          MinWidth="70">
-                    <TextBlock Text="{Binding DayDisplay}"
-                               FontSize="14"
-                               Foreground="{Binding IsSelected, Converter={StaticResource BoolToDateFgConverter}}"
-                               HorizontalAlignment="Center"/>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
+        <!-- 가능 시간 (복수 선택) -->
+        <StackPanel Spacing="8">
+          <TextBlock Text="&#x23F0; 가능 시간 (복수 선택)" FontSize="14" Foreground="White"/>
+          <ItemsControl ItemsSource="{Binding TimeSlots}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <WrapPanel Orientation="Horizontal"/>
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Button Command="{Binding $parent[ItemsControl].((vm:ScheduleInputViewModel)DataContext).ToggleTimeSlotCommand}"
+                        CommandParameter="{Binding}"
+                        Background="{Binding IsSelected, Converter={StaticResource BoolToSlotBgConverter}}"
+                        BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToSlotBorderConverter}}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12,8"
+                        Margin="0,0,8,8">
+                  <TextBlock Text="{Binding TimeRangeDisplay}"
+                             FontSize="13"
+                             Foreground="{Binding IsSelected, Converter={StaticResource BoolToSlotFgConverter}}"/>
+                </Button>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
 
-            <!-- 가능 일자 없음 -->
-            <TextBlock Text="선택 가능한 일자가 없습니다."
-                       FontSize="13" Foreground="#888888"
-                       IsVisible="{Binding !AvailableDates.Count}"/>
-          </StackPanel>
-
-          <!-- 시간 선택 -->
-          <StackPanel Spacing="8" IsVisible="{Binding SelectedDate, Converter={x:Static ObjectConverters.IsNotNull}}">
-            <StackPanel Orientation="Horizontal" Spacing="8">
-              <TextBlock Text="&#x23F0; 시간 선택" FontSize="14" Foreground="White" FontWeight="SemiBold"/>
-              <TextBlock Text="{Binding AvailableTimeSlotsForDate.Count, StringFormat='({0}개)'}"
-                         FontSize="12" Foreground="#888888" VerticalAlignment="Center"/>
-            </StackPanel>
-            <ItemsControl ItemsSource="{Binding AvailableTimeSlotsForDate}">
-              <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                  <WrapPanel Orientation="Horizontal"/>
-                </ItemsPanelTemplate>
-              </ItemsControl.ItemsPanel>
-              <ItemsControl.ItemTemplate>
-                <DataTemplate>
-                  <Button Command="{Binding $parent[ItemsControl].((vm:ScheduleInputViewModel)DataContext).SelectTimeSlotCommand}"
-                          CommandParameter="{Binding}"
-                          Background="{Binding IsSelected, Converter={StaticResource BoolToSlotBgConverter}}"
-                          BorderBrush="{Binding IsSelected, Converter={StaticResource BoolToSlotBorderConverter}}"
-                          BorderThickness="1"
-                          CornerRadius="6"
-                          Padding="12,8"
-                          Margin="0,0,8,8">
-                    <TextBlock Text="{Binding TimeRangeDisplay}"
-                               FontSize="13"
-                               Foreground="{Binding IsSelected, Converter={StaticResource BoolToSlotFgConverter}}"/>
-                  </Button>
-                </DataTemplate>
-              </ItemsControl.ItemTemplate>
-            </ItemsControl>
-          </StackPanel>
-
-          <!-- 예약 정보 표시 -->
-          <Border Background="#2E5930" CornerRadius="8" Padding="16"
-                  IsVisible="{Binding ShowReservationDisplay}">
-            <TextBlock Text="{Binding ReservationDisplay}"
-                       FontSize="15" Foreground="White"
-                       HorizontalAlignment="Center" FontWeight="SemiBold"/>
+          <!-- 선택된 시간 표시 -->
+          <Border Background="#2A3F5F" CornerRadius="6" Padding="12,8"
+                  IsVisible="{Binding SelectedTimesDisplay, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+            <TextBlock Text="{Binding SelectedTimesDisplay}"
+                       FontSize="12" Foreground="#87CEEB"/>
           </Border>
+        </StackPanel>
+
+        <!-- 메모 -->
+        <StackPanel Spacing="8">
+          <TextBlock Text="&#x1F4DD; 메모 (선택)" FontSize="14" Foreground="White"/>
+          <TextBox Text="{Binding Memo}"
+                   Watermark="업체 요청사항 등"
+                   Background="#333333"
+                   Foreground="White"
+                   AcceptsReturn="True"
+                   TextWrapping="Wrap"
+                   MinHeight="80"
+                   Padding="12"/>
         </StackPanel>
 
         <!-- 에러 메시지 -->
@@ -312,20 +186,12 @@
           </Button>
           <Button Grid.Column="1" Command="{Binding SaveCommand}"
                   IsEnabled="{Binding CanSave}"
+                  Background="#2196F3"
                   CornerRadius="8"
                   HorizontalAlignment="Stretch" Padding="16"
                   HorizontalContentAlignment="Center"
                   Margin="8,0,0,0">
-            <Button.Background>
-              <SolidColorBrush Color="{Binding IsInputTabSelected, Converter={StaticResource BoolToSaveBtnColorConverter}}"/>
-            </Button.Background>
-            <TextBlock FontSize="15" Foreground="White">
-              <TextBlock.Text>
-                <MultiBinding StringFormat="{}{0}">
-                  <Binding Path="IsInputTabSelected" Converter="{StaticResource BoolToSaveBtnTextConverter}"/>
-                </MultiBinding>
-              </TextBlock.Text>
-            </TextBlock>
+            <TextBlock Text="저장" FontSize="15" Foreground="White"/>
           </Button>
         </Grid>
 
@@ -339,14 +205,8 @@
 
         <!-- 안내 문구 -->
         <TextBlock FontSize="11" Foreground="#666666" HorizontalAlignment="Center"
-                   TextWrapping="Wrap" TextAlignment="Center"
-                   IsVisible="{Binding IsInputTabSelected}">
+                   TextWrapping="Wrap" TextAlignment="Center">
           저장 시 -> 상태 "입력됨" + 대대담당자/사단담당자에게 알림
-        </TextBlock>
-        <TextBlock FontSize="11" Foreground="#666666" HorizontalAlignment="Center"
-                   TextWrapping="Wrap" TextAlignment="Center"
-                   IsVisible="{Binding IsReserveTabSelected}">
-          예약 시 -> 상태 "예약됨" + 캘린더 자동등록 + 확정 가능
         </TextBlock>
       </StackPanel>
     </Border>

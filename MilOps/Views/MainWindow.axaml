@@ -13,7 +13,7 @@
     <!-- 로딩 화면 -->
     <Border x:Name="LoadingView" Background="#000000" IsVisible="True">
       <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="20">
-        <TextBlock Text="MilOps" FontSize="32" Foreground="White" HorizontalAlignment="Center" FontWeight="Bold"/>
+        <TextBlock Text="MilOps" FontSize="32" Foreground="White" HorizontalAlignment="Center"/>
         <TextBlock Text="로딩중..." FontSize="16" Foreground="#888888" HorizontalAlignment="Center"/>
       </StackPanel>
     </Border>

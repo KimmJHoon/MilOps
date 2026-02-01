@@ -13,220 +13,231 @@
 
   <Panel>
     <!-- 메인 컨텐츠 -->
-    <Grid Background="#000000">
+    <Grid Background="#0a0a0a">
       <Grid.RowDefinitions>
         <RowDefinition Height="Auto"/>
         <RowDefinition Height="*"/>
         <RowDefinition Height="Auto"/>
       </Grid.RowDefinitions>
 
-      <!-- 상단 헤더 -->
-      <Border Grid.Row="0" Background="#333333" Padding="12">
+      <!-- 상단 헤더 (iOS 스타일) -->
+      <Border Grid.Row="0" Background="#1c1c1e" Padding="16,12">
         <Grid>
           <Button Command="{Binding ToggleDrawerCommand}"
                   Background="Transparent" BorderThickness="0"
-                  HorizontalAlignment="Left" Padding="5,0">
-            <TextBlock Text="☰" FontSize="22" Foreground="White"/>
+                  HorizontalAlignment="Left" Padding="4">
+            <TextBlock Text="&#xe5d2;" FontFamily="{StaticResource MaterialIcons}"
+                       FontSize="26" Foreground="#effdf6"/>
           </Button>
           <TextBlock Text="{Binding CurrentPageTitle}"
                      FontSize="18"
-                     Foreground="White"
+                     Foreground="#effdf6"
                      HorizontalAlignment="Center"
                      VerticalAlignment="Center"/>
         </Grid>
       </Border>
 
-    <!-- 중앙 콘텐츠 영역 -->
-    <Grid Grid.Row="1">
-      <Border IsVisible="{Binding IsCalendarSelected}">
-        <views:CalendarView/>
-      </Border>
-      <Border IsVisible="{Binding IsScheduleSelected}">
-        <views:ScheduleListView x:Name="ScheduleListView"/>
-      </Border>
-      <Border IsVisible="{Binding IsManagerSelected}">
-        <views:ManagerView/>
-      </Border>
-      <Border IsVisible="{Binding IsNotificationSelected}">
-        <views:NotificationView/>
-      </Border>
-      <Border IsVisible="{Binding IsSettingsSelected}">
-        <views:SettingsView/>
-      </Border>
-    </Grid>
-
-    <!-- 하단 네비게이션 바 -->
-    <Border Grid.Row="2" Background="#333333" Padding="2">
-      <Panel>
-      <!-- 사용자용 메뉴: 캘린더 - 일정 - 알림 (3개) -->
-      <Grid IsVisible="{Binding IsUser}">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
-
-        <!-- 캘린더 -->
-        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📅" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="캘린더" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsCalendarSelected}"/>
-              <TextBlock Text="캘린더" FontSize="12" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsCalendarSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
-
-        <!-- 일정 -->
-        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="schedule"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📋" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="일정" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsScheduleSelected}"/>
-              <TextBlock Text="일정" FontSize="12" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsScheduleSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
-
-        <!-- 알림 -->
-        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="notification"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="🔔" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="알림" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsNotificationSelected}"/>
-              <TextBlock Text="알림" FontSize="12" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsNotificationSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
+      <!-- 중앙 콘텐츠 영역 -->
+      <Grid Grid.Row="1">
+        <Border IsVisible="{Binding IsCalendarSelected}">
+          <views:CalendarView/>
+        </Border>
+        <Border IsVisible="{Binding IsScheduleSelected}">
+          <views:ScheduleListView x:Name="ScheduleListView"/>
+        </Border>
+        <Border IsVisible="{Binding IsManagerSelected}">
+          <views:ManagerView/>
+        </Border>
+        <Border IsVisible="{Binding IsNotificationSelected}">
+          <views:NotificationView x:Name="NotificationView"/>
+        </Border>
+        <Border IsVisible="{Binding IsSettingsSelected}">
+          <views:SettingsView/>
+        </Border>
       </Grid>
 
-      <!-- 중간관리자용 메뉴: 캘린더 - 일정 - 알림 - 담당자 (4개) -->
-      <Grid IsVisible="{Binding IsMiddleAdmin}">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+      <!-- 하단 네비게이션 바 (iOS 탭바 스타일) -->
+      <Border Grid.Row="2" Background="#1c1c1e" Padding="8,12" CornerRadius="20,20,0,0">
+        <Panel>
+          <!-- 사용자용 메뉴: 캘린더 - 일정 - 알림 (3개) -->
+          <Grid IsVisible="{Binding IsUser}">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- 캘린더 -->
-        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📅" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="캘린더" FontSize="11" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsCalendarSelected}"/>
-              <TextBlock Text="캘린더" FontSize="11" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsCalendarSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
+            <!-- 캘린더 -->
+            <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="48" Height="32" CornerRadius="16"
+                        Background="{Binding IsCalendarSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}" FontSize="20"
+                             Foreground="{Binding IsCalendarSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="캘린더" FontSize="11" HorizontalAlignment="Center"
+                           Foreground="{Binding IsCalendarSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
 
-        <!-- 일정 -->
-        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="schedule"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📋" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="일정" FontSize="11" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsScheduleSelected}"/>
-              <TextBlock Text="일정" FontSize="11" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsScheduleSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
+            <!-- 일정 -->
+            <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="schedule"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="48" Height="32" CornerRadius="16"
+                        Background="{Binding IsScheduleSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe0ee;" FontFamily="{StaticResource MaterialIcons}" FontSize="20"
+                             Foreground="{Binding IsScheduleSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="일정" FontSize="11" HorizontalAlignment="Center"
+                           Foreground="{Binding IsScheduleSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
 
-        <!-- 알림 -->
-        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="notification"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="🔔" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="알림" FontSize="11" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsNotificationSelected}"/>
-              <TextBlock Text="알림" FontSize="11" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsNotificationSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
+            <!-- 알림 -->
+            <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="notification"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="48" Height="32" CornerRadius="16"
+                        Background="{Binding IsNotificationSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe7f4;" FontFamily="{StaticResource MaterialIcons}" FontSize="20"
+                             Foreground="{Binding IsNotificationSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="알림" FontSize="11" HorizontalAlignment="Center"
+                           Foreground="{Binding IsNotificationSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
+          </Grid>
 
-        <!-- 담당자 -->
-        <Button Grid.Column="3" Command="{Binding SelectTabCommand}" CommandParameter="manager"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="👥" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="담당자" FontSize="11" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsManagerSelected}"/>
-              <TextBlock Text="담당자" FontSize="11" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsManagerSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
-      </Grid>
+          <!-- 중간관리자용 메뉴: 캘린더 - 일정 - 알림 - 담당자 (4개) -->
+          <Grid IsVisible="{Binding IsMiddleAdmin}">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-      <!-- 최종관리자용 메뉴: 캘린더 - 알림 - 담당자관리 (3개) -->
-      <Grid IsVisible="{Binding IsSuperAdmin}">
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+            <!-- 캘린더 -->
+            <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="4,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="44" Height="30" CornerRadius="15"
+                        Background="{Binding IsCalendarSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}" FontSize="18"
+                             Foreground="{Binding IsCalendarSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="캘린더" FontSize="10" HorizontalAlignment="Center"
+                           Foreground="{Binding IsCalendarSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
 
-        <!-- 캘린더 -->
-        <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="📅" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="캘린더" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsCalendarSelected}"/>
-              <TextBlock Text="캘린더" FontSize="12" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsCalendarSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
+            <!-- 일정 -->
+            <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="schedule"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="4,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="44" Height="30" CornerRadius="15"
+                        Background="{Binding IsScheduleSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe0ee;" FontFamily="{StaticResource MaterialIcons}" FontSize="18"
+                             Foreground="{Binding IsScheduleSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="일정" FontSize="10" HorizontalAlignment="Center"
+                           Foreground="{Binding IsScheduleSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
 
-        <!-- 알림 -->
-        <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="notification"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="🔔" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="알림" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsNotificationSelected}"/>
-              <TextBlock Text="알림" FontSize="12" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsNotificationSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
+            <!-- 알림 -->
+            <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="notification"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="4,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="44" Height="30" CornerRadius="15"
+                        Background="{Binding IsNotificationSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe7f4;" FontFamily="{StaticResource MaterialIcons}" FontSize="18"
+                             Foreground="{Binding IsNotificationSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="알림" FontSize="10" HorizontalAlignment="Center"
+                           Foreground="{Binding IsNotificationSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
 
-        <!-- 담당자 -->
-        <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="manager"
-                Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="2,0">
-          <StackPanel HorizontalAlignment="Center" Spacing="0">
-            <TextBlock Text="👥" FontSize="14" HorizontalAlignment="Center"/>
-            <Panel>
-              <TextBlock Text="관리" FontSize="12" HorizontalAlignment="Center" Foreground="#00FF00"
-                         IsVisible="{Binding IsManagerSelected}"/>
-              <TextBlock Text="관리" FontSize="12" HorizontalAlignment="Center" Foreground="White"
-                         IsVisible="{Binding !IsManagerSelected}"/>
-            </Panel>
-          </StackPanel>
-        </Button>
-      </Grid>
-      </Panel>
-    </Border>
+            <!-- 담당자 -->
+            <Button Grid.Column="3" Command="{Binding SelectTabCommand}" CommandParameter="manager"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="4,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="44" Height="30" CornerRadius="15"
+                        Background="{Binding IsManagerSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe7ef;" FontFamily="{StaticResource MaterialIcons}" FontSize="18"
+                             Foreground="{Binding IsManagerSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="담당자" FontSize="10" HorizontalAlignment="Center"
+                           Foreground="{Binding IsManagerSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
+          </Grid>
+
+          <!-- 최종관리자용 메뉴: 캘린더 - 알림 - 담당자관리 (3개) -->
+          <Grid IsVisible="{Binding IsSuperAdmin}">
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- 캘린더 -->
+            <Button Grid.Column="0" Command="{Binding SelectTabCommand}" CommandParameter="calendar"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="48" Height="32" CornerRadius="16"
+                        Background="{Binding IsCalendarSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}" FontSize="20"
+                             Foreground="{Binding IsCalendarSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="캘린더" FontSize="11" HorizontalAlignment="Center"
+                           Foreground="{Binding IsCalendarSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
+
+            <!-- 알림 -->
+            <Button Grid.Column="1" Command="{Binding SelectTabCommand}" CommandParameter="notification"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="48" Height="32" CornerRadius="16"
+                        Background="{Binding IsNotificationSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe7f4;" FontFamily="{StaticResource MaterialIcons}" FontSize="20"
+                             Foreground="{Binding IsNotificationSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="알림" FontSize="11" HorizontalAlignment="Center"
+                           Foreground="{Binding IsNotificationSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
+
+            <!-- 담당자 -->
+            <Button Grid.Column="2" Command="{Binding SelectTabCommand}" CommandParameter="manager"
+                    Background="Transparent" BorderThickness="0" HorizontalAlignment="Stretch" Padding="8,6">
+              <StackPanel HorizontalAlignment="Center" Spacing="4">
+                <Border Width="48" Height="32" CornerRadius="16"
+                        Background="{Binding IsManagerSelected, Converter={StaticResource BoolToTabBgConverter}}">
+                  <TextBlock Text="&#xe7ef;" FontFamily="{StaticResource MaterialIcons}" FontSize="20"
+                             Foreground="{Binding IsManagerSelected, Converter={StaticResource BoolToTabFgConverter}}"
+                             HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="관리" FontSize="11" HorizontalAlignment="Center"
+                           Foreground="{Binding IsManagerSelected, Converter={StaticResource BoolToTabFgConverter}}"/>
+              </StackPanel>
+            </Button>
+          </Grid>
+        </Panel>
+      </Border>
     </Grid>
 
     <!-- 드로어 오버레이 (반투명 배경) -->
@@ -238,43 +249,115 @@
             Opacity="0"
             PointerPressed="OnOverlayPressed"/>
 
-    <!-- 사이드 드로어 -->
+    <!-- 사이드 드로어 (모던 iOS 스타일) -->
     <Border x:Name="DrawerPanel"
-            Background="#222222"
-            Width="250"
+            Background="#1c1c1e"
+            Width="300"
             HorizontalAlignment="Left"
+            CornerRadius="0,24,24,0"
             IsVisible="False">
       <Border.RenderTransform>
-        <TranslateTransform X="-250"/>
+        <TranslateTransform X="-300"/>
       </Border.RenderTransform>
       <Grid RowDefinitions="Auto,*,Auto">
-        <!-- 드로어 헤더 -->
-        <Border Grid.Row="0" Background="#333333" Padding="20">
-          <StackPanel Spacing="8">
-            <TextBlock Text="사용자 정보" FontSize="18" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
-            <TextBlock Text="{Binding CurrentUserName}" FontSize="16" Foreground="White" FontFamily="Malgun Gothic, Microsoft YaHei, sans-serif"/>
-            <TextBlock Text="{Binding CurrentUserId}" FontSize="14" Foreground="#00FF00"/>
+        <!-- 드로어 헤더 - 사용자 정보 -->
+        <Border Grid.Row="0" Background="#2c2c2e" Padding="24" CornerRadius="0,24,0,0">
+          <StackPanel Spacing="16">
+            <!-- 프로필 아이콘 -->
+            <Border Width="64" Height="64" CornerRadius="32" Background="#00a872"
+                    HorizontalAlignment="Left">
+              <TextBlock Text="&#xe7fd;" FontFamily="{StaticResource MaterialIcons}"
+                         FontSize="32" Foreground="White"
+                         HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+
+            <TextBlock Text="내 정보" FontSize="22" Foreground="#effdf6"/>
+
+            <!-- 이름 -->
+            <StackPanel Spacing="4">
+              <TextBlock Text="이름" FontSize="12" Foreground="#6a6a6a"/>
+              <TextBlock Text="{Binding CurrentUserName}" FontSize="17" Foreground="#effdf6"/>
+            </StackPanel>
+
+            <!-- 직책/계급 -->
+            <StackPanel Spacing="4" IsVisible="{Binding CurrentUserPosition, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <TextBlock Text="직책" FontSize="12" Foreground="#6a6a6a"/>
+              <TextBlock Text="{Binding CurrentUserPosition}" FontSize="15" Foreground="#effdf6"/>
+            </StackPanel>
+
+            <!-- 역할 -->
+            <StackPanel Spacing="4">
+              <TextBlock Text="역할" FontSize="12" Foreground="#6a6a6a"/>
+              <Border Background="#00a872" CornerRadius="8" Padding="10,6" HorizontalAlignment="Left">
+                <TextBlock Text="{Binding CurrentUserRole}" FontSize="13" Foreground="White"/>
+              </Border>
+            </StackPanel>
           </StackPanel>
         </Border>
 
-        <!-- 빈 공간 -->
-        <Grid Grid.Row="1"/>
+        <!-- 중간 정보 영역 -->
+        <ScrollViewer Grid.Row="1" Padding="24,16">
+          <StackPanel Spacing="16">
+            <!-- 소속/지역 -->
+            <Border Background="#2c2c2e" CornerRadius="12" Padding="16"
+                    IsVisible="{Binding CurrentUserRegion, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="&#xe55f;" FontFamily="{StaticResource MaterialIcons}"
+                             FontSize="16" Foreground="#deb887"/>
+                  <TextBlock Text="소속" FontSize="12" Foreground="#6a6a6a"/>
+                </StackPanel>
+                <TextBlock Text="{Binding CurrentUserRegion}" FontSize="14" Foreground="#effdf6" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+
+            <!-- 아이디 -->
+            <Border Background="#2c2c2e" CornerRadius="12" Padding="16">
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="&#xe853;" FontFamily="{StaticResource MaterialIcons}"
+                             FontSize="16" Foreground="#deb887"/>
+                  <TextBlock Text="아이디" FontSize="12" Foreground="#6a6a6a"/>
+                </StackPanel>
+                <TextBlock Text="{Binding CurrentUserId}" FontSize="14" Foreground="#a0a0a0"/>
+              </StackPanel>
+            </Border>
+
+            <!-- 연락처 -->
+            <Border Background="#2c2c2e" CornerRadius="12" Padding="16"
+                    IsVisible="{Binding CurrentUserPhone, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+              <StackPanel Spacing="4">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                  <TextBlock Text="&#xe0cd;" FontFamily="{StaticResource MaterialIcons}"
+                             FontSize="16" Foreground="#deb887"/>
+                  <TextBlock Text="연락처" FontSize="12" Foreground="#6a6a6a"/>
+                </StackPanel>
+                <TextBlock Text="{Binding CurrentUserPhone}" FontSize="14" Foreground="#effdf6"/>
+              </StackPanel>
+            </Border>
+          </StackPanel>
+        </ScrollViewer>
 
         <!-- 로그아웃 버튼 -->
-        <Border Grid.Row="2" Padding="20">
+        <Border Grid.Row="2" Padding="24" CornerRadius="0,0,24,0">
           <Button Command="{Binding LogoutCommand}"
-                  Background="#AA0000"
+                  Background="#3d1f1f"
+                  CornerRadius="12"
                   HorizontalAlignment="Stretch"
                   HorizontalContentAlignment="Center"
-                  Padding="15">
-            <TextBlock Text="로그아웃" FontSize="16" Foreground="White"/>
+                  Padding="16">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="&#xe879;" FontFamily="{StaticResource MaterialIcons}"
+                         FontSize="20" Foreground="#ff6b6b" VerticalAlignment="Center"/>
+              <TextBlock Text="로그아웃" FontSize="16" Foreground="#ff6b6b"/>
+            </StackPanel>
           </Button>
         </Border>
       </Grid>
     </Border>
 
     <!-- 업체 등록 화면 오버레이 -->
-    <Border Background="#000000"
+    <Border Background="#0a0a0a"
             IsVisible="{Binding IsCompanyRegisterOpen}"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch">
@@ -282,11 +365,35 @@
     </Border>
 
     <!-- 일정 생성 화면 오버레이 -->
-    <Border Background="#000000"
+    <Border Background="#0a0a0a"
             IsVisible="{Binding IsScheduleCreateOpen}"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch">
       <views:ScheduleCreateView x:Name="ScheduleCreateView"/>
+    </Border>
+
+    <!-- 일정 입력 화면 오버레이 (지자체담당자용) -->
+    <Border Background="#0a0a0a"
+            IsVisible="{Binding IsScheduleInputOpen}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+      <views:ScheduleInputView x:Name="ScheduleInputView"/>
+    </Border>
+
+    <!-- 일정 예약 화면 오버레이 (대대담당자용) -->
+    <Border Background="#0a0a0a"
+            IsVisible="{Binding IsScheduleReserveOpen}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+      <views:ScheduleReserveView x:Name="ScheduleReserveView"/>
+    </Border>
+
+    <!-- 일정 확정 화면 오버레이 (양측 공통) -->
+    <Border Background="#0a0a0a"
+            IsVisible="{Binding IsScheduleConfirmOpen}"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch">
+      <views:ScheduleConfirmView x:Name="ScheduleConfirmView"/>
     </Border>
   </Panel>
 </UserControl>

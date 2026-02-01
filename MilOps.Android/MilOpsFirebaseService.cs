@@ -111,6 +111,33 @@ public class MilOpsFirebaseService : FirebaseMessagingService
                     }
                     break;
 
+                case "schedule_inputted":
+                    // 일정 입력됨
+                    if (data.TryGetValue("title", out var inputTitle) &&
+                        data.TryGetValue("body", out var inputBody))
+                    {
+                        ShowNotification(inputTitle, inputBody);
+                    }
+                    break;
+
+                case "schedule_reserved":
+                    // 일정 예약됨
+                    if (data.TryGetValue("title", out var reservedTitle) &&
+                        data.TryGetValue("body", out var reservedBody))
+                    {
+                        ShowNotification(reservedTitle, reservedBody);
+                    }
+                    break;
+
+                case "schedule_confirmed":
+                    // 일정 확정됨
+                    if (data.TryGetValue("title", out var confirmedTitle) &&
+                        data.TryGetValue("body", out var confirmedBody))
+                    {
+                        ShowNotification(confirmedTitle, confirmedBody);
+                    }
+                    break;
+
                 default:
                     // 기본 메시지 처리
                     if (data.TryGetValue("title", out var defaultTitle) &&

@@ -32,14 +32,6 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isDrawerOpen = false;
 
-    // 업체 등록 화면 표시 여부
-    [ObservableProperty]
-    private bool _isCompanyRegisterOpen = false;
-
-    // 일정 생성 화면 표시 여부
-    [ObservableProperty]
-    private bool _isScheduleCreateOpen = false;
-
     // 역할별 플래그
     [ObservableProperty]
     private bool _isSuperAdmin = false;
@@ -56,6 +48,18 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private string _currentUserName = "";
 
+    [ObservableProperty]
+    private string _currentUserPhone = "";
+
+    [ObservableProperty]
+    private string _currentUserRole = "";
+
+    [ObservableProperty]
+    private string _currentUserPosition = "";
+
+    [ObservableProperty]
+    private string _currentUserRegion = "";
+
     // 오버레이 화면 열림 상태
     [ObservableProperty]
     private bool _isCompanyRegisterOpen = false;
@@ -66,12 +70,20 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isScheduleInputOpen = false;
 
-    // 일정 입력 화면에 전달할 데이터
+    [ObservableProperty]
+    private bool _isScheduleReserveOpen = false;
+
+    [ObservableProperty]
+    private bool _isScheduleConfirmOpen = false;
+
+    // 일정 입력/예약/확정 화면에 전달할 데이터
     private Guid _scheduleInputId;
-    private string _scheduleInputMode = "input";
+    private Guid _scheduleReserveId;
+    private Guid _scheduleConfirmId;
 
     public Guid ScheduleInputId => _scheduleInputId;
-    public string ScheduleInputMode => _scheduleInputMode;
+    public Guid ScheduleReserveId => _scheduleReserveId;
+    public Guid ScheduleConfirmId => _scheduleConfirmId;
 
     // 메뉴 표시 여부 (역할별)
     public bool ShowScheduleTab => IsUser || IsMiddleAdmin;  // 사용자, 중간관리자
@@ -85,13 +97,82 @@ public partial class MainViewModel : ViewModelBase
     public void RefreshUserRole()
     {
         UpdateUserRole();
-        CurrentUserId = AuthService.CurrentUserId ?? "";
-        CurrentUserName = AuthService.CurrentUser?.Name ?? "";
+        var user = AuthService.CurrentUser;
+
+        CurrentUserId = user?.LoginId ?? "";
+        CurrentUserName = user?.Name ?? "";
+        CurrentUserPhone = user?.Phone ?? "";
+        CurrentUserRole = user?.RoleDisplayName ?? "";
+        CurrentUserPosition = user?.PositionDisplay ?? "";
+
+        // 지역 정보 로드 (비동기)
+        _ = LoadUserRegionAsync();
 
         // 현재 선택된 탭이 해당 역할에서 접근 불가능하면 기본 탭(캘린더)으로 리셋
         ResetToValidTab();
 
         System.Diagnostics.Debug.WriteLine($"[MainViewModel] RefreshUserRole - IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
+    }
+
+    private async Task LoadUserRegionAsync()
+    {
+        try
+        {
+            var user = AuthService.CurrentUser;
+            if (user == null) return;
+
+            var client = SupabaseService.Client;
+            if (client == null) return;
+
+            string regionName = "";
+
+            // 지역 정보 로드 (role에 따라 다름)
+            if (user.RegionId.HasValue)
+            {
+                var regionResult = await client
+                    .From<Models.Region>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.RegionId.ToString())
+                    .Single();
+                if (regionResult != null)
+                    regionName = regionResult.Name;
+            }
+
+            if (user.DistrictId.HasValue)
+            {
+                var districtResult = await client
+                    .From<Models.District>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.DistrictId.ToString())
+                    .Single();
+                if (districtResult != null)
+                    regionName += (string.IsNullOrEmpty(regionName) ? "" : " ") + districtResult.Name;
+            }
+
+            if (user.DivisionId.HasValue)
+            {
+                var divisionResult = await client
+                    .From<Models.Division>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.DivisionId.ToString())
+                    .Single();
+                if (divisionResult != null)
+                    regionName += (string.IsNullOrEmpty(regionName) ? "" : " ") + divisionResult.Name;
+            }
+
+            if (user.BattalionId.HasValue)
+            {
+                var battalionResult = await client
+                    .From<Models.Battalion>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.BattalionId.ToString())
+                    .Single();
+                if (battalionResult != null)
+                    regionName += (string.IsNullOrEmpty(regionName) ? "" : " ") + battalionResult.Name;
+            }
+
+            CurrentUserRegion = regionName;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadUserRegionAsync error: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -190,16 +271,44 @@ public partial class MainViewModel : ViewModelBase
         IsDrawerOpen = false;
     }
 
+    // 로그아웃 완료 이벤트
+    public event Action? LogoutCompleted;
+
     [RelayCommand]
     private async Task Logout()
     {
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command started - initiating app restart");
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command started");
         IsDrawerOpen = false;
 
-        // AppRestartService를 통해 로그아웃 및 앱 재시작
-        await AppRestartService.LogoutAndRestartAsync();
+        try
+        {
+            // 1. 정리 작업 (타이머, Realtime 구독 해제)
+            try
+            {
+                AppRestartService.CleanupBeforeLogout?.Invoke();
+                System.Diagnostics.Debug.WriteLine("[MainViewModel] Cleanup completed");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] Cleanup error (continuing): {ex.Message}");
+            }
 
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command completed");
+            // 2. 세션 저장소 클리어
+            SessionStorageService.ClearSession();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] Session cleared");
+
+            // 3. AuthService 로그아웃
+            await AuthService.LogoutAsync();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] AuthService logged out");
+
+            // 4. 로그아웃 완료 이벤트 발생 (UI에서 로그인 화면으로 전환)
+            LogoutCompleted?.Invoke();
+            System.Diagnostics.Debug.WriteLine("[MainViewModel] LogoutCompleted event invoked");
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] Logout error: {ex.Message}");
+        }
     }
 
     // === 업체 등록 화면 ===
@@ -232,13 +341,12 @@ public partial class MainViewModel : ViewModelBase
         System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleCreate");
     }
 
-    // === 일정 입력/예약 화면 ===
-    public void OpenScheduleInput(Guid scheduleId, string mode)
+    // === 일정 입력 화면 (지자체담당자용) ===
+    public void OpenScheduleInput(Guid scheduleId)
     {
         _scheduleInputId = scheduleId;
-        _scheduleInputMode = mode;
         IsScheduleInputOpen = true;
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleInput - scheduleId: {scheduleId}, mode: {mode}");
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleInput - scheduleId: {scheduleId}");
     }
 
     [RelayCommand]
@@ -248,15 +356,33 @@ public partial class MainViewModel : ViewModelBase
         System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleInput");
     }
 
-    [RelayCommand]
-    public void OpenScheduleCreate()
+    // === 일정 예약 화면 (대대담당자용) ===
+    public void OpenScheduleReserve(Guid scheduleId)
     {
-        IsScheduleCreateOpen = true;
+        _scheduleReserveId = scheduleId;
+        IsScheduleReserveOpen = true;
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleReserve - scheduleId: {scheduleId}");
     }
 
     [RelayCommand]
-    public void CloseScheduleCreate()
+    private void CloseScheduleReserve()
     {
-        IsScheduleCreateOpen = false;
+        IsScheduleReserveOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleReserve");
+    }
+
+    // === 일정 확정 화면 (양측 공통) ===
+    public void OpenScheduleConfirm(Guid scheduleId)
+    {
+        _scheduleConfirmId = scheduleId;
+        IsScheduleConfirmOpen = true;
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleConfirm - scheduleId: {scheduleId}");
+    }
+
+    [RelayCommand]
+    private void CloseScheduleConfirm()
+    {
+        IsScheduleConfirmOpen = false;
+        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleConfirm");
     }
 }

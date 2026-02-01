@@ -2,6 +2,7 @@ using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using MilOps.Services;
 using MilOps.ViewModels;
 using System;
 using System.Threading.Tasks;
@@ -14,19 +15,32 @@ public partial class MainView : UserControl
     private TranslateTransform? _drawerTransform;
     private bool _isAnimating = false;
 
+    // 로그아웃 완료 이벤트 (외부에서 구독)
+    public event Action? LogoutRequested;
+
     public MainView()
     {
         InitializeComponent();
         _viewModel = new MainViewModel();
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
+        _viewModel.LogoutCompleted += OnLogoutCompleted;
         DataContext = _viewModel;
 
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
-        
+
         // View 이벤트 연결
         SetupCompanyRegisterView();
         SetupScheduleCreateView();
         SetupScheduleInputView();
+        SetupScheduleReserveView();
+        SetupScheduleConfirmView();
+        SetupNotificationView();
+    }
+
+    private void OnLogoutCompleted()
+    {
+        System.Diagnostics.Debug.WriteLine("[MainView] OnLogoutCompleted - invoking LogoutRequested");
+        LogoutRequested?.Invoke();
     }
 
     private void SetupCompanyRegisterView()
@@ -46,7 +60,40 @@ public partial class MainView : UserControl
     {
         // ScheduleInputView의 이벤트 구독
         ScheduleInputView.CloseRequested += OnScheduleInputCloseRequested;
-        ScheduleInputView.ScheduleUpdated += OnScheduleInputUpdated;
+        ScheduleInputView.ScheduleStatusChanged += OnScheduleInputStatusChanged;
+    }
+
+    private void SetupScheduleReserveView()
+    {
+        // ScheduleReserveView의 이벤트 구독
+        ScheduleReserveView.CloseRequested += OnScheduleReserveCloseRequested;
+        ScheduleReserveView.ScheduleStatusChanged += OnScheduleReserveStatusChanged;
+    }
+
+    private void SetupScheduleConfirmView()
+    {
+        // ScheduleConfirmView의 이벤트 구독
+        ScheduleConfirmView.CloseRequested += OnScheduleConfirmCloseRequested;
+        ScheduleConfirmView.ScheduleStatusChanged += OnScheduleConfirmStatusChanged;
+    }
+
+    private void SetupNotificationView()
+    {
+        // NotificationView의 이벤트 구독
+        NotificationView.CloseRequested += OnNotificationCloseRequested;
+        NotificationView.OnScheduleSelected += OnNotificationScheduleSelected;
+    }
+
+    private void OnNotificationCloseRequested(object? sender, EventArgs e)
+    {
+        // 알림 화면에서 닫기 시 캘린더로 이동
+        _viewModel.SelectTabCommand.Execute("calendar");
+    }
+
+    private void OnNotificationScheduleSelected(Guid scheduleId)
+    {
+        // 알림 클릭 시 일정 상세 화면으로 이동
+        OpenScheduleInput(scheduleId, "view");
     }
 
     private void OnCompanyRegisterCloseRequested(object? sender, EventArgs e)
@@ -94,12 +141,77 @@ public partial class MainView : UserControl
     }
 
     /// <summary>
-    /// 일정 입력/예약 화면 열기 (외부에서 호출 가능)
+    /// 일정 상세 화면 열기 (역할과 상태에 따라 입력/예약/확정 화면으로 분기)
     /// </summary>
     public async void OpenScheduleInput(Guid scheduleId, string mode)
     {
-        _viewModel.OpenScheduleInput(scheduleId, mode);
-        await ScheduleInputView.InitializeAsync(scheduleId, mode);
+        var currentUser = AuthService.CurrentUser;
+        if (currentUser == null) return;
+
+        System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - scheduleId: {scheduleId}, mode: {mode}, role: {currentUser.Role}");
+
+        // 먼저 일정 상태 확인
+        try
+        {
+            var client = SupabaseService.Client;
+            if (client == null) return;
+
+            var schedule = await client.From<MilOps.Models.Schedule>()
+                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, scheduleId.ToString())
+                .Single();
+
+            if (schedule == null)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Schedule not found");
+                return;
+            }
+
+            System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Schedule status: {schedule.Status}");
+
+            // 예약됨 상태 -> 확정 화면
+            if (schedule.Status == "reserved")
+            {
+                OpenScheduleConfirm(scheduleId);
+                return;
+            }
+
+            // 확정됨 상태 -> 확정 화면 (읽기 전용으로 보여줌)
+            if (schedule.Status == "confirmed")
+            {
+                OpenScheduleConfirm(scheduleId);
+                return;
+            }
+
+            // 역할에 따라 분기
+            if (currentUser.Role == "user_local")
+            {
+                // 지자체담당자 -> 일정 입력 화면
+                _viewModel.OpenScheduleInput(scheduleId);
+                await ScheduleInputView.InitializeAsync(scheduleId, "input");
+            }
+            else if (currentUser.Role == "user_military")
+            {
+                // 대대담당자 -> 일정 예약 화면 (입력됨 상태일 때만)
+                if (schedule.Status == "inputted")
+                {
+                    _viewModel.OpenScheduleReserve(scheduleId);
+                    await ScheduleReserveView.InitializeAsync(scheduleId);
+                }
+                else
+                {
+                    // 생성됨 상태 등 -> 아직 지자체담당자가 입력 안 함
+                    System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Schedule not ready for reservation (status: {schedule.Status})");
+                }
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Unsupported role: {currentUser.Role}");
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleInput - Error: {ex.Message}");
+        }
     }
 
     private void OnScheduleInputCloseRequested(object? sender, EventArgs e)
@@ -107,11 +219,53 @@ public partial class MainView : UserControl
         _viewModel.CloseScheduleInputCommand.Execute(null);
     }
 
-    private void OnScheduleInputUpdated(object? sender, EventArgs e)
+    private void OnScheduleInputStatusChanged(object? sender, MilOps.ViewModels.ScheduleStatusChangedEventArgs e)
     {
-        // 일정 업데이트 완료 시 화면 닫기 및 목록 새로고침
-        _viewModel.CloseScheduleInputCommand.Execute(null);
-        RefreshScheduleList();
+        // 입력 완료 시 해당 일정의 상태만 직접 업데이트 (리프레시 없이)
+        System.Diagnostics.Debug.WriteLine($"[MainView] OnScheduleInputStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
+        ScheduleListView.ViewModel?.UpdateScheduleStatus(e.ScheduleId, e.NewStatus, e.NewStatusOrder);
+    }
+
+    private void OnScheduleReserveCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseScheduleReserveCommand.Execute(null);
+    }
+
+    private void OnScheduleReserveStatusChanged(object? sender, MilOps.ViewModels.ScheduleStatusChangedEventArgs e)
+    {
+        // 예약 완료 시 해당 일정의 상태만 직접 업데이트 (리프레시 없이)
+        System.Diagnostics.Debug.WriteLine($"[MainView] OnScheduleReserveStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
+        ScheduleListView.ViewModel?.UpdateScheduleStatus(e.ScheduleId, e.NewStatus, e.NewStatusOrder);
+    }
+
+    private void OnScheduleConfirmCloseRequested(object? sender, EventArgs e)
+    {
+        System.Diagnostics.Debug.WriteLine("[MainView] OnScheduleConfirmCloseRequested");
+        _viewModel.CloseScheduleConfirmCommand.Execute(null);
+    }
+
+    private void OnScheduleConfirmStatusChanged(object? sender, MilOps.ViewModels.ScheduleStatusChangedEventArgs e)
+    {
+        // 확정 완료 시 해당 일정의 상태만 직접 업데이트 (리프레시 없이)
+        System.Diagnostics.Debug.WriteLine($"[MainView] OnScheduleConfirmStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
+        ScheduleListView.ViewModel?.UpdateScheduleStatus(e.ScheduleId, e.NewStatus, e.NewStatusOrder);
+    }
+
+    /// <summary>
+    /// 일정 확정 화면 열기 (예약된 일정에 대해 양측이 확정)
+    /// </summary>
+    public async void OpenScheduleConfirm(Guid scheduleId)
+    {
+        try
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleConfirm - scheduleId: {scheduleId}");
+            _viewModel.OpenScheduleConfirm(scheduleId);
+            await ScheduleConfirmView.InitializeAsync(scheduleId);
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainView] OpenScheduleConfirm error: {ex.Message}");
+        }
     }
 
     /// <summary>
@@ -150,13 +304,13 @@ public partial class MainView : UserControl
 
             // 동시에 애니메이션
             _ = AnimateOpacity(DrawerOverlay, 0, 0.5, duration);
-            await AnimateTranslateX(_drawerTransform, -250, 0, duration);
+            await AnimateTranslateX(_drawerTransform, -280, 0, duration);
         }
         else
         {
             // 동시에 애니메이션
             _ = AnimateOpacity(DrawerOverlay, 0.5, 0, duration);
-            await AnimateTranslateX(_drawerTransform, 0, -250, duration);
+            await AnimateTranslateX(_drawerTransform, 0, -280, duration);
 
             DrawerOverlay.IsVisible = false;
             DrawerPanel.IsVisible = false;

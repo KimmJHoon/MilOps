@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using MilOps.Services;
 using MilOps.ViewModels;
+using System;
+using System.Threading.Tasks;
 
 namespace MilOps.Views;
 
@@ -80,6 +82,19 @@ public partial class MainWindow : Window
 
         // MainView의 역할 정보 갱신
         MainViewControl.RefreshUserRole();
+
+        // FCM 토큰 서버에 저장 (Android에서만 작동)
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await FcmService.SaveTokenToServerAsync();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainWindow] FCM token save error: {ex.Message}");
+            }
+        });
 
         LoginViewControl.IsVisible = false;
         MainViewControl.IsVisible = true;

@@ -12,8 +12,8 @@ public partial class ScheduleInputView : UserControl
     // 이벤트: 화면 닫기 요청
     public event EventHandler? CloseRequested;
 
-    // 이벤트: 일정 업데이트 완료
-    public event EventHandler? ScheduleUpdated;
+    // 이벤트: 일정 상태 변경됨 (scheduleId, newStatus, newStatusOrder 전달)
+    public event EventHandler<ScheduleStatusChangedEventArgs>? ScheduleStatusChanged;
 
     public ScheduleInputView()
     {
@@ -31,13 +31,13 @@ public partial class ScheduleInputView : UserControl
         if (_viewModel != null)
         {
             _viewModel.CloseRequested -= OnViewModelCloseRequested;
-            _viewModel.ScheduleUpdated -= OnViewModelScheduleUpdated;
+            _viewModel.ScheduleStatusChanged -= OnViewModelScheduleStatusChanged;
         }
 
         // 새 ViewModel 생성
         _viewModel = new ScheduleInputViewModel();
         _viewModel.CloseRequested += OnViewModelCloseRequested;
-        _viewModel.ScheduleUpdated += OnViewModelScheduleUpdated;
+        _viewModel.ScheduleStatusChanged += OnViewModelScheduleStatusChanged;
         DataContext = _viewModel;
 
         await _viewModel.InitializeAsync(scheduleId, mode);
@@ -49,10 +49,10 @@ public partial class ScheduleInputView : UserControl
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    private void OnViewModelScheduleUpdated(object? sender, EventArgs e)
+    private void OnViewModelScheduleStatusChanged(object? sender, ScheduleStatusChangedEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleInputView] ScheduleUpdated from ViewModel");
-        ScheduleUpdated?.Invoke(this, EventArgs.Empty);
+        System.Diagnostics.Debug.WriteLine($"[ScheduleInputView] ScheduleStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
+        ScheduleStatusChanged?.Invoke(this, e);
     }
 
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
@@ -62,7 +62,7 @@ public partial class ScheduleInputView : UserControl
         if (_viewModel != null)
         {
             _viewModel.CloseRequested -= OnViewModelCloseRequested;
-            _viewModel.ScheduleUpdated -= OnViewModelScheduleUpdated;
+            _viewModel.ScheduleStatusChanged -= OnViewModelScheduleStatusChanged;
         }
     }
 }

@@ -397,6 +397,7 @@ public partial class CompanyRegisterViewModel : ViewModelBase
             else if (FormMode == "edit" && _editingCompanyId.HasValue)
             {
                 // 업체 수정
+#pragma warning disable CS8603 // Possible null reference return
                 await client.From<Company>()
                     .Where(c => c.Id == _editingCompanyId.Value)
                     .Set(c => c.Name, CompanyName.Trim())
@@ -406,6 +407,7 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                     .Set(c => c.ContactPhone, string.IsNullOrWhiteSpace(ContactPhone) ? null : ContactPhone.Trim())
                     .Set(c => c.DistrictId, SelectedDistrict!.Id)
                     .Update();
+#pragma warning restore CS8603
 
                 SuccessMessage = "업체가 수정되었습니다.";
             }
@@ -458,12 +460,14 @@ public partial class CompanyRegisterViewModel : ViewModelBase
             System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] DeleteCompanyAsync - Deleting company: {item.Id}");
 
             // Soft delete
+#pragma warning disable CS8603 // Possible null reference return
             await client.From<Company>()
                 .Where(c => c.Id == item.Id)
                 .Set(c => c.DeletedAt, DateTime.UtcNow)
                 .Set(c => c.DeletedBy, currentUser.Id)
                 .Set(c => c.IsActive, false)
                 .Update();
+#pragma warning restore CS8603
 
             System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] DeleteCompanyAsync - Delete success");
             SuccessMessage = "업체가 삭제되었습니다.";

@@ -4,67 +4,139 @@
              x:Class="MilOps.Views.LoginView"
              x:DataType="vm:LoginViewModel">
 
-  <Grid Background="{DynamicResource SystemChromeLowColor}">
-    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                Spacing="20" Width="300" Margin="20">
+  <Grid Background="#0a0a0a">
+    <ScrollViewer VerticalScrollBarVisibility="Auto">
+      <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                  Spacing="24" Width="320" Margin="24" MinHeight="600">
 
-      <!-- 앱 타이틀 -->
-      <TextBlock Text="군-지자체 일정관리"
-                 FontSize="24"
-                 Foreground="{DynamicResource SystemBaseHighColor}"
-                 HorizontalAlignment="Center"
-                 Margin="0,0,0,30"/>
+        <!-- 로고 영역 -->
+        <StackPanel Spacing="12" Margin="0,40,0,20">
+          <Border Width="80" Height="80" CornerRadius="20" Background="#1c1c1e"
+                  HorizontalAlignment="Center">
+            <TextBlock Text="&#xe7f1;" FontFamily="{StaticResource MaterialIcons}"
+                       FontSize="40" Foreground="#00a872"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <TextBlock Text="군-지자체 일정관리"
+                     FontSize="26"
+                     Foreground="#effdf6"
+                     HorizontalAlignment="Center"/>
+          <TextBlock Text="Military Operations Scheduler"
+                     FontSize="13"
+                     Foreground="#6a6a6a"
+                     HorizontalAlignment="Center"/>
+        </StackPanel>
 
-      <!-- 아이디 입력 -->
-      <StackPanel Spacing="5">
-        <TextBlock Text="아이디" Foreground="{DynamicResource SystemBaseHighColor}" FontSize="14"/>
-        <TextBox Text="{Binding UserId}"
-                 Watermark="아이디를 입력하세요"
-                 Padding="10"/>
+        <!-- 로그인 카드 -->
+        <Border Background="#1c1c1e" CornerRadius="20" Padding="24">
+          <StackPanel Spacing="20">
+
+            <!-- 아이디 입력 -->
+            <StackPanel Spacing="8">
+              <TextBlock Text="아이디" Foreground="#a0a0a0" FontSize="13"/>
+              <TextBox Text="{Binding UserId}"
+                       Watermark="아이디를 입력하세요"/>
+            </StackPanel>
+
+            <!-- 비밀번호 입력 -->
+            <StackPanel Spacing="8">
+              <TextBlock Text="비밀번호" Foreground="#a0a0a0" FontSize="13"/>
+              <TextBox Text="{Binding Password}"
+                       PasswordChar="●"
+                       Watermark="비밀번호를 입력하세요"/>
+            </StackPanel>
+
+            <!-- 에러 메시지 -->
+            <Border Background="#3d1f1f" CornerRadius="10" Padding="12"
+                    IsVisible="{Binding HasError}">
+              <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <TextBlock Text="&#xe002;" FontFamily="{StaticResource MaterialIcons}"
+                           FontSize="16" Foreground="#ff6b6b" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="#ff6b6b" FontSize="13" VerticalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+
+            <!-- 로그인 버튼 -->
+            <Button Command="{Binding LoginCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Background="#00a872"
+                    CornerRadius="12"
+                    Padding="16">
+              <TextBlock Text="로그인" FontSize="16" Foreground="White"/>
+            </Button>
+          </StackPanel>
+        </Border>
+
+        <!-- 구분선 -->
+        <Grid ColumnDefinitions="*,Auto,*" Margin="0,8">
+          <Border Grid.Column="0" Height="1" Background="#2c2c2e" VerticalAlignment="Center"/>
+          <TextBlock Grid.Column="1" Text="또는" Foreground="#6a6a6a" FontSize="13" Margin="16,0"/>
+          <Border Grid.Column="2" Height="1" Background="#2c2c2e" VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- 회원가입 버튼 -->
+        <Button Command="{Binding OpenSignUpCommand}"
+                HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center"
+                Background="#2c2c2e"
+                CornerRadius="12"
+                Padding="16">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <TextBlock Text="&#xe7fe;" FontFamily="{StaticResource MaterialIcons}"
+                       FontSize="18" Foreground="#deb887" VerticalAlignment="Center"/>
+            <TextBlock Text="회원가입" FontSize="15" Foreground="#effdf6"/>
+          </StackPanel>
+        </Button>
+
+        <!-- DEBUG 퀵 로그인 버튼들 -->
+        <Border Background="#1a1a1a" CornerRadius="16" Padding="16" Margin="0,16,0,0"
+                IsVisible="{Binding IsDebugMode}">
+          <StackPanel Spacing="12">
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+              <TextBlock Text="&#xe868;" FontFamily="{StaticResource MaterialIcons}"
+                         FontSize="16" Foreground="#deb887"/>
+              <TextBlock Text="DEBUG 퀵 로그인" Foreground="#deb887" FontSize="13"/>
+            </StackPanel>
+
+            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
+              <!-- 지자체 중간관리자 -->
+              <Button Grid.Row="0" Grid.Column="0"
+                      Command="{Binding QuickLoginCommand}"
+                      CommandParameter="LC0001"
+                      Background="#488e72" CornerRadius="10" Padding="12">
+                <TextBlock Text="지자체 중간" FontSize="12" Foreground="White"/>
+              </Button>
+
+              <!-- 사단 중간관리자 -->
+              <Button Grid.Row="0" Grid.Column="1"
+                      Command="{Binding QuickLoginCommand}"
+                      CommandParameter="MT0001"
+                      Background="#488e72" CornerRadius="10" Padding="12">
+                <TextBlock Text="사단 중간" FontSize="12" Foreground="White"/>
+              </Button>
+
+              <!-- 지자체 담당자 -->
+              <Button Grid.Row="1" Grid.Column="0"
+                      Command="{Binding QuickLoginCommand}"
+                      CommandParameter="LD0001"
+                      Background="#00a872" CornerRadius="10" Padding="12">
+                <TextBlock Text="지자체 담당자" FontSize="12" Foreground="White"/>
+              </Button>
+
+              <!-- 대대 담당자 -->
+              <Button Grid.Row="1" Grid.Column="1"
+                      Command="{Binding QuickLoginCommand}"
+                      CommandParameter="MU0001"
+                      Background="#00a872" CornerRadius="10" Padding="12">
+                <TextBlock Text="대대 담당자" FontSize="12" Foreground="White"/>
+              </Button>
+            </Grid>
+          </StackPanel>
+        </Border>
+
       </StackPanel>
-
-      <!-- 비밀번호 입력 -->
-      <StackPanel Spacing="5">
-        <TextBlock Text="비밀번호" Foreground="{DynamicResource SystemBaseHighColor}" FontSize="14"/>
-        <TextBox Text="{Binding Password}"
-                 PasswordChar="*"
-                 Watermark="비밀번호를 입력하세요"
-                 Padding="10"/>
-      </StackPanel>
-
-      <!-- 에러 메시지 -->
-      <TextBlock Text="{Binding ErrorMessage}"
-                 Foreground="#FF6B6B"
-                 FontSize="12"
-                 HorizontalAlignment="Center"
-                 IsVisible="{Binding HasError}"/>
-
-      <!-- 로그인 버튼 -->
-      <Button Command="{Binding LoginCommand}"
-              HorizontalAlignment="Stretch"
-              HorizontalContentAlignment="Center"
-              Classes="accent"
-              Padding="15"
-              Margin="0,10,0,0">
-        <TextBlock Text="로그인" FontSize="16"/>
-      </Button>
-
-      <!-- 구분선 -->
-      <Grid ColumnDefinitions="*,Auto,*" Margin="0,10,0,10">
-        <Border Grid.Column="0" Height="1" Background="#555555" VerticalAlignment="Center"/>
-        <TextBlock Grid.Column="1" Text="또는" Foreground="#888888" Margin="10,0"/>
-        <Border Grid.Column="2" Height="1" Background="#555555" VerticalAlignment="Center"/>
-      </Grid>
-
-      <!-- 회원가입 버튼 -->
-      <Button Command="{Binding OpenSignUpCommand}"
-              HorizontalAlignment="Stretch"
-              HorizontalContentAlignment="Center"
-              Background="#333333"
-              Padding="15">
-        <TextBlock Text="회원가입" FontSize="14" Foreground="White"/>
-      </Button>
-
-    </StackPanel>
+    </ScrollViewer>
   </Grid>
 </UserControl>

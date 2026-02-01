@@ -105,8 +105,15 @@ public static class SupabaseService
     {
         if (_client?.Realtime != null)
         {
+            System.Diagnostics.Debug.WriteLine($"[SupabaseService] Realtime connecting...");
+
             await _client.Realtime.ConnectAsync();
-            System.Diagnostics.Debug.WriteLine("[SupabaseService] Realtime connected");
+
+            System.Diagnostics.Debug.WriteLine($"[SupabaseService] Realtime connected");
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("[SupabaseService] Realtime client is null!");
         }
     }
 
