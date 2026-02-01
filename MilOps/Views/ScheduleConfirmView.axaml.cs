@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using MilOps.ViewModels;
 using System;
 using System.Threading.Tasks;
@@ -64,5 +65,13 @@ public partial class ScheduleConfirmView : UserControl
             _viewModel.CloseRequested -= OnViewModelCloseRequested;
             _viewModel.ScheduleStatusChanged -= OnViewModelScheduleStatusChanged;
         }
+    }
+
+    /// <summary>
+    /// 모달 배경 오버레이 클릭 시 모달 닫기
+    /// </summary>
+    private void OnModalOverlayPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _viewModel?.CancelConfirmDialogCommand.Execute(null);
     }
 }

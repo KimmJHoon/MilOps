@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="MilOps.Views.Controls.LoadingOverlay">
+
+  <Border Background="#CC0a0a0a" CornerRadius="16">
+    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
+      <TextBlock Text="&#xe627;" FontFamily="{StaticResource MaterialIcons}"
+                 FontSize="36" Foreground="#00a872" HorizontalAlignment="Center"/>
+      <TextBlock Text="로딩 중..." FontSize="16" Foreground="#effdf6"
+                 HorizontalAlignment="Center"/>
+    </StackPanel>
+  </Border>
+</UserControl>

@@ -154,13 +154,29 @@ public partial class ManagerViewModel : ViewModelBase
 
     private async Task InitializeAsync()
     {
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         if (!_isOrganizationDataLoaded)
         {
             await LoadOrganizationDataAsync();
         }
+
         DetermineUserTypeAndRole();
+
         await LoadInvitationsAsync();
-        await SubscribeToRealtimeAsync();
+
+        // UI 렌더링이 먼저 완료되도록 실시간 구독은 백그라운드에서 처리
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await SubscribeToRealtimeAsync();
+            }
+            catch (Exception)
+            {
+                // Realtime 연결 실패 시 무시 (주기적 새로고침이 백업)
+            }
+        });
+
         StartPeriodicRefresh();
     }
 

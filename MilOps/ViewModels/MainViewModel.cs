@@ -2,9 +2,30 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using MilOps.Services;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace MilOps.ViewModels;
+
+/// <summary>
+/// 일정 화면 분기 타입
+/// </summary>
+public enum ScheduleNavigationType
+{
+    Input,      // 지자체담당자용 입력 화면
+    Reserve,    // 대대담당자용 예약 화면
+    Confirm     // 양측 확정 화면
+}
+
+/// <summary>
+/// 일정 화면 이동 요청 인자
+/// </summary>
+public class ScheduleNavigationArgs
+{
+    public Guid ScheduleId { get; set; }
+    public ScheduleNavigationType NavigationType { get; set; }
+    public string Mode { get; set; } = "view";
+}
 
 public partial class MainViewModel : ViewModelBase
 {
@@ -124,50 +145,50 @@ public partial class MainViewModel : ViewModelBase
             var client = SupabaseService.Client;
             if (client == null) return;
 
-            string regionName = "";
-
-            // 지역 정보 로드 (role에 따라 다름)
-            if (user.RegionId.HasValue)
-            {
-                var regionResult = await client
-                    .From<Models.Region>()
+            // 4개 쿼리를 병렬로 실행 (순차 실행 대비 4배 빠름)
+            var regionTask = user.RegionId.HasValue
+                ? client.From<Models.Region>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.RegionId.ToString())
-                    .Single();
-                if (regionResult != null)
-                    regionName = regionResult.Name;
-            }
+                    .Single()
+                : Task.FromResult<Models.Region?>(null);
 
-            if (user.DistrictId.HasValue)
-            {
-                var districtResult = await client
-                    .From<Models.District>()
+            var districtTask = user.DistrictId.HasValue
+                ? client.From<Models.District>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.DistrictId.ToString())
-                    .Single();
-                if (districtResult != null)
-                    regionName += (string.IsNullOrEmpty(regionName) ? "" : " ") + districtResult.Name;
-            }
+                    .Single()
+                : Task.FromResult<Models.District?>(null);
 
-            if (user.DivisionId.HasValue)
-            {
-                var divisionResult = await client
-                    .From<Models.Division>()
+            var divisionTask = user.DivisionId.HasValue
+                ? client.From<Models.Division>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.DivisionId.ToString())
-                    .Single();
-                if (divisionResult != null)
-                    regionName += (string.IsNullOrEmpty(regionName) ? "" : " ") + divisionResult.Name;
-            }
+                    .Single()
+                : Task.FromResult<Models.Division?>(null);
 
-            if (user.BattalionId.HasValue)
-            {
-                var battalionResult = await client
-                    .From<Models.Battalion>()
+            var battalionTask = user.BattalionId.HasValue
+                ? client.From<Models.Battalion>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.BattalionId.ToString())
-                    .Single();
-                if (battalionResult != null)
-                    regionName += (string.IsNullOrEmpty(regionName) ? "" : " ") + battalionResult.Name;
-            }
+                    .Single()
+                : Task.FromResult<Models.Battalion?>(null);
 
-            CurrentUserRegion = regionName;
+            // 모든 쿼리 병렬 대기
+            await Task.WhenAll(regionTask, districtTask, divisionTask, battalionTask);
+
+            // 결과 조합
+            var parts = new List<string>();
+
+            if (regionTask.Result != null)
+                parts.Add(regionTask.Result.Name);
+
+            if (districtTask.Result != null)
+                parts.Add(districtTask.Result.Name);
+
+            if (divisionTask.Result != null)
+                parts.Add(divisionTask.Result.Name);
+
+            if (battalionTask.Result != null)
+                parts.Add(battalionTask.Result.Name);
+
+            CurrentUserRegion = string.Join(" ", parts);
         }
         catch (Exception ex)
         {
@@ -221,6 +242,9 @@ public partial class MainViewModel : ViewModelBase
         System.Diagnostics.Debug.WriteLine($"[MainViewModel] UpdateUserRole - DBRole: {roleString}, ParsedRole: {role}, IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
     }
 
+    // 탭 변경 이벤트 (View에서 구독하여 초기화 처리)
+    public event Action<string>? TabChanged;
+
     [RelayCommand]
     private void SelectTab(string tabName)
     {
@@ -257,6 +281,9 @@ public partial class MainViewModel : ViewModelBase
                 CurrentPageTitle = "설정";
                 break;
         }
+
+        // 탭 변경 이벤트 발생
+        TabChanged?.Invoke(tabName);
     }
 
     [RelayCommand]
@@ -339,6 +366,110 @@ public partial class MainViewModel : ViewModelBase
     {
         IsScheduleCreateOpen = false;
         System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleCreate");
+    }
+
+    // === 일정 상세 화면 열기 (역할/상태에 따라 분기) ===
+
+    /// <summary>
+    /// 일정 상세 화면 열기 전 이벤트 (View에서 구독하여 실제 화면 전환 처리)
+    /// </summary>
+    public event Action<ScheduleNavigationArgs>? ScheduleNavigationRequested;
+
+    /// <summary>
+    /// 일정 상세 화면 열기 요청 (MVVM 패턴: View에서 직접 DB 호출하지 않고 ViewModel에서 처리)
+    /// 백그라운드에서 일정 상태를 조회하고, 역할/상태에 따라 적절한 화면으로 분기
+    /// </summary>
+    public void RequestOpenScheduleDetail(Guid scheduleId, string mode = "view")
+    {
+        System.Diagnostics.Debug.WriteLine($"[MainViewModel] RequestOpenScheduleDetail - scheduleId: {scheduleId}, mode: {mode}");
+
+        // 백그라운드에서 일정 조회 및 화면 분기 처리
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var currentUser = AuthService.CurrentUser;
+                if (currentUser == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[MainViewModel] RequestOpenScheduleDetail - No user logged in");
+                    return;
+                }
+
+                var client = SupabaseService.Client;
+                if (client == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[MainViewModel] RequestOpenScheduleDetail - No Supabase client");
+                    return;
+                }
+
+                // 백그라운드에서 일정 조회
+                var schedule = await client.From<Models.Schedule>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, scheduleId.ToString())
+                    .Single();
+
+                if (schedule == null)
+                {
+                    System.Diagnostics.Debug.WriteLine("[MainViewModel] RequestOpenScheduleDetail - Schedule not found");
+                    return;
+                }
+
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] RequestOpenScheduleDetail - Schedule status: {schedule.Status}, role: {currentUser.Role}");
+
+                // 화면 분기 로직 (비즈니스 로직)
+                ScheduleNavigationType navigationType;
+
+                // 예약됨/확정됨 상태 -> 확정 화면
+                if (schedule.Status == "reserved" || schedule.Status == "confirmed")
+                {
+                    navigationType = ScheduleNavigationType.Confirm;
+                }
+                // 중간관리자/최종관리자는 모든 상태의 일정을 확정 화면(뷰어 모드)으로 조회
+                else if (currentUser.Role == "middle_local" || currentUser.Role == "middle_military" ||
+                         currentUser.Role == "super_admin_mois" || currentUser.Role == "super_admin_army")
+                {
+                    navigationType = ScheduleNavigationType.Confirm;
+                }
+                // 역할에 따라 분기
+                else if (currentUser.Role == "user_local")
+                {
+                    // 지자체담당자 -> 일정 입력 화면
+                    navigationType = ScheduleNavigationType.Input;
+                }
+                else if (currentUser.Role == "user_military")
+                {
+                    // 대대담당자 -> 입력됨 상태일 때만 예약 화면
+                    if (schedule.Status == "inputted")
+                    {
+                        navigationType = ScheduleNavigationType.Reserve;
+                    }
+                    else
+                    {
+                        System.Diagnostics.Debug.WriteLine($"[MainViewModel] Schedule not ready for reservation (status: {schedule.Status})");
+                        return;
+                    }
+                }
+                else
+                {
+                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] Unsupported role: {currentUser.Role}");
+                    return;
+                }
+
+                // UI 스레드에서 화면 전환 이벤트 발생
+                Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+                {
+                    ScheduleNavigationRequested?.Invoke(new ScheduleNavigationArgs
+                    {
+                        ScheduleId = scheduleId,
+                        NavigationType = navigationType,
+                        Mode = mode
+                    });
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainViewModel] RequestOpenScheduleDetail error: {ex.Message}");
+            }
+        });
     }
 
     // === 일정 입력 화면 (지자체담당자용) ===
