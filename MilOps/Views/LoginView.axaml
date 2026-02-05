@@ -5,7 +5,7 @@
              x:DataType="vm:LoginViewModel">
 
   <Grid Background="#0a0a0a">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
       <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
                   Spacing="24" Width="320" Margin="24" MinHeight="600">
 
@@ -90,51 +90,6 @@
           </StackPanel>
         </Button>
 
-        <!-- DEBUG 퀵 로그인 버튼들 -->
-        <Border Background="#1a1a1a" CornerRadius="16" Padding="16" Margin="0,16,0,0"
-                IsVisible="{Binding IsDebugMode}">
-          <StackPanel Spacing="12">
-            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
-              <TextBlock Text="&#xe868;" FontFamily="{StaticResource MaterialIcons}"
-                         FontSize="16" Foreground="#deb887"/>
-              <TextBlock Text="DEBUG 퀵 로그인" Foreground="#deb887" FontSize="13"/>
-            </StackPanel>
-
-            <Grid ColumnDefinitions="*,*" RowDefinitions="Auto,Auto" ColumnSpacing="10" RowSpacing="10">
-              <!-- 지자체 중간관리자 -->
-              <Button Grid.Row="0" Grid.Column="0"
-                      Command="{Binding QuickLoginCommand}"
-                      CommandParameter="LC0001"
-                      Background="#488e72" CornerRadius="10" Padding="12">
-                <TextBlock Text="지자체 중간" FontSize="12" Foreground="White"/>
-              </Button>
-
-              <!-- 사단 중간관리자 -->
-              <Button Grid.Row="0" Grid.Column="1"
-                      Command="{Binding QuickLoginCommand}"
-                      CommandParameter="MT0001"
-                      Background="#488e72" CornerRadius="10" Padding="12">
-                <TextBlock Text="사단 중간" FontSize="12" Foreground="White"/>
-              </Button>
-
-              <!-- 지자체 담당자 -->
-              <Button Grid.Row="1" Grid.Column="0"
-                      Command="{Binding QuickLoginCommand}"
-                      CommandParameter="LD0001"
-                      Background="#00a872" CornerRadius="10" Padding="12">
-                <TextBlock Text="지자체 담당자" FontSize="12" Foreground="White"/>
-              </Button>
-
-              <!-- 대대 담당자 -->
-              <Button Grid.Row="1" Grid.Column="1"
-                      Command="{Binding QuickLoginCommand}"
-                      CommandParameter="MU0001"
-                      Background="#00a872" CornerRadius="10" Padding="12">
-                <TextBlock Text="대대 담당자" FontSize="12" Foreground="White"/>
-              </Button>
-            </Grid>
-          </StackPanel>
-        </Border>
 
       </StackPanel>
     </ScrollViewer>

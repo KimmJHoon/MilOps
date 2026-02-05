@@ -23,19 +23,11 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isLoading = false;
 
-    [ObservableProperty]
-    private bool _isDebugMode = false;
-
     public event Action? LoginSuccessful;
     public event Action? SignUpRequested;
 
-    private const string QuickLoginPassword = "qwer1234";
-
     public LoginViewModel()
     {
-#if DEBUG
-        IsDebugMode = true;
-#endif
     }
 
     [RelayCommand]
@@ -44,15 +36,6 @@ public partial class LoginViewModel : ViewModelBase
         System.Diagnostics.Debug.WriteLine("[LoginViewModel] OpenSignUp called");
         SignUpRequested?.Invoke();
         System.Diagnostics.Debug.WriteLine("[LoginViewModel] SignUpRequested invoked");
-    }
-
-    [RelayCommand]
-    private async Task QuickLoginAsync(string loginId)
-    {
-        System.Diagnostics.Debug.WriteLine($"[LoginViewModel] QuickLogin - {loginId}");
-        UserId = loginId;
-        Password = QuickLoginPassword;
-        await LoginAsync();
     }
 
     [RelayCommand]
