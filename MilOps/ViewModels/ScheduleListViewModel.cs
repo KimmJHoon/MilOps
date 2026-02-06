@@ -18,7 +18,10 @@ public partial class ScheduleListViewModel : ViewModelBase
     private readonly IAuthService _authService;
     private readonly ISupabaseService _supabaseService;
 
-    // 일정 목록
+    // 이벤트 구독 해제용
+    private bool _isSubscribed = false;
+
+    // 일정 목록 (배치 업데이트를 위해 setter 추가)
     [ObservableProperty]
     private ObservableCollection<ScheduleListItem> _schedules = new();
 
@@ -141,13 +144,114 @@ public partial class ScheduleListViewModel : ViewModelBase
         _authService = authService;
         _supabaseService = supabaseService;
 
+        // ScheduleDataService 이벤트 구독
+        SubscribeToDataService();
+
         if (autoInitialize)
         {
             _ = InitializeAsync();
         }
     }
 
-    private async Task InitializeAsync()
+    /// <summary>
+    /// ScheduleDataService 이벤트 구독
+    /// </summary>
+    private void SubscribeToDataService()
+    {
+        if (_isSubscribed) return;
+
+        ScheduleDataService.DataLoaded += OnDataLoaded;
+        ScheduleDataService.LoadingStateChanged += OnLoadingStateChanged;
+        ScheduleDataService.CacheLoaded += OnCacheLoaded;
+        _isSubscribed = true;
+
+        System.Diagnostics.Debug.WriteLine("[ScheduleListVM] Subscribed to ScheduleDataService");
+    }
+
+    /// <summary>
+    /// 이벤트 구독 해제 (Dispose 시 호출)
+    /// </summary>
+    public void UnsubscribeFromDataService()
+    {
+        if (!_isSubscribed) return;
+
+        ScheduleDataService.DataLoaded -= OnDataLoaded;
+        ScheduleDataService.LoadingStateChanged -= OnLoadingStateChanged;
+        ScheduleDataService.CacheLoaded -= OnCacheLoaded;
+        _isSubscribed = false;
+
+        System.Diagnostics.Debug.WriteLine("[ScheduleListVM] Unsubscribed from ScheduleDataService");
+    }
+
+    /// <summary>
+    /// 데이터 로드 완료 이벤트 핸들러 (백그라운드 -> UI 스레드)
+    /// </summary>
+    private void OnDataLoaded(ScheduleDataLoadedEventArgs args)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] OnDataLoaded - {args.Schedules.Count} schedules");
+
+            // 원본 데이터 저장
+            _allSchedules = args.Schedules;
+
+            // 상태별 카운트 업데이트
+            AllCount = args.StatusCounts.GetValueOrDefault("all", 0);
+            CreatedCount = args.StatusCounts.GetValueOrDefault("created", 0);
+            InputtedCount = args.StatusCounts.GetValueOrDefault("inputted", 0);
+            ReservedCount = args.StatusCounts.GetValueOrDefault("reserved", 0);
+            ConfirmedCount = args.StatusCounts.GetValueOrDefault("confirmed", 0);
+
+            // 필터 적용 및 UI 업데이트 (배치 방식)
+            ApplyFilterWithItems(args.Items);
+        });
+    }
+
+    /// <summary>
+    /// 로딩 상태 변경 이벤트 핸들러
+    /// Optimistic UI: 캐시된 데이터가 있으면 로딩 화면을 보여주지 않음
+    /// </summary>
+    private void OnLoadingStateChanged(bool isLoading)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            // 캐시된 데이터가 있으면 로딩 화면을 보여주지 않음 (SWR 패턴)
+            if (isLoading && ScheduleDataService.HasCachedResult)
+            {
+                // 캐시 데이터를 이미 표시 중이므로 로딩 화면 불필요
+                return;
+            }
+            IsLoading = isLoading;
+        });
+    }
+
+    /// <summary>
+    /// 캐시 로드 완료 이벤트 핸들러
+    /// </summary>
+    private void OnCacheLoaded(ScheduleCacheLoadedEventArgs args)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] OnCacheLoaded - {args.CompanyCount} companies, {args.UserCount} users");
+
+            // 캐시 데이터를 로컬 딕셔너리에 복사 (기존 코드 호환성)
+            _companyNames = ScheduleDataService.CompanyNames.ToDictionary(kv => kv.Key, kv => kv.Value);
+            _battalionNames = ScheduleDataService.BattalionNames.ToDictionary(kv => kv.Key, kv => kv.Value);
+            _districtNames = ScheduleDataService.DistrictNames.ToDictionary(kv => kv.Key, kv => kv.Value);
+            _userNames = ScheduleDataService.UserNames.ToDictionary(kv => kv.Key, kv => kv.Value);
+            _userCache = ScheduleDataService.UserCache.ToDictionary(kv => kv.Key, kv => kv.Value);
+            _battalionCache = ScheduleDataService.BattalionCache.ToDictionary(kv => kv.Key, kv => kv.Value);
+            _districtCache = ScheduleDataService.DistrictCache.ToDictionary(kv => kv.Key, kv => kv.Value);
+
+            // 현재 사용자 표시 갱신
+            if (_authService.CurrentUser != null)
+            {
+                UpdateCurrentUserDisplay(_authService.CurrentUser);
+            }
+        });
+    }
+
+    private Task InitializeAsync()
     {
         try
         {
@@ -155,17 +259,21 @@ public partial class ScheduleListViewModel : ViewModelBase
             if (_authService.CurrentUser == null)
             {
                 System.Diagnostics.Debug.WriteLine("[ScheduleListVM] InitializeAsync skipped - no current user");
-                return;
+                return Task.CompletedTask;
             }
 
             DetermineUserRole();
-            await LoadCacheDataAsync();
-            await LoadSchedulesAsync();
+
+            // 이미 캐시된 데이터가 있으면 Preload에서 로드한 것 사용
+            // LoadSchedulesInBackground는 캐시가 있으면 즉시 반환 (0ms)
+            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] InitializeAsync - HasCache: {ScheduleDataService.HasCachedResult}");
+            ScheduleDataService.LoadSchedulesInBackground(_authService.CurrentUser);
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] InitializeAsync error: {ex.Message}");
         }
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -184,14 +292,14 @@ public partial class ScheduleListViewModel : ViewModelBase
             case "user_local": // 지자체담당자
                 ShowLocalUserTab = true;
                 SelectedRoleTab = "user_local";
-                GuideMessage = "💡 생성됨 상태의 일정을 클릭하여 가능 일정을 입력해주세요";
+                GuideMessage = "생성됨 상태의 일정을 클릭하여\n가능 일정을 입력해주세요";
                 ShowGuideMessage = true;
                 break;
 
             case "user_military": // 대대담당자
                 ShowMilitaryUserTab = true;
                 SelectedRoleTab = "user_military";
-                GuideMessage = "💡 입력됨 상태의 일정을 클릭하여 예약해주세요";
+                GuideMessage = "입력됨 상태의 일정을 클릭하여\n예약해주세요";
                 ShowGuideMessage = true;
                 break;
 
@@ -292,44 +400,19 @@ public partial class ScheduleListViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 일정 목록 로드
+    /// 일정 목록 로드 (ScheduleDataService를 통해 백그라운드에서 실행)
     /// </summary>
     [RelayCommand]
     public async Task LoadSchedulesAsync()
     {
-        if (!_supabaseService.IsInitialized) return;
         if (_authService.CurrentUser == null) return;
 
-        IsLoading = true;
-        try
-        {
-            var currentUser = _authService.CurrentUser;
+        // ScheduleDataService를 통해 백그라운드에서 데이터 로드
+        // 결과는 OnDataLoaded 이벤트 핸들러에서 처리됨
+        ScheduleDataService.LoadSchedulesInBackground(_authService.CurrentUser);
 
-            // 모든 일정을 가져온 후 클라이언트에서 필터링
-            var schedules = await _supabaseService.GetSchedulesAsync();
-
-            // 삭제되지 않은 일정만 필터링
-            _allSchedules = schedules.Where(s => !s.IsDeleted).ToList();
-
-            // 역할에 따른 추가 필터링
-            _allSchedules = FilterSchedulesByRole(_allSchedules, currentUser);
-
-            // 상태별 카운트 업데이트
-            UpdateStatusCounts();
-
-            // 필터 적용 및 UI 표시
-            ApplyFilter();
-
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Loaded {_allSchedules.Count} schedules");
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Failed to load schedules: {ex.Message}");
-        }
-        finally
-        {
-            IsLoading = false;
-        }
+        // 비동기 메서드 시그니처 유지를 위한 await (실제로는 fire-and-forget)
+        await Task.CompletedTask;
     }
 
     private List<Schedule> FilterSchedulesByRole(List<Schedule> schedules, User currentUser)
@@ -415,7 +498,7 @@ public partial class ScheduleListViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 상태 필터 적용
+    /// 상태 필터 적용 (기존 방식 - 호환성 유지)
     /// </summary>
     private void ApplyFilter()
     {
@@ -428,15 +511,38 @@ public partial class ScheduleListViewModel : ViewModelBase
             _ => _allSchedules
         };
 
-        Schedules.Clear();
-        foreach (var schedule in filtered)
-        {
-            var item = CreateScheduleListItem(schedule);
-            Schedules.Add(item);
-        }
+        // 최신순 정렬 (생성일 내림차순)
+        var sorted = filtered.OrderByDescending(s => s.CreatedAt);
+
+        // 배치 업데이트: 한 번에 컬렉션 교체 (N+1 UI 업데이트 -> 1회)
+        var items = sorted.Select(s => CreateScheduleListItem(s)).ToList();
+        Schedules = new ObservableCollection<ScheduleListItem>(items);
 
         ShowEmptyMessage = Schedules.Count == 0;
         UpdateEmptyMessage();
+    }
+
+    /// <summary>
+    /// 상태 필터 적용 (미리 생성된 아이템 사용 - ScheduleDataService에서 전달)
+    /// </summary>
+    private void ApplyFilterWithItems(List<ScheduleListItem> allItems)
+    {
+        var filtered = SelectedStatusFilter switch
+        {
+            "created" => allItems.Where(i => i.Schedule?.Status == "created"),
+            "inputted" => allItems.Where(i => i.Schedule?.Status == "inputted"),
+            "reserved" => allItems.Where(i => i.Schedule?.Status == "reserved"),
+            "confirmed" => allItems.Where(i => i.Schedule?.Status == "confirmed"),
+            _ => allItems
+        };
+
+        // 배치 업데이트: 한 번에 컬렉션 교체 (1회 UI 업데이트)
+        Schedules = new ObservableCollection<ScheduleListItem>(filtered);
+
+        ShowEmptyMessage = Schedules.Count == 0;
+        UpdateEmptyMessage();
+
+        System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] ApplyFilterWithItems - Filter: {SelectedStatusFilter}, Count: {Schedules.Count}");
     }
 
     private void UpdateEmptyMessage()
@@ -692,15 +798,21 @@ public partial class ScheduleListViewModel : ViewModelBase
     [RelayCommand]
     private async Task RefreshAsync()
     {
-        await LoadCacheDataAsync();
-        await LoadSchedulesAsync();
+        if (_authService.CurrentUser == null) return;
+
+        // ScheduleDataService를 통해 백그라운드에서 데이터 로드
+        ScheduleDataService.LoadSchedulesInBackground(_authService.CurrentUser);
+        await Task.CompletedTask;
     }
 
     /// <summary>
-    /// 캐시 정리
+    /// 캐시 정리 및 이벤트 구독 해제
     /// </summary>
     public void ClearCache()
     {
+        // 이벤트 구독 해제
+        UnsubscribeFromDataService();
+
         // 모달 닫기
         ShowDeleteModal = false;
         _pendingDeleteItem = null;

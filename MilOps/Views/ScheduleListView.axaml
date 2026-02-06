@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MilOps.ViewModels"
+             xmlns:controls="using:MilOps.Views.Controls"
              x:Class="MilOps.Views.ScheduleListView"
              x:DataType="vm:ScheduleListViewModel">
 
@@ -118,11 +119,12 @@
         <!-- 안내 메시지 -->
         <Border Background="#1a3d2e" CornerRadius="12" Padding="14"
                 IsVisible="{Binding ShowGuideMessage}" HorizontalAlignment="Stretch">
-          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Center">
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
             <TextBlock Text="&#xe88e;" FontFamily="{StaticResource MaterialIcons}"
-                       FontSize="18" Foreground="#00a872"/>
+                       FontSize="18" Foreground="#00a872" VerticalAlignment="Center"
+                       Margin="0,0,10,0"/>
             <TextBlock Text="{Binding GuideMessage}" Foreground="#effdf6" FontSize="13"
-                       TextWrapping="Wrap" VerticalAlignment="Center"/>
+                       VerticalAlignment="Center" TextAlignment="Center"/>
           </StackPanel>
         </Border>
 
@@ -153,15 +155,6 @@
           </Button>
         </Grid>
 
-        <!-- 로딩 표시 -->
-        <Border Background="#1c1c1e" CornerRadius="12" Padding="20"
-                IsVisible="{Binding IsLoading}" HorizontalAlignment="Center">
-          <StackPanel Orientation="Horizontal" Spacing="10">
-            <TextBlock Text="&#xe86a;" FontFamily="{StaticResource MaterialIcons}"
-                       FontSize="18" Foreground="#00a872"/>
-            <TextBlock Text="로딩중..." Foreground="#a0a0a0" FontSize="13"/>
-          </StackPanel>
-        </Border>
 
         <!-- 빈 목록 메시지 -->
         <Border Background="#1c1c1e" CornerRadius="12" Padding="24"
@@ -275,10 +268,14 @@
       </StackPanel>
     </ScrollViewer>
 
+    <!-- 로딩 오버레이 -->
+    <controls:LoadingOverlay IsVisible="{Binding IsLoading}"/>
+
     <!-- 삭제 확인 모달 오버레이 -->
-    <Grid IsVisible="{Binding ShowDeleteModal}">
-      <!-- 배경 오버레이 -->
-      <Border Background="#000000" Opacity="0.8"/>
+    <Grid IsVisible="{Binding ShowDeleteModal, FallbackValue=False}">
+      <!-- 배경 오버레이 (클릭 시 모달 닫기) -->
+      <Border Background="#000000" Opacity="0.8"
+              PointerPressed="OnDeleteModalOverlayPressed"/>
 
       <!-- 모달 다이얼로그 -->
       <Border Background="#1c1c1e" CornerRadius="20"

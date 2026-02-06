@@ -42,6 +42,17 @@ public partial class NotificationViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// 캐시 초기화 (로그인 전환 시 호출)
+    /// </summary>
+    public void ClearCache()
+    {
+        System.Diagnostics.Debug.WriteLine("[NotificationVM] ClearCache called - resetting all data");
+        Notifications.Clear();
+        HasNotifications = false;
+        UnreadCount = 0;
+    }
+
+    /// <summary>
     /// 알림 목록 로드
     /// </summary>
     public async Task LoadNotificationsAsync()

@@ -322,12 +322,9 @@ public partial class AppShell : UserControl
         }
     }
 
-    private void OnLoginSuccess()
+    private async void OnLoginSuccess()
     {
         System.Diagnostics.Debug.WriteLine("[AppShell] OnLoginSuccess called");
-
-        // MainView의 역할 정보 갱신
-        MainViewControl.RefreshUserRole();
 
         // FCM 토큰 서버에 저장 (Android에서만 작동)
         _ = Task.Run(async () =>
@@ -342,12 +339,25 @@ public partial class AppShell : UserControl
             }
         });
 
+        // ★ 화면 전환 전에 데이터 미리 로드 시작 (Preload)
+        // 이렇게 하면 화면 전환 후 즉시 로딩 스피너가 표시되고, 빈 화면 시간이 최소화됨
+        CalendarDataService.PreloadCurrentMonth();
+        ScheduleDataService.PreloadCache();  // 일정 목록용 캐시 미리 로드
+        System.Diagnostics.Debug.WriteLine("[AppShell] Calendar and Schedule preload started");
+
+        // 화면 전환
         LoginViewControl.IsVisible = false;
         InviteCodeViewControl.IsVisible = false;
         InviteAcceptViewControl.IsVisible = false;
         MainViewControl.IsVisible = true;
 
-        System.Diagnostics.Debug.WriteLine("[AppShell] OnLoginSuccess completed");
+        // 렌더링 완료까지 대기 (DispatcherPriority.Loaded = UI 그리기 완료 후 실행)
+        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+
+        // MainView가 visible된 후 역할 정보 갱신 및 초기화
+        await MainViewControl.RefreshUserRoleAsync();
+
+        System.Diagnostics.Debug.WriteLine("[AppShell] OnLoginSuccess completed - data loading finished");
     }
 
     private void OnLogoutRequested()

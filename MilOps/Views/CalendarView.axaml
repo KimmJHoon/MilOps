@@ -1,37 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MilOps.ViewModels"
+             xmlns:controls="using:MilOps.Views.Controls"
              x:Class="MilOps.Views.CalendarView"
              x:DataType="vm:CalendarViewModel">
-
-  <UserControl.Resources>
-    <!-- 캘린더 셀 템플릿 -->
-    <DataTemplate x:Key="CalendarCellTemplate" x:DataType="vm:CalendarDay">
-      <Border BorderBrush="#2c2c2e" BorderThickness="0.5" Background="#1c1c1e" ClipToBounds="True">
-        <Grid Margin="2">
-          <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-          </Grid.RowDefinitions>
-
-          <!-- 날짜 숫자 -->
-          <TextBlock Grid.Row="0" Text="{Binding DayText}" FontSize="12" Foreground="{Binding DayColor}"
-                     HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,0"/>
-
-          <!-- 일정 점 표시 영역 -->
-          <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="4"
-                      IsVisible="{Binding HasSchedules}">
-            <!-- 확정 일정 점 (초록색) -->
-            <Border Width="8" Height="8" CornerRadius="4" Background="#00a872"
-                    IsVisible="{Binding HasConfirmedSchedule}"/>
-            <!-- 예약(미확정) 일정 점 (주황색) -->
-            <Border Width="8" Height="8" CornerRadius="4" Background="#deb887"
-                    IsVisible="{Binding HasReservedSchedule}"/>
-          </StackPanel>
-        </Grid>
-      </Border>
-    </DataTemplate>
-  </UserControl.Resources>
 
   <Grid Background="#0a0a0a">
     <Grid.RowDefinitions>
@@ -68,19 +40,23 @@
       </Grid>
     </Border>
 
-    <!-- 범례 - 카드 스타일 -->
-    <Border Grid.Row="1" Background="#1c1c1e" Padding="16,12" Margin="12,12,12,0" CornerRadius="12">
-      <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="32">
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Border Width="16" Height="16" CornerRadius="8" Background="#00a872"/>
-          <TextBlock Text="확정" Foreground="#b0b0b0" FontSize="13" VerticalAlignment="Center"/>
+    <!-- 범례 영역 (최종관리자가 아닐 때만 표시) -->
+    <StackPanel Grid.Row="1" Spacing="8" Margin="12,12,12,0"
+                IsVisible="{Binding ShowLegend}">
+      <!-- 범례 - 카드 스타일 -->
+      <Border Background="#1c1c1e" Padding="16,12" CornerRadius="12">
+        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="32">
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Border Width="16" Height="16" CornerRadius="8" Background="#00a872"/>
+            <TextBlock Text="확정" Foreground="#b0b0b0" FontSize="13" VerticalAlignment="Center"/>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="8">
+            <Border Width="16" Height="16" CornerRadius="8" Background="#deb887"/>
+            <TextBlock Text="예약 (미확정)" Foreground="#b0b0b0" FontSize="13" VerticalAlignment="Center"/>
+          </StackPanel>
         </StackPanel>
-        <StackPanel Orientation="Horizontal" Spacing="8">
-          <Border Width="16" Height="16" CornerRadius="8" Background="#deb887"/>
-          <TextBlock Text="예약 (미확정)" Foreground="#b0b0b0" FontSize="13" VerticalAlignment="Center"/>
-        </StackPanel>
-      </StackPanel>
-    </Border>
+      </Border>
+    </StackPanel>
 
     <!-- 요일 헤더 -->
     <Border Grid.Row="2" Background="Transparent" Padding="12,12,12,8">
@@ -105,232 +81,82 @@
       </Grid>
     </Border>
 
-    <!-- 날짜 그리드 - 6주 고정 레이아웃 -->
+    <!-- 날짜 그리드 - ItemsControl + UniformGrid 사용 (동적 바인딩) -->
     <Border Grid.Row="3" Margin="8,0,8,8" CornerRadius="16" ClipToBounds="True">
-      <Grid Background="#1c1c1e" Name="CalendarGrid">
-        <Grid.RowDefinitions>
-          <RowDefinition Height="*"/>
-          <RowDefinition Height="*"/>
-          <RowDefinition Height="*"/>
-          <RowDefinition Height="*"/>
-          <RowDefinition Height="*"/>
-          <RowDefinition Height="*"/>
-        </Grid.RowDefinitions>
-        <Grid.ColumnDefinitions>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-          <ColumnDefinition Width="*"/>
-        </Grid.ColumnDefinitions>
+      <ItemsControl ItemsSource="{Binding Days}" Background="#1c1c1e">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate>
+            <UniformGrid Rows="6" Columns="7"/>
+          </ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:CalendarDay">
+            <Button Command="{Binding $parent[ItemsControl].((vm:CalendarViewModel)DataContext).SelectDayCommand}"
+                    CommandParameter="{Binding}"
+                    Background="Transparent" BorderThickness="0" Padding="0"
+                    HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                    HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+              <Border BorderBrush="#2c2c2e" BorderThickness="0.5" Background="#1c1c1e" ClipToBounds="True">
+                <Grid Margin="2">
+                  <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                  </Grid.RowDefinitions>
 
-        <!-- Week 1 -->
-        <Button Grid.Row="0" Grid.Column="0" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[0]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[0]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="0" Grid.Column="1" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[1]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[1]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="0" Grid.Column="2" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[2]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[2]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="0" Grid.Column="3" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[3]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[3]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="0" Grid.Column="4" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[4]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[4]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="0" Grid.Column="5" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[5]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[5]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="0" Grid.Column="6" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[6]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[6]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
+                  <!-- 날짜 숫자 -->
+                  <TextBlock Grid.Row="0" Text="{Binding DayText}" FontSize="12" Foreground="{Binding DayColor}"
+                             HorizontalAlignment="Center" VerticalAlignment="Top" Margin="0,2,0,0"/>
 
-        <!-- Week 2 -->
-        <Button Grid.Row="1" Grid.Column="0" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[7]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[7]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="1" Grid.Column="1" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[8]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[8]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="1" Grid.Column="2" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[9]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[9]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="1" Grid.Column="3" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[10]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[10]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="1" Grid.Column="4" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[11]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[11]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="1" Grid.Column="5" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[12]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[12]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="1" Grid.Column="6" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[13]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[13]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-
-        <!-- Week 3 -->
-        <Button Grid.Row="2" Grid.Column="0" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[14]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[14]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="2" Grid.Column="1" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[15]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[15]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="2" Grid.Column="2" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[16]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[16]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="2" Grid.Column="3" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[17]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[17]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="2" Grid.Column="4" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[18]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[18]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="2" Grid.Column="5" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[19]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[19]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="2" Grid.Column="6" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[20]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[20]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-
-        <!-- Week 4 -->
-        <Button Grid.Row="3" Grid.Column="0" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[21]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[21]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="3" Grid.Column="1" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[22]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[22]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="3" Grid.Column="2" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[23]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[23]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="3" Grid.Column="3" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[24]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[24]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="3" Grid.Column="4" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[25]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[25]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="3" Grid.Column="5" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[26]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[26]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="3" Grid.Column="6" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[27]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[27]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-
-        <!-- Week 5 -->
-        <Button Grid.Row="4" Grid.Column="0" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[28]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[28]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="4" Grid.Column="1" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[29]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[29]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="4" Grid.Column="2" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[30]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[30]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="4" Grid.Column="3" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[31]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[31]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="4" Grid.Column="4" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[32]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[32]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="4" Grid.Column="5" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[33]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[33]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="4" Grid.Column="6" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[34]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[34]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-
-        <!-- Week 6 -->
-        <Button Grid.Row="5" Grid.Column="0" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[35]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[35]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="5" Grid.Column="1" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[36]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[36]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="5" Grid.Column="2" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[37]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[37]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="5" Grid.Column="3" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[38]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[38]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="5" Grid.Column="4" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[39]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[39]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="5" Grid.Column="5" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[40]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[40]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-        <Button Grid.Row="5" Grid.Column="6" Command="{Binding SelectDayCommand}" CommandParameter="{Binding Days[41]}"
-                Background="Transparent" BorderThickness="0" Padding="0" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
-                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
-                Content="{Binding Days[41]}" ContentTemplate="{StaticResource CalendarCellTemplate}"/>
-      </Grid>
+                  <!-- 일정 점 표시 영역 -->
+                  <Grid Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                        IsVisible="{Binding HasSchedules}" Margin="1">
+                    <!-- 최종관리자: 시도/사단별 색상 뱃지 (예약 개수 표시) - WrapPanel로 자동 줄바꿈 -->
+                    <ItemsControl ItemsSource="{Binding GroupBadges}" IsVisible="{Binding IsSuperAdmin}"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center">
+                      <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                          <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
+                        </ItemsPanelTemplate>
+                      </ItemsControl.ItemsPanel>
+                      <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GroupBadgeItem">
+                          <Border MinWidth="14" Height="14" CornerRadius="7" Background="{Binding Color}"
+                                  Padding="2,0" Margin="1">
+                            <TextBlock Text="{Binding Count}" FontSize="9" Foreground="White"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                          </Border>
+                        </DataTemplate>
+                      </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <!-- 일반 사용자: 확정/예약 점 -->
+                    <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsSuperAdmin}"
+                                HorizontalAlignment="Center" VerticalAlignment="Center">
+                      <Border Width="8" Height="8" CornerRadius="4" Background="#00a872"
+                              IsVisible="{Binding HasConfirmedSchedule}"/>
+                      <Border Width="8" Height="8" CornerRadius="4" Background="#deb887"
+                              IsVisible="{Binding HasReservedSchedule}"/>
+                    </StackPanel>
+                  </Grid>
+                </Grid>
+              </Border>
+            </Button>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
     </Border>
 
     <!-- 로딩 오버레이 -->
-    <Border Grid.RowSpan="4"
-            Background="#CC0a0a0a"
-            IsVisible="{Binding IsLoading}">
-      <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="16">
-        <TextBlock Text="&#xe627;" FontFamily="{StaticResource MaterialIcons}"
-                   FontSize="36" Foreground="#00a872" HorizontalAlignment="Center"/>
-        <TextBlock Text="일정 로딩 중..."
-                   Foreground="#effdf6"
-                   FontSize="16"
-                   HorizontalAlignment="Center"/>
-      </StackPanel>
-    </Border>
+    <controls:LoadingOverlay Grid.RowSpan="4" IsVisible="{Binding IsLoading}"/>
 
     <!-- 선택한 날짜의 일정 목록 패널 -->
     <Border Grid.RowSpan="4"
             Background="#E60a0a0a"
             IsVisible="{Binding HasSelectedDaySchedules}">
       <Border Background="#1c1c1e" CornerRadius="20" Margin="16" Padding="20"
-              VerticalAlignment="Center" MaxHeight="500">
-        <Grid RowDefinitions="Auto,*,Auto">
+              VerticalAlignment="Center" MaxHeight="600">
+        <Grid RowDefinitions="Auto,Auto,*,Auto">
           <!-- 헤더 -->
-          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+          <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
             <StackPanel Orientation="Horizontal" Spacing="10">
               <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}"
                          FontSize="24" Foreground="#00a872" VerticalAlignment="Center"/>
@@ -344,9 +170,137 @@
             </Button>
           </Grid>
 
+          <!-- 최종관리자용 필터 (모달 내부) -->
+          <Border Grid.Row="1" Background="#2c2c2e" CornerRadius="12" Padding="12,10" Margin="0,0,0,12"
+                  IsVisible="{Binding ShowFilter}">
+            <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
+              <Grid>
+                <!-- 시도 필터 (행정안전부) -->
+                <ItemsControl ItemsSource="{Binding RegionFilters}"
+                              IsVisible="{Binding IsRegionFilter}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="10"/>
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RegionFilterItem">
+                      <Button Command="{Binding $parent[ItemsControl].((vm:CalendarViewModel)DataContext).SelectRegionFilterCommand}"
+                              CommandParameter="{Binding}"
+                              Background="{Binding IsSelected, Converter={StaticResource BoolToFilterBgConverter}}"
+                              BorderBrush="{Binding Color}"
+                              BorderThickness="2"
+                              CornerRadius="16"
+                              Padding="14,8"
+                              MinWidth="60"
+                              MinHeight="36">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <Border Width="10" Height="10" CornerRadius="5" Background="{Binding Color}"
+                                  IsVisible="{Binding IsSelected}"/>
+                          <TextBlock Text="{Binding Name}" FontSize="13"
+                                     Foreground="{Binding IsSelected, Converter={StaticResource BoolToFilterFgConverter}}"/>
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- 사단 필터 (육군본부) -->
+                <ItemsControl ItemsSource="{Binding DivisionFilters}"
+                              IsVisible="{Binding IsDivisionFilter}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="10"/>
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DivisionFilterItem">
+                      <Button Command="{Binding $parent[ItemsControl].((vm:CalendarViewModel)DataContext).SelectDivisionFilterCommand}"
+                              CommandParameter="{Binding}"
+                              Background="{Binding IsSelected, Converter={StaticResource BoolToFilterBgConverter}}"
+                              BorderBrush="{Binding Color}"
+                              BorderThickness="2"
+                              CornerRadius="16"
+                              Padding="14,8"
+                              MinWidth="60"
+                              MinHeight="36">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <Border Width="10" Height="10" CornerRadius="5" Background="{Binding Color}"
+                                  IsVisible="{Binding IsSelected}"/>
+                          <TextBlock Text="{Binding Name}" FontSize="13"
+                                     Foreground="{Binding IsSelected, Converter={StaticResource BoolToFilterFgConverter}}"/>
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- 군/구 필터 (지자체 도 중간관리자) -->
+                <ItemsControl ItemsSource="{Binding DistrictFilters}"
+                              IsVisible="{Binding IsDistrictFilter}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="10"/>
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DistrictFilterItem">
+                      <Button Command="{Binding $parent[ItemsControl].((vm:CalendarViewModel)DataContext).SelectDistrictFilterCommand}"
+                              CommandParameter="{Binding}"
+                              Background="{Binding IsSelected, Converter={StaticResource BoolToFilterBgConverter}}"
+                              BorderBrush="{Binding Color}"
+                              BorderThickness="2"
+                              CornerRadius="16"
+                              Padding="14,8"
+                              MinWidth="60"
+                              MinHeight="36">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <Border Width="10" Height="10" CornerRadius="5" Background="{Binding Color}"
+                                  IsVisible="{Binding IsSelected}"/>
+                          <TextBlock Text="{Binding Name}" FontSize="13"
+                                     Foreground="{Binding IsSelected, Converter={StaticResource BoolToFilterFgConverter}}"/>
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <!-- 대대 필터 (사단 중간관리자) -->
+                <ItemsControl ItemsSource="{Binding BattalionFilters}"
+                              IsVisible="{Binding IsBattalionFilter}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                      <StackPanel Orientation="Horizontal" Spacing="10"/>
+                    </ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BattalionFilterItem">
+                      <Button Command="{Binding $parent[ItemsControl].((vm:CalendarViewModel)DataContext).SelectBattalionFilterCommand}"
+                              CommandParameter="{Binding}"
+                              Background="{Binding IsSelected, Converter={StaticResource BoolToFilterBgConverter}}"
+                              BorderBrush="{Binding Color}"
+                              BorderThickness="2"
+                              CornerRadius="16"
+                              Padding="14,8"
+                              MinWidth="60"
+                              MinHeight="36">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                          <Border Width="10" Height="10" CornerRadius="5" Background="{Binding Color}"
+                                  IsVisible="{Binding IsSelected}"/>
+                          <TextBlock Text="{Binding Name}" FontSize="13"
+                                     Foreground="{Binding IsSelected, Converter={StaticResource BoolToFilterFgConverter}}"/>
+                        </StackPanel>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </Grid>
+            </ScrollViewer>
+          </Border>
+
           <!-- 일정 목록 -->
-          <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
-            <ItemsControl ItemsSource="{Binding SelectedDaySchedules}">
+          <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl ItemsSource="{Binding FilteredSelectedDaySchedules}">
               <ItemsControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:CalendarScheduleItem">
                   <Button Command="{Binding $parent[ItemsControl].((vm:CalendarViewModel)DataContext).OpenScheduleDetailCommand}"
@@ -354,14 +308,22 @@
                           Background="Transparent" Padding="0" Margin="0,0,0,10"
                           HorizontalAlignment="Stretch"
                           HorizontalContentAlignment="Stretch">
-                    <Border Background="#2c2c2e" CornerRadius="14" Padding="16">
+                    <Border Background="#3c3c3e" CornerRadius="14" Padding="16"
+                            BorderBrush="{Binding GroupColor}" BorderThickness="0,0,0,3">
                       <Grid RowDefinitions="Auto,Auto,Auto">
-                        <!-- 업체명 + 상태 -->
+                        <!-- 업체명 + 상태 + 시도/사단 -->
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
-                          <TextBlock Text="{Binding CompanyName}" FontSize="15" Foreground="#effdf6"
-                                     TextTrimming="CharacterEllipsis"/>
+                          <StackPanel>
+                            <TextBlock Text="{Binding CompanyName}" FontSize="15" Foreground="#effdf6"
+                                       TextTrimming="CharacterEllipsis"/>
+                            <!-- 최종관리자용: 시도/사단명 표시 -->
+                            <TextBlock Text="{Binding GroupName}" FontSize="12" Foreground="{Binding GroupColor}"
+                                       Margin="0,2,0,0"
+                                       IsVisible="{Binding HasGroupName}"/>
+                          </StackPanel>
                           <Border Grid.Column="1" Background="{Binding StatusColor}"
-                                  CornerRadius="8" Padding="10,5" Margin="10,0,0,0">
+                                  CornerRadius="8" Padding="10,5" Margin="10,0,0,0"
+                                  VerticalAlignment="Top">
                             <TextBlock Text="{Binding StatusDisplayName}" FontSize="12" Foreground="White"/>
                           </Border>
                         </Grid>
@@ -388,7 +350,7 @@
           </ScrollViewer>
 
           <!-- 안내 텍스트 -->
-          <Border Grid.Row="2" Background="#2c2c2e" CornerRadius="10" Padding="12" Margin="0,12,0,0">
+          <Border Grid.Row="3" Background="#2c2c2e" CornerRadius="10" Padding="12" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
               <TextBlock Text="&#xe88e;" FontFamily="{StaticResource MaterialIcons}"
                          FontSize="14" Foreground="#6a6a6a" VerticalAlignment="Center"/>

@@ -4,74 +4,90 @@
              x:Class="MilOps.Views.InviteCodeView"
              x:DataType="vm:InviteCodeViewModel">
 
-  <Grid Background="{DynamicResource SystemChromeLowColor}">
-    <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
-                Spacing="20" Width="300" Margin="20">
+  <Grid Background="#0a0a0a">
+    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+      <StackPanel VerticalAlignment="Center" HorizontalAlignment="Stretch"
+                  Spacing="24" MaxWidth="320" Margin="24" MinHeight="500">
 
-      <!-- 뒤로가기 버튼 -->
-      <Button Command="{Binding GoBackCommand}"
-              HorizontalAlignment="Left"
-              Background="Transparent"
-              Padding="5"
-              Margin="0,0,0,10">
-        <StackPanel Orientation="Horizontal" Spacing="5">
-          <TextBlock Text="←" FontSize="16" Foreground="{DynamicResource SystemBaseHighColor}"/>
-          <TextBlock Text="뒤로" FontSize="14" Foreground="{DynamicResource SystemBaseHighColor}"/>
-        </StackPanel>
-      </Button>
-
-      <!-- 타이틀 -->
-      <TextBlock Text="초대코드 입력"
-                 FontSize="24"
-                 Foreground="{DynamicResource SystemBaseHighColor}"
-                 HorizontalAlignment="Center"
-                 Margin="0,0,0,10"/>
-
-      <!-- 설명 -->
-      <TextBlock Text="관리자로부터 받은 8자리 초대코드를 입력해주세요"
-                 FontSize="12"
-                 Foreground="#888888"
-                 HorizontalAlignment="Center"
-                 TextWrapping="Wrap"
-                 TextAlignment="Center"
-                 Margin="0,0,0,20"/>
-
-      <!-- 초대코드 입력 -->
-      <StackPanel Spacing="5">
-        <TextBlock Text="초대코드" Foreground="{DynamicResource SystemBaseHighColor}" FontSize="14"/>
-        <TextBox Text="{Binding InviteCode}"
-                 Watermark="예: ABC12345"
-                 Padding="15"
-                 FontSize="18"
-                 TextAlignment="Center"
-                 MaxLength="8"/>
-      </StackPanel>
-
-      <!-- 에러 메시지 -->
-      <TextBlock Text="{Binding ErrorMessage}"
-                 Foreground="#FF6B6B"
-                 FontSize="12"
-                 HorizontalAlignment="Center"
-                 TextWrapping="Wrap"
-                 TextAlignment="Center"
-                 IsVisible="{Binding HasError}"/>
-
-      <!-- 확인 버튼 -->
-      <Button Command="{Binding VerifyCodeCommand}"
-              HorizontalAlignment="Stretch"
-              HorizontalContentAlignment="Center"
-              Classes="accent"
-              Padding="15"
-              Margin="0,10,0,0"
-              IsEnabled="{Binding !IsLoading}">
-        <Panel>
-          <TextBlock Text="확인" FontSize="16" IsVisible="{Binding !IsLoading}"/>
-          <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsLoading}" HorizontalAlignment="Center">
-            <TextBlock Text="확인 중..." FontSize="16"/>
+        <!-- 뒤로가기 버튼 -->
+        <Button Command="{Binding GoBackCommand}"
+                HorizontalAlignment="Left"
+                Background="#2c2c2e"
+                CornerRadius="10"
+                Padding="12,8">
+          <StackPanel Orientation="Horizontal" Spacing="6">
+            <TextBlock Text="&#xe5c4;" FontFamily="{StaticResource MaterialIcons}"
+                       FontSize="18" Foreground="#effdf6" VerticalAlignment="Center"/>
+            <TextBlock Text="뒤로" FontSize="14" Foreground="#effdf6"/>
           </StackPanel>
-        </Panel>
-      </Button>
+        </Button>
 
-    </StackPanel>
+        <!-- 타이틀 영역 -->
+        <StackPanel Spacing="12" Margin="0,20,0,20">
+          <Border Width="80" Height="80" CornerRadius="20" Background="#1c1c1e"
+                  HorizontalAlignment="Center">
+            <TextBlock Text="&#xe7fe;" FontFamily="{StaticResource MaterialIcons}"
+                       FontSize="40" Foreground="#deb887"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <TextBlock Text="초대코드 입력"
+                     FontSize="26"
+                     Foreground="#effdf6"
+                     HorizontalAlignment="Center"/>
+          <TextBlock Text="관리자로부터 받은 8자리 초대코드를 입력해주세요"
+                     FontSize="13"
+                     Foreground="#6a6a6a"
+                     HorizontalAlignment="Center"
+                     TextWrapping="Wrap"
+                     TextAlignment="Center"/>
+        </StackPanel>
+
+        <!-- 입력 카드 -->
+        <Border Background="#1c1c1e" CornerRadius="20" Padding="24">
+          <StackPanel Spacing="20">
+
+            <!-- 초대코드 입력 -->
+            <StackPanel Spacing="8">
+              <TextBlock Text="초대코드" Foreground="#a0a0a0" FontSize="13"/>
+              <TextBox Text="{Binding InviteCode}"
+                       Watermark="예: ABC12345"
+                       FontSize="18"
+                       TextAlignment="Center"
+                       MaxLength="8"/>
+            </StackPanel>
+
+            <!-- 에러 메시지 -->
+            <Border Background="#3d1f1f" CornerRadius="10" Padding="12"
+                    IsVisible="{Binding HasError}">
+              <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                <TextBlock Text="&#xe002;" FontFamily="{StaticResource MaterialIcons}"
+                           FontSize="16" Foreground="#ff6b6b" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding ErrorMessage}"
+                           Foreground="#ff6b6b" FontSize="13" VerticalAlignment="Center"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+
+            <!-- 확인 버튼 -->
+            <Button Command="{Binding VerifyCodeCommand}"
+                    HorizontalAlignment="Stretch"
+                    HorizontalContentAlignment="Center"
+                    Background="#00a872"
+                    CornerRadius="12"
+                    Padding="16"
+                    IsEnabled="{Binding !IsLoading}">
+              <Panel>
+                <TextBlock Text="확인" FontSize="16" Foreground="White" IsVisible="{Binding !IsLoading}"/>
+                <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding IsLoading}" HorizontalAlignment="Center">
+                  <TextBlock Text="확인 중..." FontSize="16" Foreground="White"/>
+                </StackPanel>
+              </Panel>
+            </Button>
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
   </Grid>
 </UserControl>

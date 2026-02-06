@@ -27,6 +27,15 @@ public partial class ScheduleCreateView : UserControl
         await InitializeViewModelAsync();
     }
 
+    /// <summary>
+    /// 강제 초기화 (화면 열 때 호출)
+    /// </summary>
+    public async Task ForceInitializeAsync()
+    {
+        System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] ForceInitializeAsync called");
+        await InitializeViewModelAsync();
+    }
+
     private async Task InitializeViewModelAsync()
     {
         System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] InitializeViewModelAsync - START");

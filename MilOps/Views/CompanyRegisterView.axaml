@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MilOps.ViewModels"
+             xmlns:controls="using:MilOps.Views.Controls"
              x:Class="MilOps.Views.CompanyRegisterView"
              x:DataType="vm:CompanyRegisterViewModel"
              DataContext="{x:Null}">
@@ -28,13 +29,19 @@
         <Grid ColumnDefinitions="Auto,*,Auto">
           <Button Grid.Column="0" Command="{Binding CloseCommand}"
                   Background="Transparent" Padding="8,4">
-            <TextBlock Text="← 뒤로" Foreground="White" FontSize="14"/>
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <TextBlock Text="&#xe5c4;" FontFamily="{StaticResource MaterialIcons}" FontSize="18" Foreground="White" VerticalAlignment="Center"/>
+              <TextBlock Text="뒤로" Foreground="White" FontSize="14" VerticalAlignment="Center"/>
+            </StackPanel>
           </Button>
           <TextBlock Grid.Column="1" Text="업체 관리" FontSize="16" Foreground="White"
                      HorizontalAlignment="Center" VerticalAlignment="Center"/>
           <Button Grid.Column="2" Command="{Binding OpenRegisterDialogCommand}"
                   Background="#2196F3" Padding="10,6" CornerRadius="6">
-            <TextBlock Text="+ 등록" Foreground="White" FontSize="13"/>
+            <StackPanel Orientation="Horizontal" Spacing="4">
+              <TextBlock Text="&#xe145;" FontFamily="{StaticResource MaterialIcons}" FontSize="16" Foreground="White" VerticalAlignment="Center"/>
+              <TextBlock Text="등록" Foreground="White" FontSize="13" VerticalAlignment="Center"/>
+            </StackPanel>
           </Button>
         </Grid>
       </Border>
@@ -42,10 +49,6 @@
       <!-- 업체 목록 -->
       <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="10" Spacing="8">
-          <!-- 로딩 -->
-          <TextBlock Text="로딩중..." IsVisible="{Binding IsLoading}"
-                     Foreground="#888888" HorizontalAlignment="Center" FontSize="13"/>
-
           <!-- 성공 메시지 -->
           <Border Background="#2E7D32" CornerRadius="6" Padding="10"
                   IsVisible="{Binding SuccessMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
@@ -139,6 +142,9 @@
         </StackPanel>
       </ScrollViewer>
     </Grid>
+
+    <!-- 로딩 오버레이 -->
+    <controls:LoadingOverlay IsVisible="{Binding IsLoading}"/>
 
     <!-- 등록/수정 다이얼로그 오버레이 -->
     <Border Background="#80000000" IsVisible="{Binding IsRegisterDialogOpen}"/>
