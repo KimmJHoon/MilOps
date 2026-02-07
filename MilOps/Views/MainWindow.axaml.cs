@@ -12,65 +12,50 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        System.Diagnostics.Debug.WriteLine($"[MainWindow] LoginViewControl.DataContext: {LoginViewControl.DataContext?.GetType().Name ?? "null"}");
-
         if (LoginViewControl.DataContext is LoginViewModel loginVm)
         {
             loginVm.LoginSuccessful += OnLoginSuccess;
-            System.Diagnostics.Debug.WriteLine("[MainWindow] LoginSuccessful event connected");
         }
         else
         {
-            // DataContext가 아직 설정되지 않은 경우, Loaded 이벤트에서 연결
             LoginViewControl.Loaded += (s, e) =>
             {
                 if (LoginViewControl.DataContext is LoginViewModel vm)
                 {
                     vm.LoginSuccessful += OnLoginSuccess;
-                    System.Diagnostics.Debug.WriteLine("[MainWindow] LoginSuccessful event connected (on Loaded)");
                 }
             };
         }
 
-        // 창이 로드된 후 세션 복원 시도
         Loaded += OnWindowLoaded;
     }
 
     private async void OnWindowLoaded(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("[MainWindow] OnWindowLoaded - Starting session restore");
-
         try
         {
-            // Supabase 초기화
             if (!SupabaseService.IsInitialized)
             {
                 await SupabaseService.InitializeAsync();
             }
 
-            // 세션 복원 시도
             var restored = await AuthService.TryRestoreSessionAsync();
-            System.Diagnostics.Debug.WriteLine($"[MainWindow] Session restored: {restored}");
 
-            // 로딩 화면 숨기고 적절한 화면 표시
             LoadingView.IsVisible = false;
 
             if (restored)
             {
-                // 세션이 복원되면 메인 화면 표시
                 MainViewControl.RefreshUserRole();
                 MainViewControl.IsVisible = true;
             }
             else
             {
-                // 세션이 없으면 로그인 화면 표시
                 LoginViewControl.IsVisible = true;
             }
         }
         catch (System.Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[MainWindow] Session restore error: {ex.Message}");
-            // 에러 발생 시 로그인 화면 표시
             LoadingView.IsVisible = false;
             LoginViewControl.IsVisible = true;
         }
@@ -78,12 +63,8 @@ public partial class MainWindow : Window
 
     private void OnLoginSuccess()
     {
-        System.Diagnostics.Debug.WriteLine("[MainWindow] OnLoginSuccess called");
-
-        // MainView의 역할 정보 갱신
         MainViewControl.RefreshUserRole();
 
-        // FCM 토큰 서버에 저장 (Android에서만 작동)
         _ = Task.Run(async () =>
         {
             try
@@ -98,8 +79,6 @@ public partial class MainWindow : Window
 
         LoginViewControl.IsVisible = false;
         MainViewControl.IsVisible = true;
-
-        System.Diagnostics.Debug.WriteLine("[MainWindow] OnLoginSuccess completed");
     }
 
 }

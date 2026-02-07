@@ -111,8 +111,6 @@ public partial class InviteAcceptViewModel : ViewModelBase
         PasswordConfirm = "";
         LoginIdCheckMessage = "";
         IsLoginIdAvailable = false;
-
-        System.Diagnostics.Debug.WriteLine($"[InviteAccept] Initialized with invitation: {invitation.InviteCode}, Name: {invitation.Name}");
     }
 
     /// <summary>
@@ -146,8 +144,6 @@ public partial class InviteAcceptViewModel : ViewModelBase
 
             var response = await _httpClient.SendAsync(request);
             var responseJson = await response.Content.ReadAsStringAsync();
-
-            System.Diagnostics.Debug.WriteLine($"[InviteAccept] validate-invitation response: {responseJson}");
 
             var result = JsonSerializer.Deserialize<ValidateInvitationResponse>(responseJson);
 
@@ -282,8 +278,6 @@ public partial class InviteAcceptViewModel : ViewModelBase
 
             var response = await _httpClient.SendAsync(request);
             var responseJson = await response.Content.ReadAsStringAsync();
-
-            System.Diagnostics.Debug.WriteLine($"[InviteAccept] accept-invitation response: {responseJson}");
 
             var result = JsonSerializer.Deserialize<AcceptInvitationResponse>(responseJson);
 

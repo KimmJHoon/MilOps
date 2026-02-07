@@ -67,7 +67,6 @@ public static class ScheduleDataService
     public static void PreloadCache()
     {
         // RPC가 모든 데이터를 한 번에 가져오므로 별도 캐시 로드 불필요
-        System.Diagnostics.Debug.WriteLine("[ScheduleDataService] PreloadCache called (RPC handles all data)");
     }
 
     /// <summary>
@@ -80,7 +79,6 @@ public static class ScheduleDataService
         // 1단계: Optimistic UI - 캐시된 데이터가 있으면 즉시 반환 (0ms)
         if (_lastResult != null)
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [Optimistic] Returning cached data immediately ({_lastResult.Schedules.Count} schedules)");
             DataLoaded?.Invoke(_lastResult);
             // 로딩 상태는 true로 설정하되, 이미 데이터가 있으므로 UI에서는 로딩 화면 안 보임
         }
@@ -90,7 +88,6 @@ public static class ScheduleDataService
         {
             if (_isLoadingInProgress)
             {
-                System.Diagnostics.Debug.WriteLine("[ScheduleDataService] [BG] Load already in progress, skipping");
                 return;
             }
             _isLoadingInProgress = true;
@@ -108,15 +105,8 @@ public static class ScheduleDataService
                     LoadingStateChanged?.Invoke(true);
                 }
 
-                System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Starting RPC load for user: {currentUser.LoginId}");
-
-                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
                 // RPC를 통한 단일 요청으로 모든 데이터 로드
                 var result = await LoadSchedulesViaRpcAsync(currentUser);
-
-                stopwatch.Stop();
-                System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] RPC load complete in {stopwatch.ElapsedMilliseconds}ms. Schedules: {result.Schedules.Count}");
 
                 // 결과 캐싱
                 _lastResult = result;
@@ -152,8 +142,6 @@ public static class ScheduleDataService
             return new ScheduleDataLoadedEventArgs { Schedules = new List<Schedule>() };
         }
 
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
         // RPC 호출 파라미터
         var rpcParams = new Dictionary<string, object>
         {
@@ -164,11 +152,7 @@ public static class ScheduleDataService
         // RPC 호출 (단일 요청으로 모든 데이터)
         var response = await SupabaseService.Client.Rpc("get_schedule_list", rpcParams);
 
-        System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] RPC response in {stopwatch.ElapsedMilliseconds}ms");
-
-        // 응답 내용 확인 (디버깅용)
         var rawContent = response.Content ?? "null";
-        System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Raw response (first 500 chars): {rawContent.Substring(0, Math.Min(500, rawContent.Length))}");
 
         // JSON 파싱 - Supabase RPC 응답이 wrapper로 감싸져 있을 수 있음
         var jsonContent = rawContent;
@@ -181,17 +165,14 @@ public static class ScheduleDataService
                 if (tempObj.ContainsKey("body"))
                 {
                     jsonContent = tempObj["body"]?.ToString() ?? "{}";
-                    System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Extracted from 'body' wrapper");
                 }
                 else if (tempObj.ContainsKey("message"))
                 {
                     jsonContent = tempObj["message"]?.ToString() ?? "{}";
-                    System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Extracted from 'message' wrapper");
                 }
                 else if (tempObj.ContainsKey("data"))
                 {
                     jsonContent = tempObj["data"]?.ToString() ?? "{}";
-                    System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Extracted from 'data' wrapper");
                 }
             }
         }
@@ -223,9 +204,6 @@ public static class ScheduleDataService
 
         // ScheduleListItem 생성
         var items = schedules.Select(s => CreateScheduleListItem(s, currentUser)).ToList();
-
-        stopwatch.Stop();
-        System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Total processing: {stopwatch.ElapsedMilliseconds}ms");
 
         return new ScheduleDataLoadedEventArgs
         {
@@ -338,7 +316,6 @@ public static class ScheduleDataService
             }
 
             _cacheLoaded = true;
-            System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] Cache updated: {_companyNames.Count} companies, {_battalionNames.Count} battalions, {_districtNames.Count} districts, {_userNames.Count} users");
         }
         catch (Exception ex)
         {
@@ -593,8 +570,6 @@ public static class ScheduleDataService
         {
             _isLoadingInProgress = false;
         }
-
-        System.Diagnostics.Debug.WriteLine("[ScheduleDataService] Cache cleared");
     }
 
     /// <summary>
@@ -604,7 +579,6 @@ public static class ScheduleDataService
     public static void InvalidateCache()
     {
         _lastResult = null;
-        System.Diagnostics.Debug.WriteLine("[ScheduleDataService] Cache invalidated");
     }
 
     /// <summary>

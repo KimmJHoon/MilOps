@@ -164,8 +164,6 @@ public partial class ScheduleListViewModel : ViewModelBase
         ScheduleDataService.LoadingStateChanged += OnLoadingStateChanged;
         ScheduleDataService.CacheLoaded += OnCacheLoaded;
         _isSubscribed = true;
-
-        System.Diagnostics.Debug.WriteLine("[ScheduleListVM] Subscribed to ScheduleDataService");
     }
 
     /// <summary>
@@ -179,8 +177,6 @@ public partial class ScheduleListViewModel : ViewModelBase
         ScheduleDataService.LoadingStateChanged -= OnLoadingStateChanged;
         ScheduleDataService.CacheLoaded -= OnCacheLoaded;
         _isSubscribed = false;
-
-        System.Diagnostics.Debug.WriteLine("[ScheduleListVM] Unsubscribed from ScheduleDataService");
     }
 
     /// <summary>
@@ -190,8 +186,6 @@ public partial class ScheduleListViewModel : ViewModelBase
     {
         Dispatcher.UIThread.Post(() =>
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] OnDataLoaded - {args.Schedules.Count} schedules");
-
             // 원본 데이터 저장
             _allSchedules = args.Schedules;
 
@@ -232,8 +226,6 @@ public partial class ScheduleListViewModel : ViewModelBase
     {
         Dispatcher.UIThread.Post(() =>
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] OnCacheLoaded - {args.CompanyCount} companies, {args.UserCount} users");
-
             // 캐시 데이터를 로컬 딕셔너리에 복사 (기존 코드 호환성)
             _companyNames = ScheduleDataService.CompanyNames.ToDictionary(kv => kv.Key, kv => kv.Value);
             _battalionNames = ScheduleDataService.BattalionNames.ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -258,7 +250,6 @@ public partial class ScheduleListViewModel : ViewModelBase
             // 로그인되지 않은 상태면 초기화 중단
             if (_authService.CurrentUser == null)
             {
-                System.Diagnostics.Debug.WriteLine("[ScheduleListVM] InitializeAsync skipped - no current user");
                 return Task.CompletedTask;
             }
 
@@ -266,7 +257,6 @@ public partial class ScheduleListViewModel : ViewModelBase
 
             // 이미 캐시된 데이터가 있으면 Preload에서 로드한 것 사용
             // LoadSchedulesInBackground는 캐시가 있으면 즉시 반환 (0ms)
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] InitializeAsync - HasCache: {ScheduleDataService.HasCachedResult}");
             ScheduleDataService.LoadSchedulesInBackground(_authService.CurrentUser);
         }
         catch (Exception ex)
@@ -391,7 +381,6 @@ public partial class ScheduleListViewModel : ViewModelBase
                 UpdateCurrentUserDisplay(_authService.CurrentUser);
             }
 
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Cache loaded: {_companyNames.Count} companies, {_battalionNames.Count} battalions, {_districtNames.Count} districts, {_userNames.Count} users");
         }
         catch (Exception ex)
         {
@@ -541,8 +530,6 @@ public partial class ScheduleListViewModel : ViewModelBase
 
         ShowEmptyMessage = Schedules.Count == 0;
         UpdateEmptyMessage();
-
-        System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] ApplyFilterWithItems - Filter: {SelectedStatusFilter}, Count: {Schedules.Count}");
     }
 
     private void UpdateEmptyMessage()
@@ -581,8 +568,6 @@ public partial class ScheduleListViewModel : ViewModelBase
             // 사단담당자가 생성됨 상태의 일정만 삭제 가능
             item.CanDelete = currentUser.Role == "middle_military"
                 && schedule.Status == "created";
-
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] CreateScheduleListItem - Schedule: {schedule.Id}, Status: {schedule.Status}, Role: {currentUser.Role}, CanDelete: {item.CanDelete}");
 
             // 상태별 미확정 정보 표시
             if (schedule.Status == "created")
@@ -716,7 +701,6 @@ public partial class ScheduleListViewModel : ViewModelBase
         // 권한 확인: 사단담당자가 생성됨 상태의 일정만 삭제 가능
         if (currentUser?.Role != "middle_military" || schedule.Status != "created")
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Delete not allowed - Role: {currentUser?.Role}, Status: {schedule.Status}");
             return;
         }
 
@@ -751,8 +735,6 @@ public partial class ScheduleListViewModel : ViewModelBase
             _allSchedules.Remove(schedule);
             Schedules.Remove(_pendingDeleteItem);
             UpdateStatusCounts();
-
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Schedule deleted: {schedule.Id}");
         }
         catch (Exception ex)
         {
@@ -833,15 +815,12 @@ public partial class ScheduleListViewModel : ViewModelBase
     /// </summary>
     public void UpdateScheduleStatus(Guid scheduleId, string newStatus, int newStatusOrder)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] UpdateScheduleStatus - id: {scheduleId}, status: {newStatus}, order: {newStatusOrder}");
-
         // _allSchedules에서 해당 일정 찾아서 업데이트
         var schedule = _allSchedules.FirstOrDefault(s => s.Id == scheduleId);
         if (schedule != null)
         {
             schedule.Status = newStatus;
             schedule.StatusOrder = newStatusOrder;
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Updated schedule in _allSchedules");
         }
 
         // Schedules 컬렉션에서 해당 아이템 찾아서 UI 갱신
@@ -859,7 +838,6 @@ public partial class ScheduleListViewModel : ViewModelBase
                 item.ActionText = GetActionText(item.Schedule, currentUser);
             }
 
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListVM] Updated UI item - StatusDisplay: {item.StatusDisplay}");
         }
 
         // 상태별 카운트 갱신

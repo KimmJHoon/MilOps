@@ -385,7 +385,6 @@ public partial class ScheduleReserveViewModel : ViewModelBase
             }
 
             SuccessMessage = "예약이 완료되었습니다.";
-            System.Diagnostics.Debug.WriteLine($"[ScheduleReserveVM] Reserved: {SelectedDate.Date:yyyy-MM-dd} {SelectedTimeSlot.TimeRangeDisplay}");
 
             // 상태 변경 이벤트 발생 (reserved, statusOrder=3)
             ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "reserved", 3));

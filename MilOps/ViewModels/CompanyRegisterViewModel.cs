@@ -104,7 +104,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
     {
         // 지자체(도) 중간관리자만 업체 등록 가능
         HasPermission = AuthService.CurrentUserRole == UserRole.MiddleLocal;
-        System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] CheckPermission - CurrentUserRole: {AuthService.CurrentUserRole}, HasPermission: {HasPermission}");
     }
 
     public async Task InitializeAsync()
@@ -124,39 +123,29 @@ public partial class CompanyRegisterViewModel : ViewModelBase
         try
         {
             var client = SupabaseService.Client;
-            if (client == null)
-            {
-                System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] LoadOrganizationDataAsync - client is null");
-                return;
-            }
+            if (client == null) return;
 
             // 현재 사용자의 region_id 가져오기
             var currentUser = AuthService.CurrentUser;
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] LoadOrganizationDataAsync - CurrentUser: {currentUser?.LoginId}, RegionId: {currentUser?.RegionId}");
 
             if (currentUser?.RegionId == null)
             {
-                System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] LoadOrganizationDataAsync - RegionId is null");
                 ErrorMessage = "사용자의 지역 정보가 없습니다.";
                 return;
             }
 
             // Region 로드 (현재 사용자의 지역만)
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] Loading regions for RegionId: {currentUser.RegionId}");
             var regionResponse = await client.From<Region>()
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.RegionId.ToString())
                 .Get();
             _allRegions = regionResponse.Models;
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] Loaded {_allRegions.Count} regions");
             _regionNames = _allRegions.ToDictionary(r => r.Id, r => r.Name);
 
             // District 로드 (해당 Region의 시군구만)
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] Loading districts for RegionId: {currentUser.RegionId}");
             var districtResponse = await client.From<District>()
                 .Filter("region_id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.RegionId.ToString())
                 .Get();
             _allDistricts = districtResponse.Models;
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] Loaded {_allDistricts.Count} districts");
             _districtNames = _allDistricts.ToDictionary(d => d.Id, d => d.Name);
 
             // UI 업데이트
@@ -166,13 +155,11 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                 foreach (var region in _allRegions)
                 {
                     Regions.Add(region);
-                    System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] Added region: {region.Name}");
                 }
 
                 if (Regions.Count > 0)
                 {
                     SelectedRegion = Regions[0];
-                    System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] Selected region: {SelectedRegion.Name}");
                 }
 
                 // Districts도 바로 표시
@@ -180,7 +167,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                 foreach (var district in _allDistricts)
                 {
                     Districts.Add(district);
-                    System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] Added district: {district.Name}");
                 }
             });
         }
@@ -208,13 +194,7 @@ public partial class CompanyRegisterViewModel : ViewModelBase
 
     private async Task LoadCompaniesAsync()
     {
-        System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] LoadCompaniesAsync - START");
-
-        if (IsLoading)
-        {
-            System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] LoadCompaniesAsync - Already loading, skip");
-            return;
-        }
+        if (IsLoading) return;
 
         IsLoading = true;
         ErrorMessage = "";
@@ -222,32 +202,19 @@ public partial class CompanyRegisterViewModel : ViewModelBase
         try
         {
             var client = SupabaseService.Client;
-            if (client == null)
-            {
-                System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] LoadCompaniesAsync - client is null");
-                return;
-            }
+            if (client == null) return;
 
             var currentUser = AuthService.CurrentUser;
-            if (currentUser?.RegionId == null)
-            {
-                System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] LoadCompaniesAsync - currentUser or RegionId is null");
-                return;
-            }
-
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] LoadCompaniesAsync - RegionId: {currentUser.RegionId}, _allDistricts count: {_allDistricts.Count}");
+            if (currentUser?.RegionId == null) return;
 
             // 현재 사용자가 관리하는 지역의 업체만 로드
             var districtIds = _allDistricts.Select(d => d.Id.ToString()).ToList();
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] LoadCompaniesAsync - districtIds count: {districtIds.Count}");
 
             // 모든 활성 업체 로드
             var companiesResponse = await client.From<Company>()
                 .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
                 .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
                 .Get();
-
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] LoadCompaniesAsync - total companies from DB: {companiesResponse.Models.Count}");
 
             // 필터링: 해당 지역 업체만
             List<Company> companies;
@@ -263,10 +230,7 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                 companies = companiesResponse.Models
                     .Where(c => !c.IsDeleted && c.CreatedBy == currentUser.Id)
                     .ToList();
-                System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] LoadCompaniesAsync - No districts, filtering by CreatedBy");
             }
-
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] LoadCompaniesAsync - filtered companies: {companies.Count}");
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -431,33 +395,17 @@ public partial class CompanyRegisterViewModel : ViewModelBase
     [RelayCommand]
     private async Task DeleteCompanyAsync(CompanyListItem? item)
     {
-        System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] DeleteCompanyAsync - item: {item?.Name}");
-
-        if (item == null)
-        {
-            System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] DeleteCompanyAsync - item is null");
-            return;
-        }
+        if (item == null) return;
 
         ErrorMessage = "";
 
         try
         {
             var client = SupabaseService.Client;
-            if (client == null)
-            {
-                System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] DeleteCompanyAsync - client is null");
-                return;
-            }
+            if (client == null) return;
 
             var currentUser = AuthService.CurrentUser;
-            if (currentUser == null)
-            {
-                System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] DeleteCompanyAsync - currentUser is null");
-                return;
-            }
-
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterViewModel] DeleteCompanyAsync - Deleting company: {item.Id}");
+            if (currentUser == null) return;
 
             // Soft delete
 #pragma warning disable CS8603 // Possible null reference return
@@ -469,7 +417,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                 .Update();
 #pragma warning restore CS8603
 
-            System.Diagnostics.Debug.WriteLine("[CompanyRegisterViewModel] DeleteCompanyAsync - Delete success");
             SuccessMessage = "업체가 삭제되었습니다.";
 
             // 목록 새로고침

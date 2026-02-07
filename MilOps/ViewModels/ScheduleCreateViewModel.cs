@@ -134,7 +134,6 @@ public partial class ScheduleCreateViewModel : ViewModelBase
     {
         // 사단담당자만 일정 생성 가능
         HasPermission = AuthService.CurrentUserRole == UserRole.MiddleMilitary;
-        System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] CheckPermission - CurrentUserRole: {AuthService.CurrentUserRole}, HasPermission: {HasPermission}");
 
         // 현재 사용자 정보 표시
         var currentUser = AuthService.CurrentUser;
@@ -150,8 +149,6 @@ public partial class ScheduleCreateViewModel : ViewModelBase
 
     public async Task InitializeAsync()
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleCreateViewModel] InitializeAsync - START");
-
         if (!HasPermission)
         {
             ErrorMessage = "일정 생성 권한이 없습니다.";
@@ -171,14 +168,12 @@ public partial class ScheduleCreateViewModel : ViewModelBase
             var client = SupabaseService.Client;
             if (client == null)
             {
-                System.Diagnostics.Debug.WriteLine("[ScheduleCreateViewModel] LoadDataAsync - client is null");
                 return;
             }
 
             var currentUser = AuthService.CurrentUser;
             if (currentUser == null)
             {
-                System.Diagnostics.Debug.WriteLine("[ScheduleCreateViewModel] LoadDataAsync - currentUser is null");
                 return;
             }
 
@@ -198,8 +193,6 @@ public partial class ScheduleCreateViewModel : ViewModelBase
             _allCompanies = companiesTask.Result.Models;
             _allUsers = usersTask.Result.Models;
 
-            System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] Loaded: {_allRegions.Count} regions, {_allDistricts.Count} districts, {_allBattalions.Count} battalions, {_allCompanies.Count} companies, {_allUsers.Count} users");
-
             // 현재 사용자의 Division 표시
             if (currentUser.DivisionId.HasValue)
             {
@@ -214,8 +207,6 @@ public partial class ScheduleCreateViewModel : ViewModelBase
             var managedBattalions = _allBattalions
                 .Where(b => b.DivisionId == currentUser.DivisionId)
                 .ToList();
-
-            System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] Managed battalions: {managedBattalions.Count}");
 
             // UI 업데이트
             await Dispatcher.UIThread.InvokeAsync(() =>
@@ -328,31 +319,19 @@ public partial class ScheduleCreateViewModel : ViewModelBase
     {
         SearchedCompanies.Clear();
 
-        System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] SearchCompanies - _allCompanies count: {_allCompanies.Count}");
-
         if (SelectedDistrict == null)
         {
-            System.Diagnostics.Debug.WriteLine("[ScheduleCreateViewModel] SearchCompanies - SelectedDistrict is null");
             ShowCompanySearchResults = false;
             return;
         }
 
         var searchText = CompanySearchText?.Trim() ?? "";
-        System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] SearchCompanies - searchText: '{searchText}', SelectedDistrict.Id: {SelectedDistrict.Id}");
 
         // 2글자 이상 입력 시 검색
         if (searchText.Length < 2)
         {
             ShowCompanySearchResults = false;
             return;
-        }
-
-        // 해당 구/군에 있는 모든 업체 확인
-        var companiesInDistrict = _allCompanies.Where(c => c.DistrictId == SelectedDistrict.Id).ToList();
-        System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] Companies in district {SelectedDistrict.Name}: {companiesInDistrict.Count}");
-        foreach (var c in companiesInDistrict.Take(5))
-        {
-            System.Diagnostics.Debug.WriteLine($"  - {c.Name} (DistrictId: {c.DistrictId})");
         }
 
         // 선택된 구/군의 업체 중 검색어가 포함된 업체 검색
@@ -369,8 +348,6 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         }
 
         ShowCompanySearchResults = SearchedCompanies.Count > 0;
-
-        System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] Search '{searchText}' in district {SelectedDistrict.Name}: {filtered.Count} results");
     }
 
     [RelayCommand]
@@ -408,12 +385,10 @@ public partial class ScheduleCreateViewModel : ViewModelBase
             HasLocalUser = true;
             LocalUserName = $"[민] {_selectedLocalUser.FullDisplayName}";
             LocalUserPhone = _selectedLocalUser.Phone;
-            System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] Found local user: {_selectedLocalUser.Name}");
         }
         else
         {
             LocalUserName = "! 담당자 미지정";
-            System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] No local user for district {SelectedDistrict.Name}");
         }
     }
 
@@ -435,12 +410,10 @@ public partial class ScheduleCreateViewModel : ViewModelBase
             HasMilitaryUser = true;
             MilitaryUserName = $"[군] {_selectedMilitaryUser.FullDisplayName}";
             MilitaryUserPhone = _selectedMilitaryUser.Phone;
-            System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] Found military user: {_selectedMilitaryUser.Name}");
         }
         else
         {
             MilitaryUserName = "! 담당자 미지정";
-            System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] No military user for battalion {SelectedBattalion.Name}");
         }
     }
 
@@ -533,11 +506,8 @@ public partial class ScheduleCreateViewModel : ViewModelBase
                 StatusOrder = 1
             };
 
-            System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] Creating schedule: Company={SelectedCompany.Name}, LocalUser={_selectedLocalUser.Name}, MilitaryUser={_selectedMilitaryUser.Name}");
-
             await client.From<Schedule>().Insert(newSchedule);
 
-            System.Diagnostics.Debug.WriteLine("[ScheduleCreateViewModel] Schedule created successfully");
             SuccessMessage = "일정이 생성되었습니다.";
 
             // TODO: 알림 기능 구현 시 지자체담당자에게 알림 발송

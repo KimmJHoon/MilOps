@@ -29,7 +29,6 @@ public partial class CalendarView : UserControl
 
     private void OnCleanupBeforeLogout()
     {
-        System.Diagnostics.Debug.WriteLine("[CalendarView] CleanupBeforeLogout - resetting state");
         _lastUserId = null;
         _isInitialized = false;
         _viewModel?.ClearCache();
@@ -41,7 +40,6 @@ public partial class CalendarView : UserControl
     protected override void OnLoaded(RoutedEventArgs e)
     {
         base.OnLoaded(e);
-        System.Diagnostics.Debug.WriteLine("[CalendarView] OnLoaded called");
         // OnLoaded에서는 초기화하지 않음 - MainView에서 TabChanged 이벤트로 처리
     }
 
@@ -50,17 +48,13 @@ public partial class CalendarView : UserControl
     /// </summary>
     public async System.Threading.Tasks.Task OnTabEnteredAsync()
     {
-        System.Diagnostics.Debug.WriteLine("[CalendarView] OnTabEnteredAsync called");
         try
         {
-            System.Diagnostics.Debug.WriteLine($"[CalendarView] CurrentUser: {AuthService.CurrentUser?.LoginId ?? "null"}, IsLoggedIn: {AuthService.IsLoggedIn}");
             await InitializeOrRefreshAsync();
-            System.Diagnostics.Debug.WriteLine("[CalendarView] OnTabEnteredAsync completed");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[CalendarView] OnTabEnteredAsync error: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[CalendarView] StackTrace: {ex.StackTrace}");
         }
     }
 
@@ -74,31 +68,18 @@ public partial class CalendarView : UserControl
 
     private async System.Threading.Tasks.Task InitializeOrRefreshAsync()
     {
-        System.Diagnostics.Debug.WriteLine("[CalendarView] InitializeOrRefreshAsync started");
-
-        if (_viewModel == null)
-        {
-            System.Diagnostics.Debug.WriteLine("[CalendarView] ViewModel is null, skipping");
-            return;
-        }
+        if (_viewModel == null) return;
 
         var currentUserId = AuthService.CurrentUser?.Id;
-        System.Diagnostics.Debug.WriteLine($"[CalendarView] currentUserId: {currentUserId}, _lastUserId: {_lastUserId}, _isInitialized: {_isInitialized}");
 
         // 로그인하지 않은 상태면 무시
-        if (currentUserId == null)
-        {
-            System.Diagnostics.Debug.WriteLine("[CalendarView] No user logged in, skipping");
-            return;
-        }
+        if (currentUserId == null) return;
 
         // 사용자가 변경되었는지 확인
         bool userChanged = _lastUserId != currentUserId;
 
         if (userChanged || !_isInitialized)
         {
-            System.Diagnostics.Debug.WriteLine($"[CalendarView] User changed or first init. LastUser: {_lastUserId}, CurrentUser: {currentUserId}");
-
             // 캐시 초기화 (사용자 변경 시에만)
             if (userChanged)
             {
@@ -107,38 +88,25 @@ public partial class CalendarView : UserControl
             _lastUserId = currentUserId;
 
             // 필터 초기화 (백그라운드)
-            System.Diagnostics.Debug.WriteLine("[CalendarView] Starting InitializeFiltersAsync");
             await _viewModel.InitializeFiltersAsync();
 
             // 이미 Preload로 로딩 중이거나 데이터가 있으면 다시 로드하지 않음
             if (!CalendarDataService.IsLoading && _viewModel.Days.Count > 0 && _viewModel.Days.Any(d => d.IsCurrentMonth))
             {
-                System.Diagnostics.Debug.WriteLine("[CalendarView] Data already loaded (preloaded), skipping LoadSchedulesAsync");
+                // Data already preloaded
             }
             else if (!CalendarDataService.IsLoading)
             {
-                // 아직 로딩 중이 아니면 로드 시작
-                System.Diagnostics.Debug.WriteLine("[CalendarView] Starting LoadSchedulesAsync");
                 await _viewModel.LoadSchedulesAsync();
-                System.Diagnostics.Debug.WriteLine("[CalendarView] LoadSchedulesAsync completed");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine("[CalendarView] Already loading (preloaded), waiting for completion");
             }
 
             _isInitialized = true;
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine("[CalendarView] Same user, no refresh needed");
         }
     }
 
     private void OnScheduleSelected(Guid scheduleId)
     {
         // MainView를 통해 일정 확정 화면 열기
-        // 중요: MainView.OpenScheduleConfirm을 호출해야 ViewModel이 초기화됨
         var mainView = this.FindAncestorOfType<MainView>();
         if (mainView != null)
         {

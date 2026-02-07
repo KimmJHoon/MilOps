@@ -168,7 +168,6 @@ public partial class CalendarViewModel : ViewModelBase
         if (CalendarDataService.IsLoading)
         {
             IsLoading = true;
-            System.Diagnostics.Debug.WriteLine("[CalendarViewModel] Constructor - Already loading (preloaded)");
         }
     }
 
@@ -191,15 +190,12 @@ public partial class CalendarViewModel : ViewModelBase
         // 현재 표시 중인 월과 다르면 무시 (이전 요청 응답)
         if (args.Year != CurrentYear || args.Month != CurrentMonth)
         {
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Ignoring stale data for {args.Year}-{args.Month}");
             return;
         }
 
         // UI 스레드에서 컬렉션 업데이트
         Dispatcher.UIThread.Post(() =>
         {
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] [UI Thread] Updating Days collection with {args.Days.Count} items");
-
             // CalendarDayData → CalendarDay 변환 및 컬렉션 교체
             var newDays = new ObservableCollection<CalendarDay>();
             foreach (var data in args.Days)
@@ -236,9 +232,6 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             Days = newDays;
-
-            var daysWithSchedules = newDays.Count(d => d.HasSchedules);
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] [UI Thread] Days updated. HasSchedules count: {daysWithSchedules}");
         });
     }
 
@@ -247,8 +240,6 @@ public partial class CalendarViewModel : ViewModelBase
     /// </summary>
     public void RequestLoadSchedules()
     {
-        System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] RequestLoadSchedules for {CurrentYear}-{CurrentMonth}");
-
         var selectedRegionId = SelectedRegionFilter?.Id;
         var selectedDivisionId = SelectedDivisionFilter?.Id;
         var selectedDistrictId = SelectedDistrictFilter?.Id;
@@ -341,7 +332,6 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             SelectedRegionFilter = RegionFilters.FirstOrDefault();
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Loaded {RegionFilters.Count} region filters");
         }
         catch (Exception ex)
         {
@@ -386,7 +376,6 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             SelectedDivisionFilter = DivisionFilters.FirstOrDefault();
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Loaded {DivisionFilters.Count} division filters");
         }
         catch (Exception ex)
         {
@@ -408,7 +397,6 @@ public partial class CalendarViewModel : ViewModelBase
             var currentUser = AuthService.CurrentUser;
             if (currentUser?.RegionId == null)
             {
-                System.Diagnostics.Debug.WriteLine("[CalendarViewModel] LoadDistrictFiltersAsync - No RegionId for current user");
                 return;
             }
 
@@ -441,7 +429,6 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             SelectedDistrictFilter = DistrictFilters.FirstOrDefault();
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Loaded {DistrictFilters.Count} district filters for region {currentUser.RegionId}");
         }
         catch (Exception ex)
         {
@@ -463,7 +450,6 @@ public partial class CalendarViewModel : ViewModelBase
             var currentUser = AuthService.CurrentUser;
             if (currentUser?.DivisionId == null)
             {
-                System.Diagnostics.Debug.WriteLine("[CalendarViewModel] LoadBattalionFiltersAsync - No DivisionId for current user");
                 return;
             }
 
@@ -496,7 +482,6 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             SelectedBattalionFilter = BattalionFilters.FirstOrDefault();
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Loaded {BattalionFilters.Count} battalion filters for division {currentUser.DivisionId}");
         }
         catch (Exception ex)
         {
@@ -671,8 +656,6 @@ public partial class CalendarViewModel : ViewModelBase
     [RelayCommand]
     private void SelectDay(CalendarDay? day)
     {
-        System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] SelectDay called - day: {day?.Day}, HasSchedules: {day?.HasSchedules}, ScheduleCount: {day?.Schedules?.Count ?? 0}");
-
         if (day == null || day.Day == 0) return;
 
         // 이전 선택 해제
@@ -684,7 +667,6 @@ public partial class CalendarViewModel : ViewModelBase
         // 일정이 없는 날짜 (Schedules가 null이거나 비어있으면 HasSchedules로 판단)
         if (!day.HasSchedules || day.Schedules == null || day.Schedules.Count == 0)
         {
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] SelectDay - No schedules for this day");
             HasSelectedDaySchedules = false;
             SelectedDaySchedules.Clear();
             SelectedDay = null;
@@ -694,8 +676,6 @@ public partial class CalendarViewModel : ViewModelBase
         // 새 날짜 선택
         day.IsSelected = true;
         SelectedDay = day;
-
-        System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] SelectDay - Opening schedule list with {day.Schedules.Count} schedules");
 
         // 일정 목록 패널 업데이트
         UpdateSelectedDaySchedules(day);
@@ -823,7 +803,6 @@ public partial class CalendarViewModel : ViewModelBase
     /// </summary>
     public void ClearCache()
     {
-        System.Diagnostics.Debug.WriteLine("[CalendarViewModel] ClearCache called - resetting all cached data");
         _scheduleCache.Clear();
         SelectedDaySchedules.Clear();
         FilteredSelectedDaySchedules.Clear();
@@ -853,11 +832,8 @@ public partial class CalendarViewModel : ViewModelBase
     /// </summary>
     public Task LoadSchedulesAsync()
     {
-        System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadSchedulesAsync called - delegating to RequestLoadSchedules");
-
         if (!AuthService.IsLoggedIn || AuthService.CurrentUser == null)
         {
-            System.Diagnostics.Debug.WriteLine("[CalendarViewModel] Not logged in, skipping schedule load");
             return Task.CompletedTask;
         }
 

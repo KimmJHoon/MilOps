@@ -25,8 +25,6 @@ public partial class ScheduleInputView : UserControl
     /// </summary>
     public async Task InitializeAsync(Guid scheduleId, string mode)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleInputView] InitializeAsync - scheduleId: {scheduleId}, mode: {mode}");
-
         // 기존 ViewModel 정리
         if (_viewModel != null)
         {
@@ -45,13 +43,11 @@ public partial class ScheduleInputView : UserControl
 
     private void OnViewModelCloseRequested(object? sender, EventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleInputView] CloseRequested from ViewModel");
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnViewModelScheduleStatusChanged(object? sender, ScheduleStatusChangedEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleInputView] ScheduleStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
         ScheduleStatusChanged?.Invoke(this, e);
     }
 

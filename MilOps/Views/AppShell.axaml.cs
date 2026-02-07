@@ -17,16 +17,12 @@ public partial class AppShell : UserControl
         InitializeComponent();
 
         // 로그인 이벤트 연결 - DataContext가 설정된 후 연결
-        System.Diagnostics.Debug.WriteLine($"[AppShell] LoginViewControl.DataContext: {LoginViewControl.DataContext?.GetType().Name ?? "null"}");
-
-        // DataContextChanged 이벤트로 확실하게 연결
         LoginViewControl.DataContextChanged += (s, e) =>
         {
             if (LoginViewControl.DataContext is LoginViewModel vm)
             {
                 vm.LoginSuccessful += OnLoginSuccess;
                 vm.SignUpRequested += OnSignUpRequested;
-                System.Diagnostics.Debug.WriteLine("[AppShell] LoginView events connected (on DataContextChanged)");
             }
         };
 
@@ -35,7 +31,6 @@ public partial class AppShell : UserControl
         {
             loginVm.LoginSuccessful += OnLoginSuccess;
             loginVm.SignUpRequested += OnSignUpRequested;
-            System.Diagnostics.Debug.WriteLine("[AppShell] LoginView events connected (immediate)");
         }
         else
         {
@@ -46,7 +41,6 @@ public partial class AppShell : UserControl
                 {
                     vm.LoginSuccessful += OnLoginSuccess;
                     vm.SignUpRequested += OnSignUpRequested;
-                    System.Diagnostics.Debug.WriteLine("[AppShell] LoginView events connected (on Loaded)");
                 }
             };
         }
@@ -70,28 +64,18 @@ public partial class AppShell : UserControl
         _ = TryRestoreSessionAndAutoLoginAsync();
     }
 
-    /// <summary>
-    /// 세션 복원 및 자동 로그인 시도
-    /// </summary>
     private async Task TryRestoreSessionAndAutoLoginAsync()
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine("[AppShell] Attempting to restore session...");
-
             var restored = await AuthService.TryRestoreSessionAsync();
 
             if (restored && !IsInviteAcceptVisible())
             {
-                System.Diagnostics.Debug.WriteLine("[AppShell] Session restored, auto-login successful");
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     OnLoginSuccess();
                 });
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine("[AppShell] No session to restore or invite view is visible");
             }
         }
         catch (Exception ex)
@@ -102,68 +86,40 @@ public partial class AppShell : UserControl
 
     private void SetupInviteCodeView()
     {
-        System.Diagnostics.Debug.WriteLine("[AppShell] SetupInviteCodeView called");
         try
         {
-            // InviteCodeView에 ViewModel 설정
             var inviteCodeVm = new InviteCodeViewModel();
             InviteCodeViewControl.DataContext = inviteCodeVm;
-            System.Diagnostics.Debug.WriteLine("[AppShell] InviteCodeViewModel created and set");
 
-            // 뒤로가기 이벤트
-            inviteCodeVm.BackRequested += () =>
-            {
-                System.Diagnostics.Debug.WriteLine("[AppShell] Back to login requested from InviteCodeView");
-                ShowLoginView();
-            };
+            inviteCodeVm.BackRequested += () => ShowLoginView();
 
-            // 코드 검증 성공 이벤트
             inviteCodeVm.CodeValidated += (invitation) =>
             {
-                System.Diagnostics.Debug.WriteLine($"[AppShell] Invite code validated: {invitation?.InviteCode}, proceeding to registration");
                 if (invitation != null)
                 {
                     ShowInviteAcceptViewWithInvitation(invitation);
                 }
             };
-            System.Diagnostics.Debug.WriteLine("[AppShell] SetupInviteCodeView completed");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AppShell] SetupInviteCodeView error: {ex.GetType().Name}: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[AppShell] StackTrace: {ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"[AppShell] SetupInviteCodeView error: {ex.Message}");
         }
     }
 
     private void SetupInviteAcceptView()
     {
-        System.Diagnostics.Debug.WriteLine("[AppShell] SetupInviteAcceptView called");
         try
         {
-            // InviteAcceptView에 ViewModel 설정
             var inviteVm = new InviteAcceptViewModel();
             InviteAcceptViewControl.DataContext = inviteVm;
-            System.Diagnostics.Debug.WriteLine("[AppShell] InviteAcceptViewModel created and set");
 
-            // 회원가입 성공 이벤트
-            inviteVm.RegistrationSuccessful += () =>
-            {
-                System.Diagnostics.Debug.WriteLine("[AppShell] Registration successful, navigating to login");
-                ShowLoginView();
-            };
-
-            // 로그인 화면으로 이동 이벤트
-            inviteVm.NavigateToLogin += () =>
-            {
-                System.Diagnostics.Debug.WriteLine("[AppShell] Navigate to login requested");
-                ShowLoginView();
-            };
-            System.Diagnostics.Debug.WriteLine("[AppShell] SetupInviteAcceptView completed");
+            inviteVm.RegistrationSuccessful += () => ShowLoginView();
+            inviteVm.NavigateToLogin += () => ShowLoginView();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AppShell] SetupInviteAcceptView error: {ex.GetType().Name}: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[AppShell] StackTrace: {ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"[AppShell] SetupInviteAcceptView error: {ex.Message}");
         }
     }
 
@@ -179,11 +135,9 @@ public partial class AppShell : UserControl
 
     private void CheckForDeepLink()
     {
-        // DeepLinkHandler는 Android 프로젝트에 있으므로 리플렉션 또는 정적 접근 사용
         var inviteCode = GetPendingInviteCode();
         if (!string.IsNullOrEmpty(inviteCode))
         {
-            System.Diagnostics.Debug.WriteLine($"[AppShell] Deep link detected: {inviteCode}");
             ShowInviteAcceptView(inviteCode);
         }
     }
@@ -192,7 +146,6 @@ public partial class AppShell : UserControl
     {
         try
         {
-            // Android의 DeepLinkHandler.ConsumePendingInviteCode() 호출
             var deepLinkType = Type.GetType("MilOps.Android.DeepLinkHandler, MilOps.Android");
             if (deepLinkType != null)
             {
@@ -217,28 +170,23 @@ public partial class AppShell : UserControl
 
     private void OnSignUpRequested()
     {
-        System.Diagnostics.Debug.WriteLine("[AppShell] SignUp requested, showing InviteCodeView");
         ShowInviteCodeView();
     }
 
     private void ShowInviteCodeView()
     {
-        System.Diagnostics.Debug.WriteLine("[AppShell] ShowInviteCodeView called");
         try
         {
-            // 모든 뷰 숨기기
             LoginViewControl.IsVisible = false;
             MainViewControl.IsVisible = false;
             InviteAcceptViewControl.IsVisible = false;
             InviteCodeViewControl.IsVisible = true;
 
-            // 초대코드 입력 폼 초기화
             if (InviteCodeViewControl.DataContext is InviteCodeViewModel inviteCodeVm)
             {
                 inviteCodeVm.InviteCode = "";
                 inviteCodeVm.ErrorMessage = "";
                 inviteCodeVm.HasError = false;
-                System.Diagnostics.Debug.WriteLine("[AppShell] InviteCodeView form reset");
             }
             else
             {
@@ -247,27 +195,22 @@ public partial class AppShell : UserControl
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteCodeView error: {ex.GetType().Name}: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteCodeView error: {ex.Message}");
         }
     }
 
     private void ShowInviteAcceptViewWithInvitation(Invitation invitation)
     {
-        System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteAcceptViewWithInvitation called, invitation: {invitation?.InviteCode}");
         try
         {
-            // 모든 뷰 숨기기
             LoginViewControl.IsVisible = false;
             MainViewControl.IsVisible = false;
             InviteCodeViewControl.IsVisible = false;
             InviteAcceptViewControl.IsVisible = true;
 
-            // 초대 정보로 ViewModel 초기화
             if (InviteAcceptViewControl.DataContext is InviteAcceptViewModel inviteVm && invitation != null)
             {
-                System.Diagnostics.Debug.WriteLine("[AppShell] Initializing InviteAcceptViewModel with invitation");
                 inviteVm.InitializeWithInvitation(invitation);
-                System.Diagnostics.Debug.WriteLine("[AppShell] InviteAcceptViewModel initialized");
             }
             else
             {
@@ -276,8 +219,7 @@ public partial class AppShell : UserControl
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteAcceptViewWithInvitation error: {ex.GetType().Name}: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[AppShell] StackTrace: {ex.StackTrace}");
+            System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteAcceptViewWithInvitation error: {ex.Message}");
         }
     }
 
@@ -285,13 +227,11 @@ public partial class AppShell : UserControl
     {
         try
         {
-            // 모든 뷰 숨기기
             LoginViewControl.IsVisible = false;
             MainViewControl.IsVisible = false;
             InviteCodeViewControl.IsVisible = false;
             InviteAcceptViewControl.IsVisible = true;
 
-            // 초대 코드로 ViewModel 초기화
             if (InviteAcceptViewControl.DataContext is InviteAcceptViewModel inviteVm)
             {
                 await inviteVm.InitializeWithInviteCodeAsync(inviteCode);
@@ -300,7 +240,6 @@ public partial class AppShell : UserControl
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[AppShell] ShowInviteAcceptView error: {ex.Message}");
-            // 에러 발생 시 로그인 화면으로 복귀
             ShowLoginView();
         }
     }
@@ -312,7 +251,6 @@ public partial class AppShell : UserControl
         MainViewControl.IsVisible = false;
         LoginViewControl.IsVisible = true;
 
-        // 로그인 폼 초기화
         if (LoginViewControl.DataContext is LoginViewModel loginVm)
         {
             loginVm.UserId = "";
@@ -324,9 +262,6 @@ public partial class AppShell : UserControl
 
     private async void OnLoginSuccess()
     {
-        System.Diagnostics.Debug.WriteLine("[AppShell] OnLoginSuccess called");
-
-        // FCM 토큰 서버에 저장 (Android에서만 작동)
         _ = Task.Run(async () =>
         {
             try
@@ -339,38 +274,25 @@ public partial class AppShell : UserControl
             }
         });
 
-        // ★ 화면 전환 전에 데이터 미리 로드 시작 (Preload)
-        // 이렇게 하면 화면 전환 후 즉시 로딩 스피너가 표시되고, 빈 화면 시간이 최소화됨
         CalendarDataService.PreloadCurrentMonth();
-        ScheduleDataService.PreloadCache();  // 일정 목록용 캐시 미리 로드
-        System.Diagnostics.Debug.WriteLine("[AppShell] Calendar and Schedule preload started");
+        ScheduleDataService.PreloadCache();
 
-        // 화면 전환
         LoginViewControl.IsVisible = false;
         InviteCodeViewControl.IsVisible = false;
         InviteAcceptViewControl.IsVisible = false;
         MainViewControl.IsVisible = true;
 
-        // 렌더링 완료까지 대기 (DispatcherPriority.Loaded = UI 그리기 완료 후 실행)
         await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
-
-        // MainView가 visible된 후 역할 정보 갱신 및 초기화
         await MainViewControl.RefreshUserRoleAsync();
-
-        System.Diagnostics.Debug.WriteLine("[AppShell] OnLoginSuccess completed - data loading finished");
     }
 
     private void OnLogoutRequested()
     {
-        System.Diagnostics.Debug.WriteLine("[AppShell] OnLogoutRequested - navigating to login screen");
-
-        // 모든 화면 숨기고 로그인 화면 표시
         MainViewControl.IsVisible = false;
         InviteAcceptViewControl.IsVisible = false;
         InviteCodeViewControl.IsVisible = false;
         LoginViewControl.IsVisible = true;
 
-        // 로그인 폼 초기화
         if (LoginViewControl.DataContext is LoginViewModel loginVm)
         {
             loginVm.UserId = "";
@@ -378,8 +300,6 @@ public partial class AppShell : UserControl
             loginVm.ErrorMessage = "";
             loginVm.HasError = false;
         }
-
-        System.Diagnostics.Debug.WriteLine("[AppShell] OnLogoutRequested completed");
     }
 
 }

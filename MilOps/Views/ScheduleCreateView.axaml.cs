@@ -23,7 +23,6 @@ public partial class ScheduleCreateView : UserControl
     protected override async void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] OnAttachedToVisualTree");
         await InitializeViewModelAsync();
     }
 
@@ -32,14 +31,11 @@ public partial class ScheduleCreateView : UserControl
     /// </summary>
     public async Task ForceInitializeAsync()
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] ForceInitializeAsync called");
         await InitializeViewModelAsync();
     }
 
     private async Task InitializeViewModelAsync()
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] InitializeViewModelAsync - START");
-
         // 기존 ViewModel이 있으면 이벤트 해제
         if (_viewModel != null)
         {
@@ -52,28 +48,23 @@ public partial class ScheduleCreateView : UserControl
         _viewModel.CloseRequested += OnViewModelCloseRequested;
         _viewModel.ScheduleCreated += OnViewModelScheduleCreated;
         DataContext = _viewModel;
-        System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] ViewModel created and events subscribed");
 
         await _viewModel.InitializeAsync();
-        System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] ViewModel initialized");
     }
 
     private void OnViewModelCloseRequested(object? sender, EventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] CloseRequested from ViewModel");
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnViewModelScheduleCreated(object? sender, EventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] ScheduleCreated from ViewModel");
         ScheduleCreated?.Invoke(this, EventArgs.Empty);
     }
 
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        System.Diagnostics.Debug.WriteLine("[ScheduleCreateView] OnDetachedFromVisualTree");
 
         if (_viewModel != null)
         {

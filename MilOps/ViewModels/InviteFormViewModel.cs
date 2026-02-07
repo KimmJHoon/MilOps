@@ -136,8 +136,6 @@ public partial class InviteFormViewModel : ViewModelBase
         var currentUser = AuthService.CurrentUser;
         var dbRole = currentUser?.Role ?? "";
 
-        System.Diagnostics.Debug.WriteLine($"[InviteForm] Initializing for role: {dbRole}");
-
         // 조직 데이터 로드
         await LoadOrganizationDataAsync();
 
@@ -163,7 +161,6 @@ public partial class InviteFormViewModel : ViewModelBase
             default:
                 CurrentInviteType = InviteType.None;
                 FormTitle = "초대 권한 없음";
-                System.Diagnostics.Debug.WriteLine($"[InviteForm] No invite permission for role: {dbRole}");
                 break;
         }
 
@@ -199,7 +196,6 @@ public partial class InviteFormViewModel : ViewModelBase
         if (AffiliationOptions.Count > 0)
             SelectedAffiliation = AffiliationOptions[0];
 
-        System.Diagnostics.Debug.WriteLine($"[InviteForm] SuperAdminMois form setup complete. Regions: {AffiliationOptions.Count}");
         return Task.CompletedTask;
     }
 
@@ -218,7 +214,6 @@ public partial class InviteFormViewModel : ViewModelBase
         ShowRankField = true;
         AffiliationSuffix = "사단";
 
-        System.Diagnostics.Debug.WriteLine($"[InviteForm] SuperAdminArmy form setup complete");
         return Task.CompletedTask;
     }
 
@@ -259,7 +254,6 @@ public partial class InviteFormViewModel : ViewModelBase
         if (AffiliationOptions.Count > 0)
             SelectedAffiliation = AffiliationOptions[0];
 
-        System.Diagnostics.Debug.WriteLine($"[InviteForm] MiddleLocal form setup complete. Districts: {AffiliationOptions.Count} (RegionId: {userRegionId})");
         return Task.CompletedTask;
     }
 
@@ -278,7 +272,6 @@ public partial class InviteFormViewModel : ViewModelBase
         ShowRankField = true;
         AffiliationSuffix = "대대";
 
-        System.Diagnostics.Debug.WriteLine($"[InviteForm] MiddleMilitary form setup complete");
         return Task.CompletedTask;
     }
 
@@ -303,8 +296,6 @@ public partial class InviteFormViewModel : ViewModelBase
             _regions = regionsTask.Result.Models;
             _districts = districtsTask.Result.Models;
             _divisions = divisionsTask.Result.Models;
-
-            System.Diagnostics.Debug.WriteLine($"[InviteForm] Loaded: {_regions.Count} regions, {_districts.Count} districts, {_divisions.Count} divisions");
         }
         catch (Exception ex)
         {
@@ -410,7 +401,6 @@ public partial class InviteFormViewModel : ViewModelBase
             // 이벤트 발생
             InvitationCreated?.Invoke(invitation);
 
-            System.Diagnostics.Debug.WriteLine($"[InviteForm] Invitation created: {inviteCode} for role: {TargetRole}");
         }
         catch (Exception ex)
         {
@@ -456,8 +446,6 @@ public partial class InviteFormViewModel : ViewModelBase
 
                 invitation.DivisionId = newDivision.Id;
                 invitation.DisplayAffiliation = divisionName;
-
-                System.Diagnostics.Debug.WriteLine($"[InviteForm] Created division: {divisionName}");
                 break;
 
             case InviteType.MiddleLocal:
@@ -496,8 +484,6 @@ public partial class InviteFormViewModel : ViewModelBase
                 invitation.BattalionId = newBattalion.Id;
                 invitation.DivisionId = userDivisionId.Value;
                 invitation.DisplayAffiliation = battalionName;
-
-                System.Diagnostics.Debug.WriteLine($"[InviteForm] Created battalion: {battalionName}");
                 break;
         }
     }

@@ -131,8 +131,6 @@ public partial class MainViewModel : ViewModelBase
 
         // 현재 선택된 탭이 해당 역할에서 접근 불가능하면 기본 탭(캘린더)으로 리셋
         ResetToValidTab();
-
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] RefreshUserRole - IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
     }
 
     private async Task LoadUserRegionAsync()
@@ -204,7 +202,6 @@ public partial class MainViewModel : ViewModelBase
         // 담당자 탭은 중간관리자, 최종관리자만 접근 가능
         if (IsManagerSelected && !ShowManagerTab)
         {
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] Manager tab not accessible, resetting to calendar");
             SelectTab("calendar");
             return;
         }
@@ -212,7 +209,6 @@ public partial class MainViewModel : ViewModelBase
         // 일정 탭은 사용자, 중간관리자만 접근 가능
         if (IsScheduleSelected && !ShowScheduleTab)
         {
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] Schedule tab not accessible, resetting to calendar");
             SelectTab("calendar");
             return;
         }
@@ -238,8 +234,6 @@ public partial class MainViewModel : ViewModelBase
         // 속성 변경 알림 (메뉴 표시 여부 갱신)
         OnPropertyChanged(nameof(ShowScheduleTab));
         OnPropertyChanged(nameof(ShowManagerTab));
-
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] UpdateUserRole - DBRole: {roleString}, ParsedRole: {role}, IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
     }
 
     // 탭 변경 이벤트 (View에서 구독하여 초기화 처리)
@@ -304,7 +298,6 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task Logout()
     {
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command started");
         IsDrawerOpen = false;
 
         try
@@ -313,7 +306,6 @@ public partial class MainViewModel : ViewModelBase
             try
             {
                 AppRestartService.CleanupBeforeLogout?.Invoke();
-                System.Diagnostics.Debug.WriteLine("[MainViewModel] Cleanup completed");
             }
             catch (Exception ex)
             {
@@ -322,15 +314,12 @@ public partial class MainViewModel : ViewModelBase
 
             // 2. 세션 저장소 클리어
             SessionStorageService.ClearSession();
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] Session cleared");
 
             // 3. AuthService 로그아웃
             await AuthService.LogoutAsync();
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] AuthService logged out");
 
             // 4. 로그아웃 완료 이벤트 발생 (UI에서 로그인 화면으로 전환)
             LogoutCompleted?.Invoke();
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] LogoutCompleted event invoked");
         }
         catch (Exception ex)
         {
@@ -343,14 +332,12 @@ public partial class MainViewModel : ViewModelBase
     private void OpenCompanyRegister()
     {
         IsCompanyRegisterOpen = true;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] OpenCompanyRegister");
     }
 
     [RelayCommand]
     private void CloseCompanyRegister()
     {
         IsCompanyRegisterOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseCompanyRegister");
     }
 
     // === 일정 생성 화면 ===
@@ -358,14 +345,12 @@ public partial class MainViewModel : ViewModelBase
     private void OpenScheduleCreate()
     {
         IsScheduleCreateOpen = true;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] OpenScheduleCreate");
     }
 
     [RelayCommand]
     private void CloseScheduleCreate()
     {
         IsScheduleCreateOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleCreate");
     }
 
     // === 일정 상세 화면 열기 (역할/상태에 따라 분기) ===
@@ -381,8 +366,6 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     public void RequestOpenScheduleDetail(Guid scheduleId, string mode = "view")
     {
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] RequestOpenScheduleDetail - scheduleId: {scheduleId}, mode: {mode}");
-
         // 백그라운드에서 일정 조회 및 화면 분기 처리
         _ = Task.Run(async () =>
         {
@@ -390,17 +373,11 @@ public partial class MainViewModel : ViewModelBase
             {
                 var currentUser = AuthService.CurrentUser;
                 if (currentUser == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("[MainViewModel] RequestOpenScheduleDetail - No user logged in");
                     return;
-                }
 
                 var client = SupabaseService.Client;
                 if (client == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("[MainViewModel] RequestOpenScheduleDetail - No Supabase client");
                     return;
-                }
 
                 // 백그라운드에서 일정 조회
                 var schedule = await client.From<Models.Schedule>()
@@ -408,12 +385,7 @@ public partial class MainViewModel : ViewModelBase
                     .Single();
 
                 if (schedule == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("[MainViewModel] RequestOpenScheduleDetail - Schedule not found");
                     return;
-                }
-
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] RequestOpenScheduleDetail - Schedule status: {schedule.Status}, role: {currentUser.Role}");
 
                 // 화면 분기 로직 (비즈니스 로직)
                 ScheduleNavigationType navigationType;
@@ -444,13 +416,11 @@ public partial class MainViewModel : ViewModelBase
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine($"[MainViewModel] Schedule not ready for reservation (status: {schedule.Status})");
                         return;
                     }
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] Unsupported role: {currentUser.Role}");
                     return;
                 }
 
@@ -477,14 +447,12 @@ public partial class MainViewModel : ViewModelBase
     {
         _scheduleInputId = scheduleId;
         IsScheduleInputOpen = true;
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleInput - scheduleId: {scheduleId}");
     }
 
     [RelayCommand]
     private void CloseScheduleInput()
     {
         IsScheduleInputOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleInput");
     }
 
     // === 일정 예약 화면 (대대담당자용) ===
@@ -492,14 +460,12 @@ public partial class MainViewModel : ViewModelBase
     {
         _scheduleReserveId = scheduleId;
         IsScheduleReserveOpen = true;
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleReserve - scheduleId: {scheduleId}");
     }
 
     [RelayCommand]
     private void CloseScheduleReserve()
     {
         IsScheduleReserveOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleReserve");
     }
 
     // === 일정 확정 화면 (양측 공통) ===
@@ -507,13 +473,11 @@ public partial class MainViewModel : ViewModelBase
     {
         _scheduleConfirmId = scheduleId;
         IsScheduleConfirmOpen = true;
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleConfirm - scheduleId: {scheduleId}");
     }
 
     [RelayCommand]
     private void CloseScheduleConfirm()
     {
         IsScheduleConfirmOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleConfirm");
     }
 }

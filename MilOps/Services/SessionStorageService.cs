@@ -45,7 +45,6 @@ public static class SessionStorageService
 
             var json = JsonSerializer.Serialize(sessionData);
             await File.WriteAllTextAsync(SessionFilePath, json);
-            System.Diagnostics.Debug.WriteLine($"[SessionStorage] Session saved for {loginId}");
         }
         catch (Exception ex)
         {
@@ -62,7 +61,6 @@ public static class SessionStorageService
         {
             if (!File.Exists(SessionFilePath))
             {
-                System.Diagnostics.Debug.WriteLine("[SessionStorage] No saved session found");
                 return (null, null, null);
             }
 
@@ -71,7 +69,6 @@ public static class SessionStorageService
 
             if (sessionData != null)
             {
-                System.Diagnostics.Debug.WriteLine($"[SessionStorage] Session loaded for {sessionData.LoginId}");
                 return (sessionData.AccessToken, sessionData.RefreshToken, sessionData.LoginId);
             }
         }
@@ -93,7 +90,6 @@ public static class SessionStorageService
             if (File.Exists(SessionFilePath))
             {
                 File.Delete(SessionFilePath);
-                System.Diagnostics.Debug.WriteLine("[SessionStorage] Session cleared");
             }
         }
         catch (Exception ex)

@@ -154,7 +154,6 @@ public partial class ManagerViewModel : ViewModelBase
 
     private async Task InitializeAsync()
     {
-        var sw = System.Diagnostics.Stopwatch.StartNew();
         if (!_isOrganizationDataLoaded)
         {
             await LoadOrganizationDataAsync();
@@ -191,7 +190,6 @@ public partial class ManagerViewModel : ViewModelBase
             {
                 try
                 {
-                    System.Diagnostics.Debug.WriteLine("[ManagerVM] Periodic refresh triggered (background)");
                     await Dispatcher.UIThread.InvokeAsync(async () =>
                     {
                         // 백그라운드 새로고침 - 로딩 화면 없이 조용히 갱신
@@ -207,7 +205,6 @@ public partial class ManagerViewModel : ViewModelBase
             RefreshIntervalMs,  // 최초 실행까지 대기 시간
             RefreshIntervalMs   // 반복 간격
         );
-        System.Diagnostics.Debug.WriteLine($"[ManagerVM] Periodic refresh started (interval: {RefreshIntervalMs}ms)");
     }
 
     /// <summary>
@@ -247,7 +244,6 @@ public partial class ManagerViewModel : ViewModelBase
             if (hasChanges)
             {
                 UpdateCounts();
-                System.Diagnostics.Debug.WriteLine($"[ManagerVM] Background refresh - Invitations updated: {Invitations.Count}");
             }
         }
         catch (Exception ex)
@@ -263,7 +259,6 @@ public partial class ManagerViewModel : ViewModelBase
     {
         _refreshTimer?.Dispose();
         _refreshTimer = null;
-        System.Diagnostics.Debug.WriteLine("[ManagerVM] Periodic refresh stopped");
     }
 
     /// <summary>
@@ -288,8 +283,6 @@ public partial class ManagerViewModel : ViewModelBase
 
             _invitationsChannel.AddPostgresChangeHandler(PostgresChangesOptions.ListenType.All, (sender, change) =>
             {
-                System.Diagnostics.Debug.WriteLine($"[ManagerVM] Realtime change received: {change.Event}");
-
                 // UI 스레드에서 처리
                 Dispatcher.UIThread.InvokeAsync(async () =>
                 {
@@ -298,7 +291,6 @@ public partial class ManagerViewModel : ViewModelBase
             });
 
             await _invitationsChannel.Subscribe();
-            System.Diagnostics.Debug.WriteLine("[ManagerVM] Subscribed to invitations realtime changes");
         }
         catch (Exception ex)
         {
@@ -313,8 +305,6 @@ public partial class ManagerViewModel : ViewModelBase
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Handling change event: {change.Event}");
-
             // Model/OldModel로 데이터 가져오기
             Invitation? model = null;
             Invitation? oldModel = null;
@@ -328,7 +318,6 @@ public partial class ManagerViewModel : ViewModelBase
             // 현재 사용자가 초대한 것만 처리
             if (invitedBy != currentUserId)
             {
-                System.Diagnostics.Debug.WriteLine($"[ManagerVM] Ignoring change - not my invitation (invitedBy: {invitedBy})");
                 return;
             }
 
@@ -379,7 +368,6 @@ public partial class ManagerViewModel : ViewModelBase
             {
                 _invitationsChannel.Unsubscribe();
                 _invitationsChannel = null;
-                System.Diagnostics.Debug.WriteLine("[ManagerVM] Unsubscribed from realtime");
             }
 
             // 캐시 및 데이터 비우기
@@ -427,8 +415,6 @@ public partial class ManagerViewModel : ViewModelBase
         NewAffiliationText = "";
         NewInviteName = "";
         NewInvitePhone = "";
-
-        System.Diagnostics.Debug.WriteLine("[ManagerVM] Cache cleared");
     }
 
     /// <summary>
@@ -463,7 +449,6 @@ public partial class ManagerViewModel : ViewModelBase
             _battalionNames = _battalions.ToDictionary(b => b.Id, b => b.Name);
 
             _isOrganizationDataLoaded = true;
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Loaded: {_regions.Count} regions, {_districts.Count} districts, {_divisions.Count} divisions, {_battalions.Count} battalions");
         }
         catch (Exception ex)
         {
@@ -478,8 +463,6 @@ public partial class ManagerViewModel : ViewModelBase
     {
         var currentUser = AuthService.CurrentUser;
         var dbRole = currentUser?.Role ?? "";
-
-        System.Diagnostics.Debug.WriteLine($"[ManagerVM] CurrentUser: {currentUser?.LoginId ?? "null"}, Role from DB: {dbRole}");
 
         // DB의 role 문자열을 직접 사용하여 판단
         // 기본값 설정
@@ -499,7 +482,6 @@ public partial class ManagerViewModel : ViewModelBase
             ShowAffiliationComboBox = true;
             ShowAffiliationTextInput = false;
             InitializeRegionOptions();
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Set as SuperAdminMois, TargetRole={TargetRole}");
         }
         else if (dbRole == "super_admin_army")
         {
@@ -513,7 +495,6 @@ public partial class ManagerViewModel : ViewModelBase
             ShowAffiliationComboBox = false;
             ShowAffiliationTextInput = true;
             AffiliationSuffix = "사단";
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Set as SuperAdminArmy, TargetRole={TargetRole}, TextInput=true");
         }
         else if (dbRole == "middle_local")
         {
@@ -526,7 +507,6 @@ public partial class ManagerViewModel : ViewModelBase
             ShowAffiliationComboBox = true;
             ShowAffiliationTextInput = false;
             InitializeDistrictOptionsForMiddleLocal();
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Set as MiddleLocal, TargetRole={TargetRole}");
         }
         else if (dbRole == "middle_military")
         {
@@ -540,7 +520,6 @@ public partial class ManagerViewModel : ViewModelBase
             ShowAffiliationComboBox = false;
             ShowAffiliationTextInput = true;
             AffiliationSuffix = "대대";
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Set as MiddleMilitary, TargetRole={TargetRole}, TextInput=true");
         }
         else
         {
@@ -550,7 +529,6 @@ public partial class ManagerViewModel : ViewModelBase
             InviteFormTitle = "";
             ShowAffiliationComboBox = true;
             ShowAffiliationTextInput = false;
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] No invite permission, dbRole={dbRole}");
         }
     }
 
@@ -603,18 +581,15 @@ public partial class ManagerViewModel : ViewModelBase
 
         // 현재 사용자의 region_id로 필터링
         var userRegionId = currentUser?.RegionId;
-        System.Diagnostics.Debug.WriteLine($"[ManagerVM] InitializeDistrictOptionsForMiddleLocal - UserRegionId: {userRegionId}, Total districts: {_districts.Count}");
 
         var filteredDistricts = userRegionId.HasValue
             ? _districts.Where(d => d.RegionId == userRegionId.Value)
             : _districts;
 
         var filteredList = filteredDistricts.OrderBy(d => d.Name).ToList();
-        System.Diagnostics.Debug.WriteLine($"[ManagerVM] Filtered districts count: {filteredList.Count}");
 
         foreach (var district in filteredList)
         {
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Adding district: {district.Name} (RegionId: {district.RegionId})");
             AffiliationOptions.Add(new AffiliationOption(
                 district.Id,
                 district.Name,
@@ -725,8 +700,6 @@ public partial class ManagerViewModel : ViewModelBase
             var currentRole = AuthService.CurrentUser.Role;
             var visibleRoles = GetVisibleInvitationRoles();
 
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Loading invitations - User: {AuthService.CurrentUser.LoginId}, Role: {currentRole}, VisibleRoles: {string.Join(", ", visibleRoles)}");
-
             if (visibleRoles.Count == 0)
             {
                 if (Invitations.Count > 0)
@@ -734,7 +707,6 @@ public partial class ManagerViewModel : ViewModelBase
                     Invitations.Clear();
                     UpdateCounts();
                 }
-                System.Diagnostics.Debug.WriteLine("[ManagerVM] No visible roles, clearing invitations");
                 return;
             }
 
@@ -753,11 +725,6 @@ public partial class ManagerViewModel : ViewModelBase
             if (hasChanges)
             {
                 UpdateCounts();
-                System.Diagnostics.Debug.WriteLine($"[ManagerVM] Invitations updated - Total: {Invitations.Count}");
-            }
-            else
-            {
-                System.Diagnostics.Debug.WriteLine($"[ManagerVM] No changes detected in invitations");
             }
         }
         catch (Exception ex)
@@ -787,7 +754,6 @@ public partial class ManagerViewModel : ViewModelBase
         {
             Invitations.Remove(item);
             hasChanges = true;
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Removed invitation: {item.InviteCode}");
         }
 
         // 2. 새 항목 추가 및 기존 항목 업데이트
@@ -818,7 +784,6 @@ public partial class ManagerViewModel : ViewModelBase
                     }
 
                     hasChanges = true;
-                    System.Diagnostics.Debug.WriteLine($"[ManagerVM] Updated invitation: {newItem.InviteCode}, Status: {newItem.Status}");
                 }
             }
             else
@@ -833,7 +798,6 @@ public partial class ManagerViewModel : ViewModelBase
                     Invitations.Add(newItem);
                 }
                 hasChanges = true;
-                System.Diagnostics.Debug.WriteLine($"[ManagerVM] Added invitation: {newItem.InviteCode}");
             }
         }
 
@@ -898,8 +862,6 @@ public partial class ManagerViewModel : ViewModelBase
         SelectedRankOption = RankOptions.FirstOrDefault(r => !r.IsCategory);
 
         IsNewInviteDialogOpen = true;
-
-        System.Diagnostics.Debug.WriteLine($"[ManagerVM] Dialog opened - FormTitle: {InviteFormTitle}, ShowTextInput: {ShowAffiliationTextInput}, ShowComboBox: {ShowAffiliationComboBox}");
     }
 
     [RelayCommand]
@@ -1001,8 +963,6 @@ public partial class ManagerViewModel : ViewModelBase
                         .From<Division>()
                         .Insert(newDivision);
 
-                    System.Diagnostics.Debug.WriteLine($"[ManagerVM] Created new division: {affiliationName} (ID: {newDivision.Id})");
-
                     newInvite.DivisionId = newDivision.Id;
                     displayAffiliation = affiliationName;
 
@@ -1030,8 +990,6 @@ public partial class ManagerViewModel : ViewModelBase
                     await SupabaseService.Client
                         .From<Battalion>()
                         .Insert(newBattalion);
-
-                    System.Diagnostics.Debug.WriteLine($"[ManagerVM] Created new battalion: {affiliationName} (ID: {newBattalion.Id})");
 
                     newInvite.BattalionId = newBattalion.Id;
                     newInvite.DivisionId = userDivisionId.Value;
@@ -1076,8 +1034,6 @@ public partial class ManagerViewModel : ViewModelBase
             // 초대 코드를 클립보드에 복사
             await CopyToClipboardAsync(inviteCode);
             CopiedMessage = $"초대코드 {inviteCode} 가 복사되었습니다!";
-
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Invitation created: {inviteCode}, Role: {TargetRole}, Affiliation: {displayAffiliation}");
         }
         catch (Exception ex)
         {
@@ -1130,14 +1086,10 @@ public partial class ManagerViewModel : ViewModelBase
     {
         try
         {
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Deleting invitation: {invitation.Id}, Code: {invitation.InviteCode}");
-
             await SupabaseService.Client
                 .From<Invitation>()
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, invitation.Id.ToString())
                 .Delete();
-
-            System.Diagnostics.Debug.WriteLine($"[ManagerVM] Delete completed");
 
             Invitations.Remove(invitation);
             UpdateCounts();
