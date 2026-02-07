@@ -951,23 +951,36 @@ public partial class ManagerViewModel : ViewModelBase
 
                 if (AffiliationSuffix == "사단")
                 {
-                    // SW0002 (육군본부) → 사단담당자 초대: divisions 테이블에 생성
-                    var newDivision = new Division
-                    {
-                        Id = Guid.NewGuid(),
-                        Name = affiliationName,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await SupabaseService.Client
+                    // SW0002 (육군본부) → 사단담당자 초대: divisions 테이블에서 조회 후 없으면 생성
+                    var existingDivision = await SupabaseService.Client
                         .From<Division>()
-                        .Insert(newDivision);
+                        .Filter("name", Supabase.Postgrest.Constants.Operator.Equals, affiliationName)
+                        .Single();
 
-                    newInvite.DivisionId = newDivision.Id;
+                    Division division;
+                    if (existingDivision != null)
+                    {
+                        division = existingDivision;
+                    }
+                    else
+                    {
+                        division = new Division
+                        {
+                            Id = Guid.NewGuid(),
+                            Name = affiliationName,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        await SupabaseService.Client
+                            .From<Division>()
+                            .Insert(division);
+                    }
+
+                    newInvite.DivisionId = division.Id;
                     displayAffiliation = affiliationName;
 
                     // 캐시 업데이트
-                    _divisionNames[newDivision.Id] = affiliationName;
+                    _divisionNames[division.Id] = affiliationName;
                 }
                 else if (AffiliationSuffix == "대대")
                 {
@@ -979,24 +992,39 @@ public partial class ManagerViewModel : ViewModelBase
                         return;
                     }
 
-                    var newBattalion = new Battalion
-                    {
-                        Id = Guid.NewGuid(),
-                        DivisionId = userDivisionId.Value,
-                        Name = affiliationName,
-                        CreatedAt = DateTime.UtcNow
-                    };
-
-                    await SupabaseService.Client
+                    // 같은 사단 내 동일 이름 대대 조회 후 없으면 생성
+                    var existingBattalion = await SupabaseService.Client
                         .From<Battalion>()
-                        .Insert(newBattalion);
+                        .Filter("name", Supabase.Postgrest.Constants.Operator.Equals, affiliationName)
+                        .Filter("division_id", Supabase.Postgrest.Constants.Operator.Equals, userDivisionId.Value.ToString())
+                        .Single();
 
-                    newInvite.BattalionId = newBattalion.Id;
+                    Battalion battalion;
+                    if (existingBattalion != null)
+                    {
+                        battalion = existingBattalion;
+                    }
+                    else
+                    {
+                        battalion = new Battalion
+                        {
+                            Id = Guid.NewGuid(),
+                            DivisionId = userDivisionId.Value,
+                            Name = affiliationName,
+                            CreatedAt = DateTime.UtcNow
+                        };
+
+                        await SupabaseService.Client
+                            .From<Battalion>()
+                            .Insert(battalion);
+                    }
+
+                    newInvite.BattalionId = battalion.Id;
                     newInvite.DivisionId = userDivisionId.Value;
                     displayAffiliation = affiliationName;
 
                     // 캐시 업데이트
-                    _battalionNames[newBattalion.Id] = affiliationName;
+                    _battalionNames[battalion.Id] = affiliationName;
                 }
             }
             else
