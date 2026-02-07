@@ -27,7 +27,7 @@ public class Notification : BaseModel
     [Column("title")]
     public string Title { get; set; } = "";
 
-    [Column("body")]
+    [Column("message")]
     public string Message { get; set; } = "";
 
     [Column("is_read")]
