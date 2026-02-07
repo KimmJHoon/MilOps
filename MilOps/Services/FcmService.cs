@@ -65,7 +65,18 @@ public static class FcmService
 
             System.Diagnostics.Debug.WriteLine($"[FcmService] Saving FCM token for user {userId}");
 
-            // 기존 토큰 확인 및 업데이트/삽입
+            // 1. 해당 FCM 토큰의 다른 사용자 등록을 모두 비활성화 (디바이스 1개 = 1명만 활성)
+            System.Diagnostics.Debug.WriteLine("[FcmService] Deactivating other users' registrations for this token");
+#pragma warning disable CS8603
+            await client
+                .From<UserDevice>()
+                .Filter("fcm_token", Supabase.Postgrest.Constants.Operator.Equals, token)
+                .Filter("user_id", Supabase.Postgrest.Constants.Operator.NotEqual, userId.ToString())
+                .Set(d => d.IsActive, false)
+                .Update();
+#pragma warning restore CS8603
+
+            // 2. 현재 사용자의 기존 토큰 확인
             var existingDevices = await client
                 .From<UserDevice>()
                 .Filter("user_id", Supabase.Postgrest.Constants.Operator.Equals, userId.ToString())
