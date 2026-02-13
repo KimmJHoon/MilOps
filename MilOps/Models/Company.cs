@@ -21,12 +21,6 @@ public class Company : BaseModel
     [Column("products")]
     public string? Products { get; set; }
 
-    [Column("contact_name")]
-    public string? ContactName { get; set; }
-
-    [Column("contact_phone")]
-    public string? ContactPhone { get; set; }
-
     [Column("district_id")]
     public Guid DistrictId { get; set; }
 
