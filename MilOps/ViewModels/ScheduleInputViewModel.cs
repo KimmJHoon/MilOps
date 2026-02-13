@@ -52,9 +52,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
     [ObservableProperty]
     private string _militaryUserName = "";
 
-    [ObservableProperty]
-    private string _militaryUserPhone = "";
-
     // === 가능 일자 입력 ===
     [ObservableProperty]
     private DateTime? _availableStartDate;
@@ -191,7 +188,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
 
             // 대대담당자 정보
             MilitaryUserName = detail.MilitaryUserFullDisplayName;
-            MilitaryUserPhone = detail.MilitaryUserPhone ?? "";
             BattalionName = detail.BattalionFullName;
 
             // 현재 사용자 표시 설정

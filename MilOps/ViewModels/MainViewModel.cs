@@ -33,7 +33,7 @@ public partial class MainViewModel : ViewModelBase
     private string _selectedTab = "calendar";
 
     [ObservableProperty]
-    private string _currentPageTitle = "캘린더";
+    private string _currentPageTitle = "자원조사 일정표";
 
     [ObservableProperty]
     private bool _isCalendarSelected = true;
@@ -70,13 +70,7 @@ public partial class MainViewModel : ViewModelBase
     private string _currentUserName = "";
 
     [ObservableProperty]
-    private string _currentUserPhone = "";
-
-    [ObservableProperty]
     private string _currentUserRole = "";
-
-    [ObservableProperty]
-    private string _currentUserPosition = "";
 
     [ObservableProperty]
     private string _currentUserRegion = "";
@@ -121,10 +115,8 @@ public partial class MainViewModel : ViewModelBase
         var user = AuthService.CurrentUser;
 
         CurrentUserId = user?.LoginId ?? "";
-        CurrentUserName = user?.Name ?? "";
-        CurrentUserPhone = user?.Phone ?? "";
+        CurrentUserName = user?.FullDisplayName ?? "";
         CurrentUserRole = user?.RoleDisplayName ?? "";
-        CurrentUserPosition = user?.PositionDisplay ?? "";
 
         // 지역 정보 로드 (비동기)
         _ = LoadUserRegionAsync();
@@ -256,7 +248,7 @@ public partial class MainViewModel : ViewModelBase
         {
             case "calendar":
                 IsCalendarSelected = true;
-                CurrentPageTitle = "캘린더";
+                CurrentPageTitle = "자원조사 일정표";
                 break;
             case "schedule":
                 IsScheduleSelected = true;

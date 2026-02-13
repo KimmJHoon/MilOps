@@ -27,11 +27,6 @@ namespace MilOps.Android;
     LaunchMode = LaunchMode.SingleTop,
     WindowSoftInputMode = SoftInput.AdjustResize,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
-[IntentFilter(
-    new[] { Intent.ActionView },
-    Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable },
-    DataScheme = "milops",
-    DataHost = "invite")]
 public class MainActivity : AvaloniaMainActivity<App>
 {
     private const string TAG = "MilOps";
@@ -57,8 +52,6 @@ public class MainActivity : AvaloniaMainActivity<App>
             // Android 13+ 알림 권한 요청
             RequestNotificationPermission();
 
-            // 딥링크 처리 (앱이 시작될 때)
-            HandleIntent(Intent);
         }
         catch (Exception ex)
         {
@@ -109,15 +102,6 @@ public class MainActivity : AvaloniaMainActivity<App>
             FinishAffinity();
             Java.Lang.JavaSystem.Exit(0);
         };
-    }
-
-    /// <summary>
-    /// 앱이 이미 실행 중일 때 새 인텐트 수신 (딥링크)
-    /// </summary>
-    protected override void OnNewIntent(Intent? intent)
-    {
-        base.OnNewIntent(intent);
-        HandleIntent(intent);
     }
 
     /// <summary>
@@ -186,30 +170,6 @@ public class MainActivity : AvaloniaMainActivity<App>
         }
     }
 
-    /// <summary>
-    /// 딥링크 인텐트 처리
-    /// </summary>
-    private void HandleIntent(Intent? intent)
-    {
-        if (intent?.Data == null)
-            return;
-
-        var uri = intent.Data;
-        Log.Info(TAG, $"Deep link received: {uri}");
-
-        // milops://invite/{code} 형식 처리
-        if (uri.Scheme == "milops" && uri.Host == "invite")
-        {
-            var inviteCode = uri.LastPathSegment;
-            if (!string.IsNullOrEmpty(inviteCode))
-            {
-                Log.Info(TAG, $"Invite code: {inviteCode}");
-                // 초대 코드를 앱에 전달 (정적 변수 또는 이벤트 사용)
-                DeepLinkHandler.PendingInviteCode = inviteCode;
-            }
-        }
-    }
-
     private void LoadSupabaseConfig()
     {
         try
@@ -257,31 +217,4 @@ public class MainActivity : AvaloniaMainActivity<App>
         return base.CustomizeAppBuilder(builder)
             .LogToTrace();
     }
-}
-
-/// <summary>
-/// 딥링크 처리를 위한 정적 클래스
-/// </summary>
-public static class DeepLinkHandler
-{
-    /// <summary>
-    /// 처리 대기 중인 초대 코드
-    /// 앱이 초대 링크로 실행된 경우 설정됨
-    /// </summary>
-    public static string? PendingInviteCode { get; set; }
-
-    /// <summary>
-    /// 초대 코드 소비 (한 번 읽으면 null로 리셋)
-    /// </summary>
-    public static string? ConsumePendingInviteCode()
-    {
-        var code = PendingInviteCode;
-        PendingInviteCode = null;
-        return code;
-    }
-
-    /// <summary>
-    /// 초대 코드가 있는지 확인
-    /// </summary>
-    public static bool HasPendingInvite => !string.IsNullOrEmpty(PendingInviteCode);
 }

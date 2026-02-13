@@ -49,9 +49,6 @@ public partial class ScheduleReserveViewModel : ViewModelBase
     [ObservableProperty]
     private string _localUserName = "";
 
-    [ObservableProperty]
-    private string _localUserPhone = "";
-
     // === 가능 일자/시간 선택 ===
     [ObservableProperty]
     private ObservableCollection<ReserveDateItem> _availableDates = new();
@@ -191,7 +188,6 @@ public partial class ScheduleReserveViewModel : ViewModelBase
             if (localUser != null)
             {
                 LocalUserName = localUser.FullDisplayName;
-                LocalUserPhone = localUser.Phone ?? "";
             }
 
             // 현재 사용자 표시 설정 (대대담당자)

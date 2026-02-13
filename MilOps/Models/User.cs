@@ -18,9 +18,6 @@ public class User : BaseModel
     [Column("name")]
     public string Name { get; set; } = "";
 
-    [Column("phone")]
-    public string Phone { get; set; } = "";
-
     [Column("email")]
     public string? Email { get; set; }
 
@@ -41,15 +38,6 @@ public class User : BaseModel
 
     [Column("military_rank")]
     public string? MilitaryRank { get; set; }
-
-    [Column("department")]
-    public string? Department { get; set; }
-
-    [Column("position")]
-    public string? Position { get; set; }
-
-    [Column("parent_id")]
-    public Guid? ParentId { get; set; }
 
     [Column("is_active")]
     public bool IsActive { get; set; } = true;
@@ -93,7 +81,7 @@ public class User : BaseModel
     public string RoleDisplayName => Role switch
     {
         "super_admin_mois" => "최종관리자 (행정안전부)",
-        "super_admin_army" => "최종관리자 (육군본부)",
+        "super_admin_army" => "최종관리자 (제2작전사)",
         "middle_local" => "지자체(도)",
         "middle_military" => "사단담당자",
         "user_local" => "지자체담당자",
@@ -101,6 +89,9 @@ public class User : BaseModel
         _ => "알 수 없음"
     };
 
+    /// <summary>
+    /// 군 측: 계급 표시, 행정 측: 빈 문자열
+    /// </summary>
     [JsonIgnore]
     public string PositionDisplay
     {
@@ -108,12 +99,14 @@ public class User : BaseModel
         {
             if (IsMilitarySide && !string.IsNullOrEmpty(MilitaryRank))
                 return MilitaryRank;
-            if (IsLocalSide && !string.IsNullOrEmpty(Position))
-                return Position;
             return "";
         }
     }
 
+    /// <summary>
+    /// 계정 표시명 (하위 호환용)
+    /// 군 측: "계정명 계급", 행정 측: "계정명"
+    /// </summary>
     [JsonIgnore]
     public string FullDisplayName
     {

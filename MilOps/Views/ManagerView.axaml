@@ -1,250 +1,123 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MilOps.ViewModels"
-             xmlns:models="using:MilOps.Models"
              xmlns:controls="using:MilOps.Views.Controls"
              x:Class="MilOps.Views.ManagerView"
              x:DataType="vm:ManagerViewModel">
 
-  <Grid Background="#000000">
+  <Grid Background="#F2F2F7">
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
       <StackPanel Margin="10" Spacing="10">
 
-        <!-- 통계 박스 -->
-        <Grid ColumnDefinitions="*,*,*" Margin="0,0,0,5">
-          <!-- 전체 -->
-          <Border Grid.Column="0" Background="#1A1A1A" CornerRadius="8" Padding="10" Margin="0,0,3,0">
-            <StackPanel HorizontalAlignment="Center">
-              <TextBlock Text="{Binding TotalCount}" FontSize="24" Foreground="White" HorizontalAlignment="Center"/>
-              <TextBlock Text="전체" FontSize="12" Foreground="#888888" HorizontalAlignment="Center"/>
+        <!-- 헤더 -->
+        <TextBlock Text="{Binding HeaderTitle}" FontSize="18"
+                   Foreground="#1C1C1E" Margin="4,4,0,0"/>
+
+        <!-- 통계 카드 -->
+        <Grid ColumnDefinitions="*,*,*" Margin="0,0,0,4">
+          <Border Grid.Column="0" Background="#FFFFFF" CornerRadius="10" Padding="12" Margin="0,0,4,0">
+            <StackPanel HorizontalAlignment="Center" Spacing="4">
+              <TextBlock Text="{Binding TotalCount}" FontSize="22"
+                         Foreground="#1C1C1E" HorizontalAlignment="Center"/>
+              <TextBlock Text="전체" FontSize="12" Foreground="#8E8E93" HorizontalAlignment="Center"/>
             </StackPanel>
           </Border>
-
-          <!-- 활성 (활성화) -->
-          <Border Grid.Column="1" Background="#1A1A1A" CornerRadius="8" Padding="10" Margin="3,0">
-            <StackPanel HorizontalAlignment="Center">
-              <TextBlock Text="{Binding ActiveCount}" FontSize="24" Foreground="#4CAF50" HorizontalAlignment="Center"/>
-              <TextBlock Text="활성화" FontSize="12" Foreground="#888888" HorizontalAlignment="Center"/>
+          <Border Grid.Column="1" Background="#FFFFFF" CornerRadius="10" Padding="12" Margin="2,0,2,0">
+            <StackPanel HorizontalAlignment="Center" Spacing="4">
+              <TextBlock Text="{Binding LocalCount}" FontSize="22"
+                         Foreground="#007AFF" HorizontalAlignment="Center"/>
+              <TextBlock Text="행정" FontSize="12" Foreground="#8E8E93" HorizontalAlignment="Center"/>
             </StackPanel>
           </Border>
-
-          <!-- 초대중 (대기) -->
-          <Border Grid.Column="2" Background="#1A1A1A" CornerRadius="8" Padding="10" Margin="3,0,0,0">
-            <StackPanel HorizontalAlignment="Center">
-              <TextBlock Text="{Binding PendingCount}" FontSize="24" Foreground="#FF9800" HorizontalAlignment="Center"/>
-              <TextBlock Text="대기중" FontSize="12" Foreground="#888888" HorizontalAlignment="Center"/>
+          <Border Grid.Column="2" Background="#FFFFFF" CornerRadius="10" Padding="12" Margin="4,0,0,0">
+            <StackPanel HorizontalAlignment="Center" Spacing="4">
+              <TextBlock Text="{Binding MilitaryCount}" FontSize="22"
+                         Foreground="#34C759" HorizontalAlignment="Center"/>
+              <TextBlock Text="군" FontSize="12" Foreground="#8E8E93" HorizontalAlignment="Center"/>
             </StackPanel>
           </Border>
         </Grid>
 
-        <!-- 목록 헤더 -->
-        <Grid Margin="0,5,0,5">
-          <TextBlock Text="초대 코드 목록" FontSize="14" Foreground="White" VerticalAlignment="Center"/>
-          <Button Command="{Binding OpenNewInviteDialogCommand}"
-                  Background="#2196F3"
-                  HorizontalAlignment="Right"
-                  Padding="10,6"
-                  CornerRadius="6"
-                  IsVisible="{Binding TargetRole, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
-            <TextBlock Text="+ 새 초대" FontSize="13" Foreground="White"/>
-          </Button>
-        </Grid>
+        <!-- 필터 탭 -->
+        <Border Background="#FFFFFF" CornerRadius="10" Padding="4">
+          <Grid ColumnDefinitions="*,*,*">
+            <Button Grid.Column="0" Command="{Binding SetFilterAllCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    CornerRadius="8" Padding="8,6"
+                    Background="{Binding FilterType, Converter={x:Static StringConverters.IsNotNullOrEmpty}, ConverterParameter=all}"
+                    Classes="filterTab">
+              <Button.Background>
+                <MultiBinding>
+                  <Binding Path="FilterType"/>
+                </MultiBinding>
+              </Button.Background>
+              <TextBlock Text="전체" FontSize="13" HorizontalAlignment="Center"
+                         Foreground="{Binding FilterType, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+            </Button>
+            <Button Grid.Column="1" Command="{Binding SetFilterLocalCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    CornerRadius="8" Padding="8,6">
+              <TextBlock Text="행정" FontSize="13" HorizontalAlignment="Center"/>
+            </Button>
+            <Button Grid.Column="2" Command="{Binding SetFilterMilitaryCommand}"
+                    HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                    CornerRadius="8" Padding="8,6">
+              <TextBlock Text="군" FontSize="13" HorizontalAlignment="Center"/>
+            </Button>
+          </Grid>
+        </Border>
 
-
-        <!-- 초대 목록 -->
-        <ItemsControl ItemsSource="{Binding Invitations}">
+        <!-- 유저 목록 -->
+        <ItemsControl ItemsSource="{Binding Users}">
           <ItemsControl.ItemTemplate>
-            <DataTemplate DataType="models:Invitation">
-              <Border Background="#1A1A1A" CornerRadius="8" Padding="12" Margin="0,4">
-                <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto">
-                  <!-- Row 0: 초대코드 + 상태 배지 -->
-                  <Grid Grid.Row="0" ColumnDefinitions="*,Auto,Auto">
-                    <TextBlock Grid.Column="0" Text="{Binding InviteCode}" FontSize="14" Foreground="#2196F3"
-                               FontFamily="Consolas" TextTrimming="CharacterEllipsis"/>
-                    <Border Grid.Column="1" Background="{Binding StatusColor}" CornerRadius="4" Padding="6,2" Margin="6,0,0,0">
-                      <TextBlock Text="{Binding StatusText}" FontSize="11" Foreground="White"/>
-                    </Border>
-                    <!-- 코드 복사 버튼 (대기중일 때만) -->
-                    <Button Grid.Column="2"
-                            Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).CopyInviteCodeCommand}"
-                            CommandParameter="{Binding}"
-                            Background="Transparent"
-                            Padding="4,0"
-                            Margin="4,0,0,0"
-                            IsVisible="{Binding IsValid}">
-                      <TextBlock Text="&#xe0ee;" FontFamily="{StaticResource MaterialIcons}" FontSize="14"/>
-                    </Button>
-                  </Grid>
+            <DataTemplate x:DataType="vm:UserListItem">
+              <Border Background="#FFFFFF" CornerRadius="10" Padding="14" Margin="0,0,0,6">
+                <Grid ColumnDefinitions="Auto,*">
+                  <!-- 역할 아이콘 -->
+                  <Border Grid.Column="0" Width="36" Height="36" CornerRadius="18"
+                          Background="{Binding RoleColor}" Margin="0,0,12,0"
+                          VerticalAlignment="Center">
+                    <TextBlock Text="{Binding RoleIcon}" FontSize="14"
+                               Foreground="#FFFFFF" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  </Border>
 
-                  <!-- Row 1: 이름 + 계급 -->
-                  <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
-                    <TextBlock Text="{Binding Name}" FontSize="13" Foreground="White"/>
-                    <TextBlock Text="{Binding MilitaryRank}" FontSize="13" Foreground="#FF9800"
-                               IsVisible="{Binding MilitaryRank, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                  </StackPanel>
-
-                  <!-- Row 2: 소속 + 역할 -->
-                  <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="0,2,0,0">
-                    <TextBlock Text="{Binding DisplayAffiliation}" FontSize="12" Foreground="#888888"
-                               TextTrimming="CharacterEllipsis"
-                               IsVisible="{Binding DisplayAffiliation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-                    <TextBlock Text="{Binding RoleDisplayName}" FontSize="11" Foreground="#666666"/>
-                  </StackPanel>
-
-                  <!-- Row 3: 연락처 -->
-                  <TextBlock Grid.Row="3" Text="{Binding Phone}" FontSize="12" Foreground="#888888" Margin="0,2,0,0"
-                             IsVisible="{Binding Phone, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-                  <!-- Row 4: 생성일/만료일 + 액션 버튼 -->
-                  <Grid Grid.Row="4" ColumnDefinitions="*,Auto" Margin="0,6,0,0">
-                    <StackPanel Grid.Column="0" Spacing="2">
-                      <TextBlock Text="{Binding CreatedAtText}" FontSize="11" Foreground="#888888"/>
-                      <TextBlock Text="{Binding ExpiresAtText}" FontSize="11" Foreground="#888888"/>
+                  <!-- 정보 -->
+                  <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                      <TextBlock Text="{Binding Name}" FontSize="14" Foreground="#1C1C1E"/>
+                      <TextBlock Text="{Binding RoleDisplayName}" FontSize="11" Foreground="#8E8E93"
+                                 VerticalAlignment="Center"/>
                     </StackPanel>
-
-                    <!-- 활성화: 삭제 버튼 -->
-                    <Button Grid.Column="1"
-                            Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).DeleteInvitationCommand}"
-                            CommandParameter="{Binding}"
-                            Background="Transparent"
-                            IsVisible="{Binding IsUsed}">
-                      <TextBlock Text="삭제" FontSize="13" Foreground="#F44336"/>
-                    </Button>
-
-                    <!-- 대기중: 재발송/취소 버튼 -->
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
-                                IsVisible="{Binding IsValid}">
-                      <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).ResendInvitationCommand}"
-                              CommandParameter="{Binding}"
-                              Background="Transparent">
-                        <TextBlock Text="연장" FontSize="13" Foreground="#4CAF50"/>
-                      </Button>
-                      <Button Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).CancelInvitationCommand}"
-                              CommandParameter="{Binding}"
-                              Background="Transparent">
-                        <TextBlock Text="취소" FontSize="13" Foreground="#888888"/>
-                      </Button>
-                    </StackPanel>
-
-                    <!-- 만료됨: 재발송 버튼 -->
-                    <Button Grid.Column="1"
-                            Command="{Binding $parent[ItemsControl].((vm:ManagerViewModel)DataContext).ResendInvitationCommand}"
-                            CommandParameter="{Binding}"
-                            Background="Transparent"
-                            IsVisible="{Binding IsExpired}">
-                      <TextBlock Text="연장" FontSize="13" Foreground="#4CAF50"/>
-                    </Button>
-                  </Grid>
+                    <TextBlock Text="{Binding Affiliation}" FontSize="12" Foreground="#AEAEB2"
+                               IsVisible="{Binding Affiliation, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                  </StackPanel>
                 </Grid>
               </Border>
             </DataTemplate>
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
+        <!-- 빈 상태 -->
+        <Border Background="#FFFFFF" CornerRadius="10" Padding="30"
+                IsVisible="{Binding !Users.Count}">
+          <StackPanel HorizontalAlignment="Center" Spacing="8">
+            <TextBlock Text="&#xe7fb;" FontFamily="{StaticResource MaterialIcons}"
+                       FontSize="36" Foreground="#C7C7CC" HorizontalAlignment="Center"/>
+            <TextBlock Text="담당자가 없습니다" FontSize="14" Foreground="#8E8E93" HorizontalAlignment="Center"/>
+          </StackPanel>
+        </Border>
+
+        <!-- 에러 메시지 -->
+        <Border Background="#FFF3F3" CornerRadius="8" Padding="12"
+                IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+          <TextBlock Text="{Binding ErrorMessage}" FontSize="13" Foreground="#FF3B30"
+                     TextWrapping="Wrap"/>
+        </Border>
+
       </StackPanel>
     </ScrollViewer>
 
     <!-- 로딩 오버레이 -->
     <controls:LoadingOverlay IsVisible="{Binding IsLoading}"/>
-
-    <!-- 새 초대 다이얼로그 오버레이 -->
-    <Border Background="#80000000" IsVisible="{Binding IsNewInviteDialogOpen}"/>
-
-    <!-- 새 초대 다이얼로그 - 반응형 (좌우 여백 유지) -->
-    <Border Background="#222222"
-            CornerRadius="10"
-            Padding="16"
-            Margin="20,40"
-            MaxWidth="350"
-            VerticalAlignment="Center"
-            HorizontalAlignment="Stretch"
-            IsVisible="{Binding IsNewInviteDialogOpen}">
-      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="12">
-          <!-- 동적 타이틀 -->
-          <TextBlock Text="{Binding InviteFormTitle}" FontSize="16" Foreground="White" HorizontalAlignment="Center"/>
-
-          <!-- 소속 (ComboBox - 기본 모드) -->
-          <StackPanel Spacing="4" IsVisible="{Binding ShowAffiliationComboBox}">
-            <TextBlock Text="{Binding AffiliationLabel}" Foreground="#AAAAAA" FontSize="12"/>
-            <ComboBox ItemsSource="{Binding AffiliationOptions}"
-                      SelectedItem="{Binding SelectedAffiliation}"
-                      Background="#333333"
-                      Foreground="White"
-                      HorizontalAlignment="Stretch"/>
-          </StackPanel>
-
-          <!-- 소속 (텍스트 입력 - 사단/대대 직접 입력 모드) -->
-          <StackPanel Spacing="4" IsVisible="{Binding ShowAffiliationTextInput}">
-            <TextBlock Text="{Binding AffiliationLabel}" Foreground="#AAAAAA" FontSize="12"/>
-            <Grid ColumnDefinitions="*,Auto">
-              <TextBox Grid.Column="0"
-                       Text="{Binding NewAffiliationText}"
-                       Watermark="예: 31"
-                       Background="#333333"
-                       Foreground="White"
-                       Padding="8"
-                       MaxLength="5"/>
-              <TextBlock Grid.Column="1"
-                         Text="{Binding AffiliationSuffix}"
-                         Foreground="White"
-                         FontSize="13"
-                         VerticalAlignment="Center"
-                         Margin="6,0,0,0"/>
-            </Grid>
-            <TextBlock Text="* 최대 5자리 숫자까지 입력 가능" Foreground="#666666" FontSize="10"/>
-          </StackPanel>
-
-          <!-- 이름 -->
-          <StackPanel Spacing="4">
-            <TextBlock Text="이름" Foreground="#AAAAAA" FontSize="12"/>
-            <TextBox Text="{Binding NewInviteName}"
-                     Watermark="이름 입력"
-                     Background="#333333"
-                     Foreground="White"
-                     Padding="8"/>
-          </StackPanel>
-
-          <!-- 연락처 -->
-          <StackPanel Spacing="4">
-            <TextBlock Text="연락처" Foreground="#AAAAAA" FontSize="12"/>
-            <TextBox Text="{Binding NewInvitePhone}"
-                     Watermark="010-0000-0000"
-                     Background="#333333"
-                     Foreground="White"
-                     Padding="8"/>
-          </StackPanel>
-
-          <!-- 계급 (군부대용만 표시) -->
-          <StackPanel Spacing="4" IsVisible="{Binding ShowRankField}">
-            <TextBlock Text="계급" Foreground="#AAAAAA" FontSize="12"/>
-            <ComboBox ItemsSource="{Binding RankOptions}"
-                      SelectedItem="{Binding SelectedRankOption}"
-                      Background="#333333"
-                      Foreground="White"
-                      HorizontalAlignment="Stretch"/>
-          </StackPanel>
-
-          <!-- 복사 완료 메시지 -->
-          <TextBlock Text="{Binding CopiedMessage}"
-                     Foreground="#4CAF50"
-                     FontSize="12"
-                     HorizontalAlignment="Center"
-                     IsVisible="{Binding CopiedMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
-
-          <!-- 버튼들 -->
-          <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
-            <Button Grid.Column="0" Command="{Binding CloseNewInviteDialogCommand}"
-                    Background="#555555" Margin="0,0,4,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10" CornerRadius="6">
-              <TextBlock Text="닫기" Foreground="White" FontSize="13"/>
-            </Button>
-            <Button Grid.Column="1" Command="{Binding SendInviteCommand}"
-                    Background="#2196F3" Margin="4,0,0,0" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Padding="10" CornerRadius="6">
-              <TextBlock Text="초대 발송" Foreground="White" FontSize="13"/>
-            </Button>
-          </Grid>
-        </StackPanel>
-      </ScrollViewer>
-    </Border>
   </Grid>
 </UserControl>

@@ -77,17 +77,11 @@ public partial class ScheduleCreateViewModel : ViewModelBase
     private string _localUserName = "";
 
     [ObservableProperty]
-    private string _localUserPhone = "";
-
-    [ObservableProperty]
     private bool _hasLocalUser = false;
 
     // 대대담당자 정보
     [ObservableProperty]
     private string _militaryUserName = "";
-
-    [ObservableProperty]
-    private string _militaryUserPhone = "";
 
     [ObservableProperty]
     private bool _hasMilitaryUser = false;
@@ -372,7 +366,6 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         _selectedLocalUser = null;
         HasLocalUser = false;
         LocalUserName = "";
-        LocalUserPhone = "";
 
         if (SelectedDistrict == null) return;
 
@@ -384,7 +377,6 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         {
             HasLocalUser = true;
             LocalUserName = $"[민] {_selectedLocalUser.FullDisplayName}";
-            LocalUserPhone = _selectedLocalUser.Phone;
         }
         else
         {
@@ -397,7 +389,6 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         _selectedMilitaryUser = null;
         HasMilitaryUser = false;
         MilitaryUserName = "";
-        MilitaryUserPhone = "";
 
         if (SelectedBattalion == null) return;
 
@@ -409,7 +400,6 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         {
             HasMilitaryUser = true;
             MilitaryUserName = $"[군] {_selectedMilitaryUser.FullDisplayName}";
-            MilitaryUserPhone = _selectedMilitaryUser.Phone;
         }
         else
         {
@@ -552,9 +542,7 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         CompanyAddress = "";
         CompanyProducts = "";
         LocalUserName = "";
-        LocalUserPhone = "";
         MilitaryUserName = "";
-        MilitaryUserPhone = "";
         HasLocalUser = false;
         HasMilitaryUser = false;
         CanCreate = false;
