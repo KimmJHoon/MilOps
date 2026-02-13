@@ -95,5 +95,5 @@ public class Notification : BaseModel
     }
 
     [JsonIgnore]
-    public string BackgroundColor => IsRead ? "#1A1A1A" : "#2A2A3A";
+    public string BackgroundColor => IsRead ? "#FFFFFF" : "#E8EAF6";
 }

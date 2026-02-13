@@ -5,7 +5,7 @@
              x:Class="MilOps.Views.CalendarView"
              x:DataType="vm:CalendarViewModel">
 
-  <Grid Background="#0a0a0a">
+  <Grid Background="#F2F2F7">
     <Grid.RowDefinitions>
       <RowDefinition Height="Auto"/>
       <RowDefinition Height="Auto"/>
@@ -14,7 +14,7 @@
     </Grid.RowDefinitions>
 
     <!-- 월 네비게이션 - iOS 스타일 -->
-    <Border Grid.Row="0" Background="#1c1c1e" Padding="12,16" CornerRadius="0,0,20,20">
+    <Border Grid.Row="0" Background="#FFFFFF" Padding="12,16" CornerRadius="0,0,20,20">
       <Grid>
         <Grid.ColumnDefinitions>
           <ColumnDefinition Width="Auto"/>
@@ -23,17 +23,17 @@
         </Grid.ColumnDefinitions>
 
         <Button Grid.Column="0" Command="{Binding PreviousMonthCommand}"
-                Background="#2c2c2e" BorderThickness="0" Padding="12,8" CornerRadius="12">
+                Background="#E5E5EA" BorderThickness="0" Padding="12,8" CornerRadius="12">
           <TextBlock Text="&#xe5cb;" FontFamily="{StaticResource MaterialIcons}"
                      FontSize="24" Foreground="#00a872"/>
         </Button>
 
         <TextBlock Grid.Column="1" Text="{Binding CurrentMonthYear}"
-                   FontSize="22" Foreground="#effdf6"
+                   FontSize="22" Foreground="#1C1C1E"
                    HorizontalAlignment="Center" VerticalAlignment="Center"/>
 
         <Button Grid.Column="2" Command="{Binding NextMonthCommand}"
-                Background="#2c2c2e" BorderThickness="0" Padding="12,8" CornerRadius="12">
+                Background="#E5E5EA" BorderThickness="0" Padding="12,8" CornerRadius="12">
           <TextBlock Text="&#xe5cc;" FontFamily="{StaticResource MaterialIcons}"
                      FontSize="24" Foreground="#00a872"/>
         </Button>
@@ -44,15 +44,15 @@
     <StackPanel Grid.Row="1" Spacing="8" Margin="12,12,12,0"
                 IsVisible="{Binding ShowLegend}">
       <!-- 범례 - 카드 스타일 -->
-      <Border Background="#1c1c1e" Padding="16,12" CornerRadius="12">
+      <Border Background="#FFFFFF" Padding="16,12" CornerRadius="12">
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="32">
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Border Width="16" Height="16" CornerRadius="8" Background="#00a872"/>
-            <TextBlock Text="확정" Foreground="#b0b0b0" FontSize="13" VerticalAlignment="Center"/>
+            <TextBlock Text="확정" Foreground="#8E8E93" FontSize="13" VerticalAlignment="Center"/>
           </StackPanel>
           <StackPanel Orientation="Horizontal" Spacing="8">
             <Border Width="16" Height="16" CornerRadius="8" Background="#deb887"/>
-            <TextBlock Text="예약 (미확정)" Foreground="#b0b0b0" FontSize="13" VerticalAlignment="Center"/>
+            <TextBlock Text="예약 (미확정)" Foreground="#8E8E93" FontSize="13" VerticalAlignment="Center"/>
           </StackPanel>
         </StackPanel>
       </Border>
@@ -71,19 +71,19 @@
           <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <TextBlock Grid.Column="0" Text="일" Foreground="#ff6b6b" FontSize="14" HorizontalAlignment="Center"/>
-        <TextBlock Grid.Column="1" Text="월" Foreground="#808080" FontSize="14" HorizontalAlignment="Center"/>
-        <TextBlock Grid.Column="2" Text="화" Foreground="#808080" FontSize="14" HorizontalAlignment="Center"/>
-        <TextBlock Grid.Column="3" Text="수" Foreground="#808080" FontSize="14" HorizontalAlignment="Center"/>
-        <TextBlock Grid.Column="4" Text="목" Foreground="#808080" FontSize="14" HorizontalAlignment="Center"/>
-        <TextBlock Grid.Column="5" Text="금" Foreground="#808080" FontSize="14" HorizontalAlignment="Center"/>
+        <TextBlock Grid.Column="0" Text="일" Foreground="#D32F2F" FontSize="14" HorizontalAlignment="Center"/>
+        <TextBlock Grid.Column="1" Text="월" Foreground="#1C1C1E" FontSize="14" HorizontalAlignment="Center"/>
+        <TextBlock Grid.Column="2" Text="화" Foreground="#1C1C1E" FontSize="14" HorizontalAlignment="Center"/>
+        <TextBlock Grid.Column="3" Text="수" Foreground="#1C1C1E" FontSize="14" HorizontalAlignment="Center"/>
+        <TextBlock Grid.Column="4" Text="목" Foreground="#1C1C1E" FontSize="14" HorizontalAlignment="Center"/>
+        <TextBlock Grid.Column="5" Text="금" Foreground="#1C1C1E" FontSize="14" HorizontalAlignment="Center"/>
         <TextBlock Grid.Column="6" Text="토" Foreground="#6b9fff" FontSize="14" HorizontalAlignment="Center"/>
       </Grid>
     </Border>
 
     <!-- 날짜 그리드 - ItemsControl + UniformGrid 사용 (동적 바인딩) -->
     <Border Grid.Row="3" Margin="8,0,8,8" CornerRadius="16" ClipToBounds="True">
-      <ItemsControl ItemsSource="{Binding Days}" Background="#1c1c1e">
+      <ItemsControl ItemsSource="{Binding Days}" Background="#FFFFFF">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
             <UniformGrid Rows="6" Columns="7"/>
@@ -96,7 +96,7 @@
                     Background="Transparent" BorderThickness="0" Padding="0"
                     HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                     HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
-              <Border BorderBrush="#2c2c2e" BorderThickness="0.5" Background="#1c1c1e" ClipToBounds="True">
+              <Border BorderBrush="#E5E5EA" BorderThickness="0.5" Background="#FFFFFF" ClipToBounds="True">
                 <Grid Margin="2">
                   <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -150,9 +150,9 @@
 
     <!-- 선택한 날짜의 일정 목록 패널 -->
     <Border Grid.RowSpan="4"
-            Background="#E60a0a0a"
+            Background="#E6F2F2F7"
             IsVisible="{Binding HasSelectedDaySchedules}">
-      <Border Background="#1c1c1e" CornerRadius="20" Margin="16" Padding="20"
+      <Border Background="#FFFFFF" CornerRadius="20" Margin="16" Padding="20"
               VerticalAlignment="Center" MaxHeight="600">
         <Grid RowDefinitions="Auto,Auto,*,Auto">
           <!-- 헤더 -->
@@ -160,18 +160,18 @@
             <StackPanel Orientation="Horizontal" Spacing="10">
               <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}"
                          FontSize="24" Foreground="#00a872" VerticalAlignment="Center"/>
-              <TextBlock Text="{Binding SelectedDayTitle}" FontSize="18" Foreground="#effdf6"
+              <TextBlock Text="{Binding SelectedDayTitle}" FontSize="18" Foreground="#1C1C1E"
                          VerticalAlignment="Center"/>
             </StackPanel>
             <Button Grid.Column="1" Command="{Binding CloseSelectedDaySchedulesCommand}"
-                    Background="#2c2c2e" Padding="8" CornerRadius="10">
+                    Background="#E5E5EA" Padding="8" CornerRadius="10">
               <TextBlock Text="&#xe5cd;" FontFamily="{StaticResource MaterialIcons}"
-                         FontSize="20" Foreground="#808080"/>
+                         FontSize="20" Foreground="#8E8E93"/>
             </Button>
           </Grid>
 
           <!-- 최종관리자용 필터 (모달 내부) -->
-          <Border Grid.Row="1" Background="#2c2c2e" CornerRadius="12" Padding="12,10" Margin="0,0,0,12"
+          <Border Grid.Row="1" Background="#E5E5EA" CornerRadius="12" Padding="12,10" Margin="0,0,0,12"
                   IsVisible="{Binding ShowFilter}">
             <ScrollViewer HorizontalScrollBarVisibility="Hidden" VerticalScrollBarVisibility="Disabled">
               <Grid>
@@ -308,13 +308,13 @@
                           Background="Transparent" Padding="0" Margin="0,0,0,10"
                           HorizontalAlignment="Stretch"
                           HorizontalContentAlignment="Stretch">
-                    <Border Background="#3c3c3e" CornerRadius="14" Padding="16"
+                    <Border Background="#F2F2F7" CornerRadius="14" Padding="16"
                             BorderBrush="{Binding GroupColor}" BorderThickness="0,0,0,3">
                       <Grid RowDefinitions="Auto,Auto,Auto">
                         <!-- 업체명 + 상태 + 시도/사단 -->
                         <Grid Grid.Row="0" ColumnDefinitions="*,Auto">
                           <StackPanel>
-                            <TextBlock Text="{Binding CompanyName}" FontSize="15" Foreground="#effdf6"
+                            <TextBlock Text="{Binding CompanyName}" FontSize="15" Foreground="#1C1C1E"
                                        TextTrimming="CharacterEllipsis"/>
                             <!-- 최종관리자용: 시도/사단명 표시 -->
                             <TextBlock Text="{Binding GroupName}" FontSize="12" Foreground="{Binding GroupColor}"
@@ -338,8 +338,8 @@
                         <!-- 확정 상태 -->
                         <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8" Margin="0,8,0,0">
                           <TextBlock Text="&#xe876;" FontFamily="{StaticResource MaterialIcons}"
-                                     FontSize="14" Foreground="#808080" VerticalAlignment="Center"/>
-                          <TextBlock Text="{Binding ConfirmStatusText}" FontSize="13" Foreground="#a0a0a0"/>
+                                     FontSize="14" Foreground="#8E8E93" VerticalAlignment="Center"/>
+                          <TextBlock Text="{Binding ConfirmStatusText}" FontSize="13" Foreground="#8E8E93"/>
                         </StackPanel>
                       </Grid>
                     </Border>
@@ -350,11 +350,11 @@
           </ScrollViewer>
 
           <!-- 안내 텍스트 -->
-          <Border Grid.Row="3" Background="#2c2c2e" CornerRadius="10" Padding="12" Margin="0,12,0,0">
+          <Border Grid.Row="3" Background="#E5E5EA" CornerRadius="10" Padding="12" Margin="0,12,0,0">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8">
               <TextBlock Text="&#xe88e;" FontFamily="{StaticResource MaterialIcons}"
-                         FontSize="14" Foreground="#6a6a6a" VerticalAlignment="Center"/>
-              <TextBlock Text="일정을 탭하여 상세 정보를 확인하세요" FontSize="12" Foreground="#6a6a6a"/>
+                         FontSize="14" Foreground="#AEAEB2" VerticalAlignment="Center"/>
+              <TextBlock Text="일정을 탭하여 상세 정보를 확인하세요" FontSize="12" Foreground="#AEAEB2"/>
             </StackPanel>
           </Border>
         </Grid>

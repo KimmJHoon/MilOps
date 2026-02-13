@@ -31,8 +31,8 @@ public class BoolToTabFgConverter : IValueConverter
 {
     public static readonly BoolToTabFgConverter Instance = new();
 
-    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#effdf6"));
-    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#6a6a6a"));
+    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#1C1C1E"));
+    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#AEAEB2"));
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -70,7 +70,7 @@ public class BoolToSlotBorderConverter : IValueConverter
     public static readonly BoolToSlotBorderConverter Instance = new();
 
     private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#00a872"));
-    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#3a3a3c"));
+    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#C7C7CC"));
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -89,7 +89,7 @@ public class BoolToSlotFgConverter : IValueConverter
     public static readonly BoolToSlotFgConverter Instance = new();
 
     private static readonly IBrush SelectedBrush = Brushes.White;
-    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#a0a0a0"));
+    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#8E8E93"));
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -108,7 +108,7 @@ public class BoolToDateBgConverter : IValueConverter
     public static readonly BoolToDateBgConverter Instance = new();
 
     private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#00a872"));
-    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#2c2c2e"));
+    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#E5E5EA"));
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -127,7 +127,7 @@ public class BoolToDateFgConverter : IValueConverter
     public static readonly BoolToDateFgConverter Instance = new();
 
     private static readonly IBrush SelectedBrush = Brushes.White;
-    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#a0a0a0"));
+    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#8E8E93"));
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -180,7 +180,7 @@ public class BoolToFilterBgConverter : IValueConverter
 {
     public static readonly BoolToFilterBgConverter Instance = new();
 
-    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#2c2c2e"));
+    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#E5E5EA"));
     private static readonly IBrush DefaultBrush = Brushes.Transparent;
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -199,8 +199,8 @@ public class BoolToFilterFgConverter : IValueConverter
 {
     public static readonly BoolToFilterFgConverter Instance = new();
 
-    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#effdf6"));
-    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#808080"));
+    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#1C1C1E"));
+    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#8E8E93"));
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {

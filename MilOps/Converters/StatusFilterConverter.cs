@@ -14,7 +14,7 @@ public class StatusFilterConverter : IValueConverter
     public static readonly StatusFilterConverter Instance = new();
 
     private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#00a872"));
-    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#2c2c2e"));
+    private static readonly IBrush DefaultBrush = new SolidColorBrush(Color.Parse("#E5E5EA"));
 
     public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {

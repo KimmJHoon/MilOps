@@ -15,6 +15,8 @@
         <PackageVersion Include="Avalonia.Browser" Version="11.3.11" />
         <PackageVersion Include="Avalonia.Android" Version="11.3.11" />
 
+        <PackageVersion Include="Avalonia.Svg.Skia" Version="11.3.0" />
+
         <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
 
         <PackageVersion Include="Supabase" Version="1.1.1" />
