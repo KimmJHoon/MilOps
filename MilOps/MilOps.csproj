@@ -22,6 +22,8 @@
     <PackageReference Include="Avalonia.Svg.Skia" />
     <PackageReference Include="Supabase" />
     <PackageReference Include="DotNetEnv" />
+    <PackageReference Include="sqlite-net-pcl" />
+    <PackageReference Include="SQLitePCLRaw.bundle_green" />
   </ItemGroup>
 
   <ItemGroup>
