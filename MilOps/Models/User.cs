@@ -33,6 +33,9 @@ public class User : BaseModel
     [Column("division_id")]
     public Guid? DivisionId { get; set; }
 
+    [Column("brigade_id")]
+    public Guid? BrigadeId { get; set; }
+
     [Column("battalion_id")]
     public Guid? BattalionId { get; set; }
 
@@ -59,6 +62,8 @@ public class User : BaseModel
     [JsonIgnore]
     public Division? Division { get; set; }
     [JsonIgnore]
+    public Brigade? Brigade { get; set; }
+    [JsonIgnore]
     public Battalion? Battalion { get; set; }
 
     // Helper properties
@@ -72,7 +77,10 @@ public class User : BaseModel
     [JsonIgnore]
     public bool IsLocalSide => Role == "super_admin_mois" || Role == "middle_local" || Role == "user_local";
     [JsonIgnore]
-    public bool IsMilitarySide => Role == "super_admin_army" || Role == "middle_military" || Role == "user_military";
+    public bool IsMilitarySide => Role == "super_admin_army" || Role == "middle_military" || Role == "viewer_military" || Role == "user_military";
+
+    [JsonIgnore]
+    public bool IsViewer => Role == "viewer_military";
 
     [JsonIgnore]
     public bool IsDeleted => DeletedAt.HasValue;
@@ -84,6 +92,7 @@ public class User : BaseModel
         "super_admin_army" => "최종관리자 (제2작전사)",
         "middle_local" => "지자체(도)",
         "middle_military" => "사단담당자",
+        "viewer_military" => "여단총괄",
         "user_local" => "지자체담당자",
         "user_military" => "대대담당자",
         _ => "알 수 없음"

@@ -288,6 +288,13 @@ public partial class CalendarViewModel : ViewModelBase
             FilterType = "battalion";
             await LoadBattalionFiltersAsync();
         }
+        else if (CurrentRole == UserRole.ViewerMilitary)
+        {
+            ShowFilter = true;
+            ShowLegend = false;
+            FilterType = "battalion";
+            await LoadBattalionFiltersForBrigadeAsync();
+        }
         else
         {
             ShowFilter = false;
@@ -490,6 +497,59 @@ public partial class CalendarViewModel : ViewModelBase
     }
 
     /// <summary>
+    /// 대대 필터 목록 로드 (여단총괄용)
+    /// 본인이 속한 여단의 대대만 표시
+    /// </summary>
+    private async Task LoadBattalionFiltersForBrigadeAsync()
+    {
+        try
+        {
+            var client = SupabaseService.Client;
+            if (client == null) return;
+
+            var currentUser = AuthService.CurrentUser;
+            if (currentUser?.BrigadeId == null)
+            {
+                return;
+            }
+
+            // 본인 관할 여단의 대대만 조회
+            var response = await client.From<Battalion>()
+                .Filter("brigade_id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.BrigadeId.Value.ToString())
+                .Order("name", Supabase.Postgrest.Constants.Ordering.Ascending)
+                .Get();
+
+            BattalionFilters.Clear();
+
+            // 전체 옵션 추가
+            BattalionFilters.Add(new BattalionFilterItem
+            {
+                Id = Guid.Empty,
+                Name = "전체",
+                Color = "#8E8E93",
+                IsSelected = true
+            });
+
+            foreach (var battalion in response.Models)
+            {
+                BattalionFilters.Add(new BattalionFilterItem
+                {
+                    Id = battalion.Id,
+                    Name = battalion.Name,
+                    Color = CalendarColorHelper.GetColorForGroup(battalion.Id, UserRole.ViewerMilitary),
+                    IsSelected = false
+                });
+            }
+
+            SelectedBattalionFilter = BattalionFilters.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadBattalionFiltersForBrigadeAsync error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
     /// 시도 필터 선택 (모달 내 필터링)
     /// </summary>
     [RelayCommand]
@@ -603,7 +663,7 @@ public partial class CalendarViewModel : ViewModelBase
                     FilteredSelectedDaySchedules.Add(item);
                 }
             }
-            else if (CurrentRole == UserRole.MiddleMilitary)
+            else if (CurrentRole == UserRole.MiddleMilitary || CurrentRole == UserRole.ViewerMilitary)
             {
                 // 전체 선택 또는 해당 대대와 일치하는 경우
                 if (SelectedBattalionFilter == null || SelectedBattalionFilter.Id == Guid.Empty ||
@@ -739,7 +799,7 @@ public partial class CalendarViewModel : ViewModelBase
                 f.IsSelected = f.Id == Guid.Empty;
             SelectedDistrictFilter = DistrictFilters.FirstOrDefault(f => f.Id == Guid.Empty);
         }
-        else if (CurrentRole == UserRole.MiddleMilitary)
+        else if (CurrentRole == UserRole.MiddleMilitary || CurrentRole == UserRole.ViewerMilitary)
         {
             foreach (var f in BattalionFilters)
                 f.IsSelected = f.Id == Guid.Empty;
@@ -958,7 +1018,7 @@ public partial class CalendarViewModel : ViewModelBase
                 groupName = districtName;
                 groupColor = CalendarColorHelper.GetColorForGroup(districtId.Value, CurrentRole);
             }
-            else if (CurrentRole == UserRole.MiddleMilitary && battalionId.HasValue)
+            else if ((CurrentRole == UserRole.MiddleMilitary || CurrentRole == UserRole.ViewerMilitary) && battalionId.HasValue)
             {
                 groupName = battalionName;
                 groupColor = CalendarColorHelper.GetColorForGroup(battalionId.Value, CurrentRole);
@@ -1320,6 +1380,7 @@ public class CalendarDayScheduleDisplay
                 UserRole.UserMilitary => DistrictName,       // 대대담당자: 시군구명
                 UserRole.MiddleLocal => DistrictName,        // 지자체(도): 시군구명
                 UserRole.MiddleMilitary => BattalionName,    // 사단담당자: 대대명
+                UserRole.ViewerMilitary => BattalionName,    // 여단총괄: 대대명
                 UserRole.SuperAdminMois => RegionName,       // 행정안전부: 시도명
                 UserRole.SuperAdminArmy => DivisionName,     // 육군본부: 사단명
                 _ => BattalionName                           // 그 외(지자체담당자): 대대명

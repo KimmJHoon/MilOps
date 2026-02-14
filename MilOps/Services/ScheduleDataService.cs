@@ -250,7 +250,8 @@ public static class ScheduleDataService
                         {
                             Id = id,
                             Name = obj["name"]?.ToString() ?? "",
-                            DivisionId = obj["division_id"]?.ToObject<Guid>() ?? Guid.Empty
+                            DivisionId = obj["division_id"]?.ToObject<Guid>() ?? Guid.Empty,
+                            BrigadeId = obj["brigade_id"]?.Type == JTokenType.Null ? null : obj["brigade_id"]?.ToObject<Guid>()
                         };
                     }
                 }
@@ -402,6 +403,17 @@ public static class ScheduleDataService
                     IsMilitaryUserInDivision(s.MilitaryUserId, currentUser.DivisionId.Value)
                 ).ToList();
 
+            case "viewer_military":
+                // 여단총괄: 자신의 여단 소속 대대담당자가 배정된 일정 (뷰어 전용)
+                if (!currentUser.BrigadeId.HasValue)
+                {
+                    return new List<Schedule>();
+                }
+
+                return schedules.Where(s =>
+                    IsMilitaryUserInBrigade(s.MilitaryUserId, currentUser.BrigadeId.Value)
+                ).ToList();
+
             case "middle_local":
                 // 지자체(도) 담당자: 예약됨/확정됨 상태 중 자신의 Region 소속
                 if (!currentUser.RegionId.HasValue)
@@ -431,6 +443,20 @@ public static class ScheduleDataService
             return false;
 
         return battalion.DivisionId == divisionId;
+    }
+
+    private static bool IsMilitaryUserInBrigade(Guid militaryUserId, Guid brigadeId)
+    {
+        if (!_userCache.TryGetValue(militaryUserId, out var militaryUser))
+            return false;
+
+        if (!militaryUser.BattalionId.HasValue)
+            return false;
+
+        if (!_battalionCache.TryGetValue(militaryUser.BattalionId.Value, out var battalion))
+            return false;
+
+        return battalion.BrigadeId == brigadeId;
     }
 
     private static bool IsLocalUserInRegion(Guid localUserId, Guid regionId)
@@ -507,6 +533,7 @@ public static class ScheduleDataService
             ("reserved", "user_military") when schedule.MilitaryConfirmed => "상대방 대기",
             ("confirmed", _) => "상세보기",
             ("created", "middle_military") => "삭제하기",
+            (_, "viewer_military") => "상세보기",
             _ => "상세보기"
         };
     }
@@ -528,7 +555,7 @@ public static class ScheduleDataService
             {
                 item.UnconfirmedInfo = "대대 미확정";
             }
-            else if (currentUser.Role == "user_military" || currentUser.Role == "middle_military" || currentUser.Role == "super_admin_army")
+            else if (currentUser.Role == "user_military" || currentUser.Role == "middle_military" || currentUser.Role == "viewer_military" || currentUser.Role == "super_admin_army")
             {
                 item.UnconfirmedInfo = "지자체 미확정";
             }

@@ -301,6 +301,14 @@ public partial class ScheduleListViewModel : ViewModelBase
                 ShowGuideMessage = false;
                 break;
 
+            case "viewer_military": // 여단총괄 (뷰어 전용)
+                ShowDivisionTab = true;
+                ShowScheduleCreateButton = false;
+                SelectedRoleTab = "viewer_military";
+                GuideMessage = "";
+                ShowGuideMessage = false;
+                break;
+
             case "middle_local": // 지자체(도)
                 ShowRegionTab = true;
                 ShowCompanyRegisterButton = true;

@@ -249,6 +249,7 @@ public static class CalendarDataService
             UserRole.UserMilitary => "user_military",
             UserRole.MiddleLocal => "middle_local",
             UserRole.MiddleMilitary => "middle_military",
+            UserRole.ViewerMilitary => "viewer_military",
             UserRole.SuperAdminMois => "super_admin_mois",
             UserRole.SuperAdminArmy => "super_admin_army",
             _ => "user_local"
@@ -281,6 +282,16 @@ public static class CalendarDataService
         else if (role == UserRole.MiddleMilitary && currentUser.DivisionId.HasValue)
         {
             // 관할 사단 필터 (필수)
+            rpcParams["p_division_id"] = currentUser.DivisionId.Value.ToString();
+            // 선택한 대대 필터 (옵션)
+            if (selectedBattalionId.HasValue && selectedBattalionId.Value != Guid.Empty)
+            {
+                rpcParams["p_battalion_id"] = selectedBattalionId.Value.ToString();
+            }
+        }
+        else if (role == UserRole.ViewerMilitary && currentUser.DivisionId.HasValue)
+        {
+            // 여단총괄: 관할 사단 필터로 RPC 호출, 여단 필터는 클라이언트 사이드
             rpcParams["p_division_id"] = currentUser.DivisionId.Value.ToString();
             // 선택한 대대 필터 (옵션)
             if (selectedBattalionId.HasValue && selectedBattalionId.Value != Guid.Empty)
@@ -381,7 +392,8 @@ public static class CalendarDataService
                 // 그룹 뱃지 생성 (최종관리자 + 중간관리자용)
                 // 일반 사용자(user_local, user_military)는 뱃지 대신 확정/예약 점 표시
                 if (role == UserRole.SuperAdminMois || role == UserRole.SuperAdminArmy ||
-                    role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary)
+                    role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary ||
+                    role == UserRole.ViewerMilitary)
                 {
                     dayData.IsSuperAdmin = true;  // 뱃지 표시용 플래그 (최종관리자 + 중간관리자)
                     dayData.GroupBadges = CreateGroupBadges(daySchedules, role);
@@ -501,9 +513,9 @@ public static class CalendarDataService
                 });
             }
         }
-        else if (role == UserRole.MiddleMilitary)
+        else if (role == UserRole.MiddleMilitary || role == UserRole.ViewerMilitary)
         {
-            // 사단 중간관리자: 대대별 그룹핑
+            // 사단/여단 관리자: 대대별 그룹핑
             var allGroups = schedules
                 .Where(s => s.MilitaryUser?.BattalionId != null)
                 .GroupBy(s => s.MilitaryUser!.BattalionId!.Value)

@@ -84,12 +84,18 @@ public class ScheduleConfirmDetailDto
     [JsonProperty("military_user_rank")]
     public string? MilitaryUserRank { get; set; }
 
-    // 대대/사단 정보
+    // 대대/여단/사단 정보
     [JsonProperty("battalion_id")]
     public Guid? BattalionId { get; set; }
 
     [JsonProperty("battalion_name")]
     public string? BattalionName { get; set; }
+
+    [JsonProperty("brigade_id")]
+    public Guid? BrigadeId { get; set; }
+
+    [JsonProperty("brigade_name")]
+    public string? BrigadeName { get; set; }
 
     [JsonProperty("division_id")]
     public Guid? DivisionId { get; set; }

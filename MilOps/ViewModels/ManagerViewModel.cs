@@ -48,7 +48,12 @@ public partial class ManagerViewModel : ViewModelBase
     private Dictionary<Guid, string> _regionNames = new();
     private Dictionary<Guid, string> _districtNames = new();
     private Dictionary<Guid, string> _divisionNames = new();
+    private Dictionary<Guid, string> _brigadeNames = new();
     private Dictionary<Guid, string> _battalionNames = new();
+
+    // 군↔지자체 매핑 캐시
+    private Dictionary<Guid, List<Guid>> _battalionToDistrictIds = new();
+    private List<District> _districts = new();
 
     public ManagerViewModel()
     {
@@ -89,26 +94,41 @@ public partial class ManagerViewModel : ViewModelBase
                 .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
                 .Get();
             var divisionsTask = client.From<Division>().Get();
+            var brigadesTask = client.From<Brigade>()
+                .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
+                .Get();
             var battalionsTask = client.From<Battalion>()
                 .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
                 .Get();
             var usersTask = client.From<User>()
                 .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
                 .Get();
+            var mappingsTask = client.From<DistrictBattalionMapping>()
+                .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
+                .Get();
 
-            await Task.WhenAll(regionsTask, districtsTask, divisionsTask, battalionsTask, usersTask);
+            await Task.WhenAll(regionsTask, districtsTask, divisionsTask, brigadesTask, battalionsTask, usersTask, mappingsTask);
 
             var regions = regionsTask.Result.Models;
             var districts = districtsTask.Result.Models;
             var divisions = divisionsTask.Result.Models;
+            var brigades = brigadesTask.Result.Models;
             var battalions = battalionsTask.Result.Models;
             var allUsers = usersTask.Result.Models;
+            var mappings = mappingsTask.Result.Models;
 
             // 조직명 캐시 구성
             _regionNames = regions.ToDictionary(r => r.Id, r => r.Name);
             _districtNames = districts.ToDictionary(d => d.Id, d => d.Name);
             _divisionNames = divisions.ToDictionary(d => d.Id, d => d.Name);
+            _brigadeNames = brigades.ToDictionary(b => b.Id, b => b.Name);
             _battalionNames = battalions.ToDictionary(b => b.Id, b => b.Name);
+
+            // 군↔지자체 매핑 캐시 구성
+            _districts = districts;
+            _battalionToDistrictIds = mappings
+                .GroupBy(m => m.BattalionId)
+                .ToDictionary(g => g.Key, g => g.Select(m => m.DistrictId).ToList());
 
             // 역할에 따른 유저 필터링
             var filteredUsers = FilterUsersByRole(allUsers, currentUser);
@@ -159,24 +179,24 @@ public partial class ManagerViewModel : ViewModelBase
             // 사단담당자: 같은 division의 유저 + 관련 지자체 유저
             "middle_military" => FilterForDivisionManager(allUsers, currentUser),
 
+            // 여단총괄: 같은 brigade의 유저 + 관련 지자체 유저
+            "viewer_military" => FilterForBrigadeViewer(allUsers, currentUser),
+
             // 지자체담당자: 같은 district의 유저 + 관련 대대 유저
             "user_local" => allUsers
                 .Where(u => u.DistrictId == currentUser.DistrictId ||
                             u.RegionId == currentUser.RegionId)
                 .ToList(),
 
-            // 대대담당자: 같은 battalion + 관련 지자체 유저
-            "user_military" => allUsers
-                .Where(u => u.BattalionId == currentUser.BattalionId ||
-                            u.DivisionId == currentUser.DivisionId)
-                .ToList(),
+            // 대대담당자: 같은 여단 군 유저 + 매핑 기반 지자체 유저
+            "user_military" => FilterForBattalionUser(allUsers, currentUser),
 
             _ => new List<User>()
         };
     }
 
     /// <summary>
-    /// 사단담당자용 필터 - 같은 사단 + 관련 지역 유저
+    /// 사단담당자용 필터 - 같은 사단 + 매핑 기반 관련 지역 유저
     /// </summary>
     private List<User> FilterForDivisionManager(List<User> allUsers, User currentUser)
     {
@@ -185,12 +205,85 @@ public partial class ManagerViewModel : ViewModelBase
             .Where(u => u.DivisionId == currentUser.DivisionId)
             .ToList();
 
-        // 관련 지역 유저도 포함 (같은 region)
-        var localUsers = allUsers
-            .Where(u => u.IsLocalSide && u.RegionId == currentUser.RegionId)
-            .ToList();
+        // 사단 소속 대대들이 담당하는 district의 local 유저
+        var servedDistrictIds = GetServedDistrictIds(
+            militaryUsers.Where(u => u.BattalionId.HasValue).Select(u => u.BattalionId!.Value).Distinct());
+
+        var localUsers = GetLocalUsersForDistricts(allUsers, servedDistrictIds);
 
         return militaryUsers.Union(localUsers).ToList();
+    }
+
+    /// <summary>
+    /// 여단총괄용 필터 - 같은 여단 + 매핑 기반 관련 지역 유저
+    /// </summary>
+    private List<User> FilterForBrigadeViewer(List<User> allUsers, User currentUser)
+    {
+        // 같은 여단의 군 유저
+        var militaryUsers = allUsers
+            .Where(u => u.BrigadeId == currentUser.BrigadeId)
+            .ToList();
+
+        // 여단 소속 대대들이 담당하는 district의 local 유저
+        var servedDistrictIds = GetServedDistrictIds(
+            militaryUsers.Where(u => u.BattalionId.HasValue).Select(u => u.BattalionId!.Value).Distinct());
+
+        var localUsers = GetLocalUsersForDistricts(allUsers, servedDistrictIds);
+
+        return militaryUsers.Union(localUsers).ToList();
+    }
+
+    /// <summary>
+    /// 대대담당자용 필터 - 같은 여단 군 유저 + 매핑 기반 관련 지역 유저
+    /// </summary>
+    private List<User> FilterForBattalionUser(List<User> allUsers, User currentUser)
+    {
+        // 같은 여단의 군 유저
+        var militaryUsers = allUsers
+            .Where(u => u.BrigadeId == currentUser.BrigadeId)
+            .ToList();
+
+        // 이 대대가 담당하는 district의 local 유저
+        var battalionIds = currentUser.BattalionId.HasValue
+            ? new[] { currentUser.BattalionId.Value }.AsEnumerable()
+            : Enumerable.Empty<Guid>();
+
+        var servedDistrictIds = GetServedDistrictIds(battalionIds);
+
+        var localUsers = GetLocalUsersForDistricts(allUsers, servedDistrictIds);
+
+        return militaryUsers.Union(localUsers).ToList();
+    }
+
+    /// <summary>
+    /// 대대 ID 목록 → 담당 district ID 집합 반환
+    /// </summary>
+    private HashSet<Guid> GetServedDistrictIds(IEnumerable<Guid> battalionIds)
+    {
+        return battalionIds
+            .Where(bid => _battalionToDistrictIds.ContainsKey(bid))
+            .SelectMany(bid => _battalionToDistrictIds[bid])
+            .ToHashSet();
+    }
+
+    /// <summary>
+    /// district ID 집합으로 관련 local 유저 필터링
+    /// - user_local: district_id로 정확히 매칭
+    /// - middle_local: district가 없고 region_id만 있으면, 해당 region에 매핑된 district가 있을 때 포함
+    /// </summary>
+    private List<User> GetLocalUsersForDistricts(List<User> allUsers, HashSet<Guid> servedDistrictIds)
+    {
+        var servedRegionIds = _districts
+            .Where(d => servedDistrictIds.Contains(d.Id))
+            .Select(d => d.RegionId)
+            .ToHashSet();
+
+        return allUsers
+            .Where(u => u.IsLocalSide && (
+                (u.DistrictId.HasValue && servedDistrictIds.Contains(u.DistrictId.Value)) ||
+                (!u.DistrictId.HasValue && u.RegionId.HasValue && servedRegionIds.Contains(u.RegionId.Value))
+            ))
+            .ToList();
     }
 
     private UserListItem CreateUserListItem(User user)
@@ -226,10 +319,12 @@ public partial class ManagerViewModel : ViewModelBase
         }
         else
         {
-            // 군 측: "31사단 작전대대" 형태
+            // 군 측: "31사단 93여단" 또는 "31사단 93여단 작전대대" 형태
             var parts = new List<string>();
             if (user.DivisionId.HasValue && _divisionNames.TryGetValue(user.DivisionId.Value, out var divisionName))
                 parts.Add(divisionName);
+            if (user.BrigadeId.HasValue && _brigadeNames.TryGetValue(user.BrigadeId.Value, out var brigadeName))
+                parts.Add(brigadeName);
             if (user.BattalionId.HasValue && _battalionNames.TryGetValue(user.BattalionId.Value, out var battalionName))
                 parts.Add(battalionName);
             return string.Join(" ", parts);
@@ -245,6 +340,8 @@ public partial class ManagerViewModel : ViewModelBase
                 ? $"{rn} 담당자 목록" : "담당자 목록",
             "middle_military" => _divisionNames.TryGetValue(currentUser.DivisionId ?? Guid.Empty, out var dn)
                 ? $"{dn} 담당자 목록" : "담당자 목록",
+            "viewer_military" => _brigadeNames.TryGetValue(currentUser.BrigadeId ?? Guid.Empty, out var bn)
+                ? $"{bn} 담당자 목록" : "담당자 목록",
             _ => "담당자 목록"
         };
     }
@@ -305,6 +402,7 @@ public partial class ManagerViewModel : ViewModelBase
         _regionNames.Clear();
         _districtNames.Clear();
         _divisionNames.Clear();
+        _brigadeNames.Clear();
         _battalionNames.Clear();
         Users.Clear();
         TotalCount = 0;
