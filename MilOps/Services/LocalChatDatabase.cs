@@ -43,7 +43,10 @@ public static class LocalChatDatabase
     public static async Task SaveMessagesAsync(IEnumerable<LocalChatMessage> messages)
     {
         if (_db == null) return;
-        await _db.InsertOrReplaceAllAsync(messages);
+        foreach (var msg in messages)
+        {
+            await _db.InsertOrReplaceAsync(msg);
+        }
     }
 
     /// <summary>
