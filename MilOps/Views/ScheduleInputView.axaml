@@ -201,6 +201,7 @@
             <TextBlock Text="취소" FontSize="15" Foreground="#1C1C1E"/>
           </Button>
           <Button Grid.Column="1" Command="{Binding SaveCommand}"
+                  Focusable="False"
                   IsEnabled="{Binding CanSave}"
                   Background="#00a872"
                   CornerRadius="10"
