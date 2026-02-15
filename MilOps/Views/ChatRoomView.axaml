@@ -1,0 +1,105 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:MilOps.ViewModels"
+             xmlns:controls="using:MilOps.Views.Controls"
+             x:Class="MilOps.Views.ChatRoomView"
+             x:DataType="vm:ChatRoomViewModel"
+             DataContext="{x:Null}">
+
+  <Grid Background="#F2F2F7" RowDefinitions="Auto,*,Auto">
+    <!-- 상단 바 -->
+    <Border Grid.Row="0" Background="#FFFFFF" Padding="8,12" CornerRadius="0,0,20,20">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <!-- 뒤로가기 -->
+        <Button Grid.Column="0" Command="{Binding GoBackCommand}"
+                Background="Transparent" BorderThickness="0" Padding="8">
+          <TextBlock Text="&#xe5c4;" FontFamily="{StaticResource MaterialIcons}"
+                     FontSize="24" Foreground="#007AFF"/>
+        </Button>
+
+        <!-- 상대 정보 -->
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Center">
+          <TextBlock Text="{Binding PartnerName}" FontSize="17"
+                     Foreground="#1C1C1E" HorizontalAlignment="Center"/>
+          <TextBlock Text="{Binding PartnerRoleDisplay}" FontSize="12"
+                     Foreground="#8E8E93" HorizontalAlignment="Center"/>
+        </StackPanel>
+
+        <!-- 연결 상태 -->
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4"
+                    VerticalAlignment="Center" Margin="0,0,8,0">
+          <Border Width="8" Height="8" CornerRadius="4"
+                  IsVisible="{Binding IsConnected}" Background="#34C759"/>
+          <Border Width="8" Height="8" CornerRadius="4"
+                  IsVisible="{Binding !IsConnected}" Background="#AEAEB2"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <!-- 메시지 영역 -->
+    <ScrollViewer Grid.Row="1" x:Name="MessageScroller"
+                  VerticalScrollBarVisibility="Auto" Padding="12,8">
+      <ItemsControl ItemsSource="{Binding Messages}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="vm:ChatBubble">
+            <Panel Margin="0,4">
+              <!-- 내 메시지 (오른쪽) -->
+              <StackPanel IsVisible="{Binding IsMine}"
+                          HorizontalAlignment="Right" Margin="60,0,0,0">
+                <Border Background="#007AFF" CornerRadius="18,18,4,18"
+                        Padding="14,10" MaxWidth="260">
+                  <TextBlock Text="{Binding Content}" Foreground="#FFFFFF"
+                             FontSize="15" TextWrapping="Wrap"/>
+                </Border>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right"
+                            Spacing="4" Margin="0,2,4,0">
+                  <TextBlock Text="{Binding TimeText}" FontSize="11" Foreground="#AEAEB2"/>
+                </StackPanel>
+              </StackPanel>
+
+              <!-- 상대 메시지 (왼쪽) -->
+              <StackPanel IsVisible="{Binding !IsMine}"
+                          HorizontalAlignment="Left" Margin="0,0,60,0">
+                <Border Background="#FFFFFF" CornerRadius="18,18,18,4"
+                        Padding="14,10" MaxWidth="260">
+                  <TextBlock Text="{Binding Content}" Foreground="#1C1C1E"
+                             FontSize="15" TextWrapping="Wrap"/>
+                </Border>
+                <TextBlock Text="{Binding TimeText}" FontSize="11" Foreground="#AEAEB2"
+                           Margin="4,2,0,0"/>
+              </StackPanel>
+            </Panel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+
+    <!-- 입력 영역 -->
+    <Border Grid.Row="2" Background="#FFFFFF" Padding="12,10" CornerRadius="20,20,0,0">
+      <Grid ColumnDefinitions="*,Auto">
+        <Border Grid.Column="0" Background="#F2F2F7" CornerRadius="20" Padding="16,0">
+          <TextBox x:Name="MessageInputBox"
+                   Text="{Binding MessageInput, Mode=TwoWay}"
+                   Watermark="메시지를 입력하세요"
+                   BorderThickness="0" Background="Transparent"
+                   FontSize="15" VerticalContentAlignment="Center"
+                   MinHeight="40" MaxHeight="100"
+                   AcceptsReturn="False"/>
+        </Border>
+        <Button Grid.Column="1" Command="{Binding SendCommand}"
+                Focusable="False"
+                Background="#007AFF" CornerRadius="20"
+                Width="40" Height="40" Margin="8,0,0,0"
+                Padding="0"
+                HorizontalContentAlignment="Center"
+                VerticalContentAlignment="Center">
+          <TextBlock Text="&#xe163;" FontFamily="{StaticResource MaterialIcons}"
+                     FontSize="20" Foreground="#FFFFFF"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- 로딩 -->
+    <controls:LoadingOverlay Grid.Row="1" IsVisible="{Binding IsLoading}"/>
+  </Grid>
+</UserControl>

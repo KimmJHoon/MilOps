@@ -37,7 +37,6 @@ public static class CalendarDataService
     public static void PreloadCurrentMonth()
     {
         var today = DateTime.Today;
-        System.Diagnostics.Debug.WriteLine($"[CalendarDataService] PreloadCurrentMonth - {today.Year}-{today.Month}");
         LoadSchedulesInBackground(today.Year, today.Month);
     }
 
@@ -67,7 +66,6 @@ public static class CalendarDataService
             {
                 if (_monthlyCache.TryGetValue(cacheKey, out var cachedResult))
                 {
-                    System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [CACHE HIT] Returning cached data for {year}-{month}");
                     DataLoaded?.Invoke(cachedResult);
                     return;
                 }
@@ -82,7 +80,6 @@ public static class CalendarDataService
                 IsLoading = true;
                 // Optimistic UI: 캐시가 없을 때만 로딩 상태 표시
                 LoadingStateChanged?.Invoke(true);
-                System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Starting load for {year}-{month}");
 
                 var result = await LoadSchedulesInternalAsync(year, month, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId);
 
@@ -92,8 +89,6 @@ public static class CalendarDataService
                     _monthlyCache[cacheKey] = result;
                     TrimCache();  // 캐시 크기 제한
                 }
-
-                System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Load complete. Schedules: {result.Schedules.Count}, Days: {result.Days.Count}");
 
                 // 이벤트 발생 → ViewModel이 UI 스레드에서 처리
                 DataLoaded?.Invoke(result);
@@ -144,20 +139,17 @@ public static class CalendarDataService
 
             if (needsPrev)
             {
-                System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [PRELOAD] Loading previous month: {prevYear}-{prevMonth}");
                 tasks.Add(LoadAndCacheAsync(prevYear, prevMonth, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId));
             }
 
             if (needsNext)
             {
-                System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [PRELOAD] Loading next month: {nextYear}-{nextMonth}");
                 tasks.Add(LoadAndCacheAsync(nextYear, nextMonth, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId));
             }
 
             if (tasks.Any())
             {
                 await Task.WhenAll(tasks);
-                System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [PRELOAD] Adjacent months loaded");
             }
         }
         catch (Exception ex)
@@ -193,7 +185,6 @@ public static class CalendarDataService
             // 가장 오래된 항목 삭제 (단순히 처음 항목 삭제)
             var oldestKey = _monthlyCache.Keys.First();
             _monthlyCache.Remove(oldestKey);
-            System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [CACHE] Trimmed old cache: {oldestKey.Year}-{oldestKey.Month}");
         }
     }
 
@@ -206,7 +197,6 @@ public static class CalendarDataService
         {
             _monthlyCache.Clear();
         }
-        System.Diagnostics.Debug.WriteLine("[CalendarDataService] Cache cleared");
     }
 
     /// <summary>
@@ -225,7 +215,6 @@ public static class CalendarDataService
                 _monthlyCache.Remove(key);
             }
         }
-        System.Diagnostics.Debug.WriteLine($"[CalendarDataService] Cache invalidated for {year}-{month}");
     }
 
     /// <summary>
@@ -235,8 +224,6 @@ public static class CalendarDataService
         int year, int month, Guid? selectedRegionId, Guid? selectedDivisionId,
         Guid? selectedDistrictId, Guid? selectedBattalionId)
     {
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
         if (!AuthService.IsLoggedIn || AuthService.CurrentUser == null)
         {
             return new CalendarDataLoadedEventArgs
@@ -262,6 +249,7 @@ public static class CalendarDataService
             UserRole.UserMilitary => "user_military",
             UserRole.MiddleLocal => "middle_local",
             UserRole.MiddleMilitary => "middle_military",
+            UserRole.ViewerMilitary => "viewer_military",
             UserRole.SuperAdminMois => "super_admin_mois",
             UserRole.SuperAdminArmy => "super_admin_army",
             _ => "user_local"
@@ -301,6 +289,16 @@ public static class CalendarDataService
                 rpcParams["p_battalion_id"] = selectedBattalionId.Value.ToString();
             }
         }
+        else if (role == UserRole.ViewerMilitary && currentUser.DivisionId.HasValue)
+        {
+            // 여단총괄: 관할 사단 필터로 RPC 호출, 여단 필터는 클라이언트 사이드
+            rpcParams["p_division_id"] = currentUser.DivisionId.Value.ToString();
+            // 선택한 대대 필터 (옵션)
+            if (selectedBattalionId.HasValue && selectedBattalionId.Value != Guid.Empty)
+            {
+                rpcParams["p_battalion_id"] = selectedBattalionId.Value.ToString();
+            }
+        }
         // 최종관리자 필터
         else if (role == UserRole.SuperAdminMois && selectedRegionId.HasValue && selectedRegionId.Value != Guid.Empty)
         {
@@ -312,13 +310,9 @@ public static class CalendarDataService
         }
 
         // RPC 호출 (네트워크 I/O)
-        System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Calling RPC...");
         var response = await SupabaseService.Client.Rpc("get_calendar_schedules", rpcParams);
-        System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] RPC response in {stopwatch.ElapsedMilliseconds}ms");
 
-        // 응답 내용 확인 (디버깅용)
         var rawContent = response.Content ?? "null";
-        System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Raw response (first 500 chars): {rawContent.Substring(0, Math.Min(500, rawContent.Length))}");
 
         // JSON 파싱 (CPU 작업)
         // Supabase RPC 응답이 배열이 아닌 객체로 감싸져 있을 수 있음
@@ -333,17 +327,14 @@ public static class CalendarDataService
                 if (jObj.ContainsKey("body"))
                 {
                     jsonContent = jObj["body"]?.ToString() ?? "[]";
-                    System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Extracted from 'body' wrapper");
                 }
                 else if (jObj.ContainsKey("message"))
                 {
                     jsonContent = jObj["message"]?.ToString() ?? "[]";
-                    System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Extracted from 'message' wrapper");
                 }
                 else if (jObj.ContainsKey("data"))
                 {
                     jsonContent = jObj["data"]?.ToString() ?? "[]";
-                    System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Extracted from 'data' wrapper");
                 }
             }
         }
@@ -354,31 +345,14 @@ public static class CalendarDataService
 
         var dtos = Newtonsoft.Json.JsonConvert.DeserializeObject<List<CalendarScheduleDto>>(jsonContent ?? "[]")
                    ?? new List<CalendarScheduleDto>();
-        System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Parsed {dtos.Count} DTOs");
-
-        // DTO 샘플 로그
-        if (dtos.Count > 0)
-        {
-            var sample = dtos[0];
-            System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Sample DTO - Id: {sample.Id}, ReservedDate: {sample.ReservedDate}, CompanyName: {sample.CompanyName}");
-        }
 
         var schedules = dtos.Select(dto => dto.ToScheduleWithNavigation()).ToList();
-
-        // Schedule 샘플 로그
-        if (schedules.Count > 0)
-        {
-            var sample = schedules[0];
-            System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Sample Schedule - Id: {sample.Id}, ReservedDate: {sample.ReservedDate}, HasValue: {sample.ReservedDate.HasValue}");
-        }
 
         // 날짜별로 그룹핑
         var schedulesByDate = schedules
             .Where(s => s.ReservedDate.HasValue)
             .GroupBy(s => s.ReservedDate!.Value.Date)
             .ToDictionary(g => g.Key, g => g.ToList());
-
-        System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Grouped into {schedulesByDate.Count} dates");
 
         // CalendarDayData 생성 (42개)
         var days = new List<CalendarDayData>();
@@ -418,7 +392,8 @@ public static class CalendarDataService
                 // 그룹 뱃지 생성 (최종관리자 + 중간관리자용)
                 // 일반 사용자(user_local, user_military)는 뱃지 대신 확정/예약 점 표시
                 if (role == UserRole.SuperAdminMois || role == UserRole.SuperAdminArmy ||
-                    role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary)
+                    role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary ||
+                    role == UserRole.ViewerMilitary)
                 {
                     dayData.IsSuperAdmin = true;  // 뱃지 표시용 플래그 (최종관리자 + 중간관리자)
                     dayData.GroupBadges = CreateGroupBadges(daySchedules, role);
@@ -434,9 +409,6 @@ public static class CalendarDataService
         {
             days.Add(new CalendarDayData { Day = 0, IsCurrentMonth = false });
         }
-
-        stopwatch.Stop();
-        System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] Total processing: {stopwatch.ElapsedMilliseconds}ms");
 
         return new CalendarDataLoadedEventArgs
         {
@@ -482,7 +454,7 @@ public static class CalendarDataService
                 {
                     GroupId = Guid.Empty,
                     Count = allGroups.Count - maxBadges,
-                    Color = "#6a6a6a",
+                    Color = "#AEAEB2",
                     IsOverflow = true
                 });
             }
@@ -509,7 +481,7 @@ public static class CalendarDataService
                 {
                     GroupId = Guid.Empty,
                     Count = allGroups.Count - maxBadges,
-                    Color = "#6a6a6a",
+                    Color = "#AEAEB2",
                     IsOverflow = true
                 });
             }
@@ -536,14 +508,14 @@ public static class CalendarDataService
                 {
                     GroupId = Guid.Empty,
                     Count = allGroups.Count - maxBadges,
-                    Color = "#6a6a6a",
+                    Color = "#AEAEB2",
                     IsOverflow = true
                 });
             }
         }
-        else if (role == UserRole.MiddleMilitary)
+        else if (role == UserRole.MiddleMilitary || role == UserRole.ViewerMilitary)
         {
-            // 사단 중간관리자: 대대별 그룹핑
+            // 사단/여단 관리자: 대대별 그룹핑
             var allGroups = schedules
                 .Where(s => s.MilitaryUser?.BattalionId != null)
                 .GroupBy(s => s.MilitaryUser!.BattalionId!.Value)
@@ -563,7 +535,7 @@ public static class CalendarDataService
                 {
                     GroupId = Guid.Empty,
                     Count = allGroups.Count - maxBadges,
-                    Color = "#6a6a6a",
+                    Color = "#AEAEB2",
                     IsOverflow = true
                 });
             }
@@ -612,6 +584,6 @@ public class GroupBadgeData
 {
     public Guid GroupId { get; set; }
     public int Count { get; set; }
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
     public bool IsOverflow { get; set; } = false; // "+N" 오버플로우 뱃지 여부
 }

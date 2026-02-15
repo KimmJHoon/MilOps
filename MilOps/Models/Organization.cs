@@ -77,10 +77,10 @@ public class Division : BaseModel
 }
 
 /// <summary>
-/// 대대 (군부대)
+/// 여단
 /// </summary>
-[Table("battalions")]
-public class Battalion : BaseModel
+[Table("brigades")]
+public class Brigade : BaseModel
 {
     [PrimaryKey("id", false)]
     [Column("id")]
@@ -101,6 +101,42 @@ public class Battalion : BaseModel
     // Navigation property (DB에 저장되지 않음)
     [JsonIgnore]
     public Division? Division { get; set; }
+
+    // Helper property
+    [JsonIgnore]
+    public string FullName => Division != null ? $"{Division.Name} {Name}" : Name;
+}
+
+/// <summary>
+/// 대대 (군부대)
+/// </summary>
+[Table("battalions")]
+public class Battalion : BaseModel
+{
+    [PrimaryKey("id", false)]
+    [Column("id")]
+    public Guid Id { get; set; }
+
+    [Column("division_id")]
+    public Guid DivisionId { get; set; }
+
+    [Column("brigade_id")]
+    public Guid? BrigadeId { get; set; }
+
+    [Column("name")]
+    public string Name { get; set; } = "";
+
+    [Column("is_active")]
+    public bool IsActive { get; set; } = true;
+
+    [Column("created_at")]
+    public DateTime CreatedAt { get; set; }
+
+    // Navigation properties (DB에 저장되지 않음)
+    [JsonIgnore]
+    public Division? Division { get; set; }
+    [JsonIgnore]
+    public Brigade? Brigade { get; set; }
 
     // Helper property
     [JsonIgnore]

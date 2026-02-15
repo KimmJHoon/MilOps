@@ -27,7 +27,6 @@ public partial class LoginViewModel : ViewModelBase
     private bool _isDebugMode = false;
 
     public event Action? LoginSuccessful;
-    public event Action? SignUpRequested;
 
     private const string QuickLoginPassword = "qwer1234";
 
@@ -36,14 +35,6 @@ public partial class LoginViewModel : ViewModelBase
 #if DEBUG
         IsDebugMode = true;
 #endif
-    }
-
-    [RelayCommand]
-    private void OpenSignUp()
-    {
-        System.Diagnostics.Debug.WriteLine("[LoginViewModel] OpenSignUp called");
-        SignUpRequested?.Invoke();
-        System.Diagnostics.Debug.WriteLine("[LoginViewModel] SignUpRequested invoked");
     }
 
     [RelayCommand]

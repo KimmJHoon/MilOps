@@ -49,9 +49,6 @@ public partial class ScheduleReserveViewModel : ViewModelBase
     [ObservableProperty]
     private string _localUserName = "";
 
-    [ObservableProperty]
-    private string _localUserPhone = "";
-
     // === 가능 일자/시간 선택 ===
     [ObservableProperty]
     private ObservableCollection<ReserveDateItem> _availableDates = new();
@@ -191,7 +188,6 @@ public partial class ScheduleReserveViewModel : ViewModelBase
             if (localUser != null)
             {
                 LocalUserName = localUser.FullDisplayName;
-                LocalUserPhone = localUser.Phone ?? "";
             }
 
             // 현재 사용자 표시 설정 (대대담당자)
@@ -385,7 +381,6 @@ public partial class ScheduleReserveViewModel : ViewModelBase
             }
 
             SuccessMessage = "예약이 완료되었습니다.";
-            System.Diagnostics.Debug.WriteLine($"[ScheduleReserveVM] Reserved: {SelectedDate.Date:yyyy-MM-dd} {SelectedTimeSlot.TimeRangeDisplay}");
 
             // 상태 변경 이벤트 발생 (reserved, statusOrder=3)
             ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "reserved", 3));

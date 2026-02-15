@@ -67,7 +67,6 @@ public static class ScheduleDataService
     public static void PreloadCache()
     {
         // RPC가 모든 데이터를 한 번에 가져오므로 별도 캐시 로드 불필요
-        System.Diagnostics.Debug.WriteLine("[ScheduleDataService] PreloadCache called (RPC handles all data)");
     }
 
     /// <summary>
@@ -80,7 +79,6 @@ public static class ScheduleDataService
         // 1단계: Optimistic UI - 캐시된 데이터가 있으면 즉시 반환 (0ms)
         if (_lastResult != null)
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [Optimistic] Returning cached data immediately ({_lastResult.Schedules.Count} schedules)");
             DataLoaded?.Invoke(_lastResult);
             // 로딩 상태는 true로 설정하되, 이미 데이터가 있으므로 UI에서는 로딩 화면 안 보임
         }
@@ -90,7 +88,6 @@ public static class ScheduleDataService
         {
             if (_isLoadingInProgress)
             {
-                System.Diagnostics.Debug.WriteLine("[ScheduleDataService] [BG] Load already in progress, skipping");
                 return;
             }
             _isLoadingInProgress = true;
@@ -108,15 +105,8 @@ public static class ScheduleDataService
                     LoadingStateChanged?.Invoke(true);
                 }
 
-                System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Starting RPC load for user: {currentUser.LoginId}");
-
-                var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
                 // RPC를 통한 단일 요청으로 모든 데이터 로드
                 var result = await LoadSchedulesViaRpcAsync(currentUser);
-
-                stopwatch.Stop();
-                System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] RPC load complete in {stopwatch.ElapsedMilliseconds}ms. Schedules: {result.Schedules.Count}");
 
                 // 결과 캐싱
                 _lastResult = result;
@@ -152,8 +142,6 @@ public static class ScheduleDataService
             return new ScheduleDataLoadedEventArgs { Schedules = new List<Schedule>() };
         }
 
-        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-
         // RPC 호출 파라미터
         var rpcParams = new Dictionary<string, object>
         {
@@ -164,11 +152,7 @@ public static class ScheduleDataService
         // RPC 호출 (단일 요청으로 모든 데이터)
         var response = await SupabaseService.Client.Rpc("get_schedule_list", rpcParams);
 
-        System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] RPC response in {stopwatch.ElapsedMilliseconds}ms");
-
-        // 응답 내용 확인 (디버깅용)
         var rawContent = response.Content ?? "null";
-        System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Raw response (first 500 chars): {rawContent.Substring(0, Math.Min(500, rawContent.Length))}");
 
         // JSON 파싱 - Supabase RPC 응답이 wrapper로 감싸져 있을 수 있음
         var jsonContent = rawContent;
@@ -181,17 +165,14 @@ public static class ScheduleDataService
                 if (tempObj.ContainsKey("body"))
                 {
                     jsonContent = tempObj["body"]?.ToString() ?? "{}";
-                    System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Extracted from 'body' wrapper");
                 }
                 else if (tempObj.ContainsKey("message"))
                 {
                     jsonContent = tempObj["message"]?.ToString() ?? "{}";
-                    System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Extracted from 'message' wrapper");
                 }
                 else if (tempObj.ContainsKey("data"))
                 {
                     jsonContent = tempObj["data"]?.ToString() ?? "{}";
-                    System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Extracted from 'data' wrapper");
                 }
             }
         }
@@ -223,9 +204,6 @@ public static class ScheduleDataService
 
         // ScheduleListItem 생성
         var items = schedules.Select(s => CreateScheduleListItem(s, currentUser)).ToList();
-
-        stopwatch.Stop();
-        System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] Total processing: {stopwatch.ElapsedMilliseconds}ms");
 
         return new ScheduleDataLoadedEventArgs
         {
@@ -272,7 +250,8 @@ public static class ScheduleDataService
                         {
                             Id = id,
                             Name = obj["name"]?.ToString() ?? "",
-                            DivisionId = obj["division_id"]?.ToObject<Guid>() ?? Guid.Empty
+                            DivisionId = obj["division_id"]?.ToObject<Guid>() ?? Guid.Empty,
+                            BrigadeId = obj["brigade_id"]?.Type == JTokenType.Null ? null : obj["brigade_id"]?.ToObject<Guid>()
                         };
                     }
                 }
@@ -338,7 +317,6 @@ public static class ScheduleDataService
             }
 
             _cacheLoaded = true;
-            System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] Cache updated: {_companyNames.Count} companies, {_battalionNames.Count} battalions, {_districtNames.Count} districts, {_userNames.Count} users");
         }
         catch (Exception ex)
         {
@@ -425,6 +403,17 @@ public static class ScheduleDataService
                     IsMilitaryUserInDivision(s.MilitaryUserId, currentUser.DivisionId.Value)
                 ).ToList();
 
+            case "viewer_military":
+                // 여단총괄: 자신의 여단 소속 대대담당자가 배정된 일정 (뷰어 전용)
+                if (!currentUser.BrigadeId.HasValue)
+                {
+                    return new List<Schedule>();
+                }
+
+                return schedules.Where(s =>
+                    IsMilitaryUserInBrigade(s.MilitaryUserId, currentUser.BrigadeId.Value)
+                ).ToList();
+
             case "middle_local":
                 // 지자체(도) 담당자: 예약됨/확정됨 상태 중 자신의 Region 소속
                 if (!currentUser.RegionId.HasValue)
@@ -454,6 +443,20 @@ public static class ScheduleDataService
             return false;
 
         return battalion.DivisionId == divisionId;
+    }
+
+    private static bool IsMilitaryUserInBrigade(Guid militaryUserId, Guid brigadeId)
+    {
+        if (!_userCache.TryGetValue(militaryUserId, out var militaryUser))
+            return false;
+
+        if (!militaryUser.BattalionId.HasValue)
+            return false;
+
+        if (!_battalionCache.TryGetValue(militaryUser.BattalionId.Value, out var battalion))
+            return false;
+
+        return battalion.BrigadeId == brigadeId;
     }
 
     private static bool IsLocalUserInRegion(Guid localUserId, Guid regionId)
@@ -530,6 +533,7 @@ public static class ScheduleDataService
             ("reserved", "user_military") when schedule.MilitaryConfirmed => "상대방 대기",
             ("confirmed", _) => "상세보기",
             ("created", "middle_military") => "삭제하기",
+            (_, "viewer_military") => "상세보기",
             _ => "상세보기"
         };
     }
@@ -551,7 +555,7 @@ public static class ScheduleDataService
             {
                 item.UnconfirmedInfo = "대대 미확정";
             }
-            else if (currentUser.Role == "user_military" || currentUser.Role == "middle_military" || currentUser.Role == "super_admin_army")
+            else if (currentUser.Role == "user_military" || currentUser.Role == "middle_military" || currentUser.Role == "viewer_military" || currentUser.Role == "super_admin_army")
             {
                 item.UnconfirmedInfo = "지자체 미확정";
             }
@@ -593,8 +597,6 @@ public static class ScheduleDataService
         {
             _isLoadingInProgress = false;
         }
-
-        System.Diagnostics.Debug.WriteLine("[ScheduleDataService] Cache cleared");
     }
 
     /// <summary>
@@ -604,7 +606,6 @@ public static class ScheduleDataService
     public static void InvalidateCache()
     {
         _lastResult = null;
-        System.Diagnostics.Debug.WriteLine("[ScheduleDataService] Cache invalidated");
     }
 
     /// <summary>

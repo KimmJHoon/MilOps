@@ -43,7 +43,6 @@ public partial class ScheduleListView : UserControl
 
     private void OnCleanupBeforeLogout()
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleListView] CleanupBeforeLogout - clearing cache");
         try
         {
             if (_viewModel != null)
@@ -85,18 +84,13 @@ public partial class ScheduleListView : UserControl
     /// </summary>
     public void ForceInitialize()
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleListView] ForceInitialize called");
         InitializeViewModel();
     }
 
     private void InitializeViewModel()
     {
         // 현재 사용자 정보가 없으면 무시
-        if (AuthService.CurrentUser == null)
-        {
-            System.Diagnostics.Debug.WriteLine("[ScheduleListView] InitializeViewModel - No current user, skipping");
-            return;
-        }
+        if (AuthService.CurrentUser == null) return;
 
         var currentUserId = AuthService.CurrentUser.Id;
         var currentUserRole = AuthService.CurrentUser.Role;
@@ -108,8 +102,6 @@ public partial class ScheduleListView : UserControl
 
         if (needsNewViewModel)
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListView] Creating new ViewModel for user: {AuthService.CurrentUser.LoginId}, role: {currentUserRole}");
-
             // 기존 ViewModel 정리
             if (_viewModel != null)
             {
@@ -131,7 +123,6 @@ public partial class ScheduleListView : UserControl
         else
         {
             // 동일 사용자면 데이터만 새로고침
-            System.Diagnostics.Debug.WriteLine($"[ScheduleListView] Refreshing data for same user");
             _viewModel?.RefreshCommand.Execute(null);
         }
     }
@@ -166,7 +157,6 @@ public partial class ScheduleListView : UserControl
 
     private void OnNavigateToScheduleDetail(Schedule schedule, string mode)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleListView] NavigateToScheduleDetail - scheduleId: {schedule.Id}, mode: {mode}");
         var mainView = this.GetVisualAncestors().OfType<MainView>().FirstOrDefault();
         mainView?.OpenScheduleInput(schedule.Id, mode);
     }

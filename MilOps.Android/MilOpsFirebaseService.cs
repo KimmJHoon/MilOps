@@ -85,18 +85,6 @@ public class MilOpsFirebaseService : FirebaseMessagingService
         {
             switch (messageType)
             {
-                case "invitation_accepted":
-                    // 초대 수락됨 알림
-                    if (showNotification && data.TryGetValue("name", out var name) &&
-                        data.TryGetValue("role", out var role))
-                    {
-                        ShowNotification(
-                            "초대 수락",
-                            $"{name}님이 {role}(으)로 가입했습니다."
-                        );
-                    }
-                    break;
-
                 case "schedule_created":
                     // 새 일정 생성됨
                     if (showNotification && data.TryGetValue("company_name", out var companyName))

@@ -33,7 +33,7 @@ public partial class MainViewModel : ViewModelBase
     private string _selectedTab = "calendar";
 
     [ObservableProperty]
-    private string _currentPageTitle = "캘린더";
+    private string _currentPageTitle = "자원조사 일정표";
 
     [ObservableProperty]
     private bool _isCalendarSelected = true;
@@ -46,6 +46,9 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isNotificationSelected = false;
+
+    [ObservableProperty]
+    private bool _isChatSelected = false;
 
     [ObservableProperty]
     private bool _isSettingsSelected = false;
@@ -70,13 +73,7 @@ public partial class MainViewModel : ViewModelBase
     private string _currentUserName = "";
 
     [ObservableProperty]
-    private string _currentUserPhone = "";
-
-    [ObservableProperty]
     private string _currentUserRole = "";
-
-    [ObservableProperty]
-    private string _currentUserPosition = "";
 
     [ObservableProperty]
     private string _currentUserRegion = "";
@@ -97,6 +94,31 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isScheduleConfirmOpen = false;
 
+    [ObservableProperty]
+    private bool _isChatRoomOpen = false;
+
+    // 비밀번호 변경
+    [ObservableProperty]
+    private bool _isPasswordChangeVisible = false;
+
+    [ObservableProperty]
+    private string _currentPassword = "";
+
+    [ObservableProperty]
+    private string _newPassword = "";
+
+    [ObservableProperty]
+    private string _confirmPassword = "";
+
+    [ObservableProperty]
+    private string _passwordChangeMessage = "";
+
+    [ObservableProperty]
+    private bool _isPasswordChangeError = false;
+
+    [ObservableProperty]
+    private string _passwordChangeMessageColor = "#00a872";
+
     // 일정 입력/예약/확정 화면에 전달할 데이터
     private Guid _scheduleInputId;
     private Guid _scheduleReserveId;
@@ -108,7 +130,8 @@ public partial class MainViewModel : ViewModelBase
 
     // 메뉴 표시 여부 (역할별)
     public bool ShowScheduleTab => IsUser || IsMiddleAdmin;  // 사용자, 중간관리자
-    public bool ShowManagerTab => IsMiddleAdmin || IsSuperAdmin;  // 중간관리자, 최종관리자
+    public bool ShowChatTab => IsUser || IsMiddleAdmin;      // 사용자, 중간관리자 (최종관리자 제외)
+    public bool ShowManagerTab => true;  // 모든 역할에서 담당자 탭 접근 가능
 
     public MainViewModel()
     {
@@ -121,18 +144,14 @@ public partial class MainViewModel : ViewModelBase
         var user = AuthService.CurrentUser;
 
         CurrentUserId = user?.LoginId ?? "";
-        CurrentUserName = user?.Name ?? "";
-        CurrentUserPhone = user?.Phone ?? "";
+        CurrentUserName = user?.FullDisplayName ?? "";
         CurrentUserRole = user?.RoleDisplayName ?? "";
-        CurrentUserPosition = user?.PositionDisplay ?? "";
 
         // 지역 정보 로드 (비동기)
         _ = LoadUserRegionAsync();
 
         // 현재 선택된 탭이 해당 역할에서 접근 불가능하면 기본 탭(캘린더)으로 리셋
         ResetToValidTab();
-
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] RefreshUserRole - IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
     }
 
     private async Task LoadUserRegionAsync()
@@ -145,7 +164,7 @@ public partial class MainViewModel : ViewModelBase
             var client = SupabaseService.Client;
             if (client == null) return;
 
-            // 4개 쿼리를 병렬로 실행 (순차 실행 대비 4배 빠름)
+            // 5개 쿼리를 병렬로 실행
             var regionTask = user.RegionId.HasValue
                 ? client.From<Models.Region>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.RegionId.ToString())
@@ -164,6 +183,12 @@ public partial class MainViewModel : ViewModelBase
                     .Single()
                 : Task.FromResult<Models.Division?>(null);
 
+            var brigadeTask = user.BrigadeId.HasValue
+                ? client.From<Models.Brigade>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.BrigadeId.ToString())
+                    .Single()
+                : Task.FromResult<Models.Brigade?>(null);
+
             var battalionTask = user.BattalionId.HasValue
                 ? client.From<Models.Battalion>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.BattalionId.ToString())
@@ -171,7 +196,7 @@ public partial class MainViewModel : ViewModelBase
                 : Task.FromResult<Models.Battalion?>(null);
 
             // 모든 쿼리 병렬 대기
-            await Task.WhenAll(regionTask, districtTask, divisionTask, battalionTask);
+            await Task.WhenAll(regionTask, districtTask, divisionTask, brigadeTask, battalionTask);
 
             // 결과 조합
             var parts = new List<string>();
@@ -184,6 +209,9 @@ public partial class MainViewModel : ViewModelBase
 
             if (divisionTask.Result != null)
                 parts.Add(divisionTask.Result.Name);
+
+            if (brigadeTask.Result != null)
+                parts.Add(brigadeTask.Result.Name);
 
             if (battalionTask.Result != null)
                 parts.Add(battalionTask.Result.Name);
@@ -201,18 +229,16 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     private void ResetToValidTab()
     {
-        // 담당자 탭은 중간관리자, 최종관리자만 접근 가능
-        if (IsManagerSelected && !ShowManagerTab)
+        // 일정 탭은 사용자, 중간관리자만 접근 가능
+        if (IsScheduleSelected && !ShowScheduleTab)
         {
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] Manager tab not accessible, resetting to calendar");
             SelectTab("calendar");
             return;
         }
 
-        // 일정 탭은 사용자, 중간관리자만 접근 가능
-        if (IsScheduleSelected && !ShowScheduleTab)
+        // 채팅 탭은 사용자, 중간관리자만 접근 가능
+        if (IsChatSelected && !ShowChatTab)
         {
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] Schedule tab not accessible, resetting to calendar");
             SelectTab("calendar");
             return;
         }
@@ -224,7 +250,7 @@ public partial class MainViewModel : ViewModelBase
         var roleString = AuthService.CurrentUser?.Role ?? "null";
 
         IsSuperAdmin = AuthService.IsSuperAdmin;
-        IsMiddleAdmin = role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary;
+        IsMiddleAdmin = role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary || role == UserRole.ViewerMilitary;
         IsUser = role == UserRole.UserLocal || role == UserRole.UserMilitary;
 
         // 역할이 None인 경우 기본값으로 사용자 처리 (담당자 메뉴 숨김)
@@ -237,9 +263,8 @@ public partial class MainViewModel : ViewModelBase
 
         // 속성 변경 알림 (메뉴 표시 여부 갱신)
         OnPropertyChanged(nameof(ShowScheduleTab));
+        OnPropertyChanged(nameof(ShowChatTab));
         OnPropertyChanged(nameof(ShowManagerTab));
-
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] UpdateUserRole - DBRole: {roleString}, ParsedRole: {role}, IsSuperAdmin: {IsSuperAdmin}, IsMiddleAdmin: {IsMiddleAdmin}, IsUser: {IsUser}");
     }
 
     // 탭 변경 이벤트 (View에서 구독하여 초기화 처리)
@@ -253,6 +278,7 @@ public partial class MainViewModel : ViewModelBase
         // 모든 탭 선택 해제
         IsCalendarSelected = false;
         IsScheduleSelected = false;
+        IsChatSelected = false;
         IsManagerSelected = false;
         IsNotificationSelected = false;
         IsSettingsSelected = false;
@@ -262,11 +288,15 @@ public partial class MainViewModel : ViewModelBase
         {
             case "calendar":
                 IsCalendarSelected = true;
-                CurrentPageTitle = "캘린더";
+                CurrentPageTitle = "자원조사 일정표";
                 break;
             case "schedule":
                 IsScheduleSelected = true;
                 CurrentPageTitle = "일정";
+                break;
+            case "chat":
+                IsChatSelected = true;
+                CurrentPageTitle = "메시지";
                 break;
             case "notification":
                 IsNotificationSelected = true;
@@ -274,7 +304,7 @@ public partial class MainViewModel : ViewModelBase
                 break;
             case "manager":
                 IsManagerSelected = true;
-                CurrentPageTitle = "담당자 관리";
+                CurrentPageTitle = "담당자";
                 break;
             case "settings":
                 IsSettingsSelected = true;
@@ -296,6 +326,82 @@ public partial class MainViewModel : ViewModelBase
     private void CloseDrawer()
     {
         IsDrawerOpen = false;
+        ResetPasswordChangeForm();
+    }
+
+    [RelayCommand]
+    private void ShowPasswordChange()
+    {
+        // 드로어를 먼저 닫고 모달을 표시
+        IsDrawerOpen = false;
+        IsPasswordChangeVisible = true;
+        PasswordChangeMessage = "";
+        IsPasswordChangeError = false;
+    }
+
+    [RelayCommand]
+    private void HidePasswordChange()
+    {
+        ResetPasswordChangeForm();
+    }
+
+    [RelayCommand]
+    private async Task SubmitPasswordChange()
+    {
+        // 입력 검증
+        if (string.IsNullOrWhiteSpace(CurrentPassword))
+        {
+            SetPasswordError("현재 비밀번호를 입력해주세요");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(NewPassword))
+        {
+            SetPasswordError("새 비밀번호를 입력해주세요");
+            return;
+        }
+        if (NewPassword.Length < 6)
+        {
+            SetPasswordError("비밀번호는 6자 이상이어야 합니다");
+            return;
+        }
+        if (NewPassword != ConfirmPassword)
+        {
+            SetPasswordError("새 비밀번호가 일치하지 않습니다");
+            return;
+        }
+
+        var (success, errorMessage) = await AuthService.ChangePasswordAsync(CurrentPassword, NewPassword);
+        if (success)
+        {
+            PasswordChangeMessage = "비밀번호가 변경되었습니다";
+            IsPasswordChangeError = false;
+            PasswordChangeMessageColor = "#00a872";
+            // 1.5초 후 폼 닫기
+            await Task.Delay(1500);
+            ResetPasswordChangeForm();
+        }
+        else
+        {
+            SetPasswordError(errorMessage ?? "비밀번호 변경에 실패했습니다");
+        }
+    }
+
+    private void SetPasswordError(string message)
+    {
+        PasswordChangeMessage = message;
+        IsPasswordChangeError = true;
+        PasswordChangeMessageColor = "#D32F2F";
+    }
+
+    private void ResetPasswordChangeForm()
+    {
+        IsPasswordChangeVisible = false;
+        CurrentPassword = "";
+        NewPassword = "";
+        ConfirmPassword = "";
+        PasswordChangeMessage = "";
+        IsPasswordChangeError = false;
+        PasswordChangeMessageColor = "#00a872";
     }
 
     // 로그아웃 완료 이벤트
@@ -304,7 +410,6 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private async Task Logout()
     {
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] Logout command started");
         IsDrawerOpen = false;
 
         try
@@ -313,7 +418,6 @@ public partial class MainViewModel : ViewModelBase
             try
             {
                 AppRestartService.CleanupBeforeLogout?.Invoke();
-                System.Diagnostics.Debug.WriteLine("[MainViewModel] Cleanup completed");
             }
             catch (Exception ex)
             {
@@ -322,15 +426,12 @@ public partial class MainViewModel : ViewModelBase
 
             // 2. 세션 저장소 클리어
             SessionStorageService.ClearSession();
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] Session cleared");
 
             // 3. AuthService 로그아웃
             await AuthService.LogoutAsync();
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] AuthService logged out");
 
             // 4. 로그아웃 완료 이벤트 발생 (UI에서 로그인 화면으로 전환)
             LogoutCompleted?.Invoke();
-            System.Diagnostics.Debug.WriteLine("[MainViewModel] LogoutCompleted event invoked");
         }
         catch (Exception ex)
         {
@@ -343,14 +444,12 @@ public partial class MainViewModel : ViewModelBase
     private void OpenCompanyRegister()
     {
         IsCompanyRegisterOpen = true;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] OpenCompanyRegister");
     }
 
     [RelayCommand]
     private void CloseCompanyRegister()
     {
         IsCompanyRegisterOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseCompanyRegister");
     }
 
     // === 일정 생성 화면 ===
@@ -358,14 +457,12 @@ public partial class MainViewModel : ViewModelBase
     private void OpenScheduleCreate()
     {
         IsScheduleCreateOpen = true;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] OpenScheduleCreate");
     }
 
     [RelayCommand]
     private void CloseScheduleCreate()
     {
         IsScheduleCreateOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleCreate");
     }
 
     // === 일정 상세 화면 열기 (역할/상태에 따라 분기) ===
@@ -381,8 +478,6 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     public void RequestOpenScheduleDetail(Guid scheduleId, string mode = "view")
     {
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] RequestOpenScheduleDetail - scheduleId: {scheduleId}, mode: {mode}");
-
         // 백그라운드에서 일정 조회 및 화면 분기 처리
         _ = Task.Run(async () =>
         {
@@ -390,17 +485,11 @@ public partial class MainViewModel : ViewModelBase
             {
                 var currentUser = AuthService.CurrentUser;
                 if (currentUser == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("[MainViewModel] RequestOpenScheduleDetail - No user logged in");
                     return;
-                }
 
                 var client = SupabaseService.Client;
                 if (client == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("[MainViewModel] RequestOpenScheduleDetail - No Supabase client");
                     return;
-                }
 
                 // 백그라운드에서 일정 조회
                 var schedule = await client.From<Models.Schedule>()
@@ -408,12 +497,7 @@ public partial class MainViewModel : ViewModelBase
                     .Single();
 
                 if (schedule == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("[MainViewModel] RequestOpenScheduleDetail - Schedule not found");
                     return;
-                }
-
-                System.Diagnostics.Debug.WriteLine($"[MainViewModel] RequestOpenScheduleDetail - Schedule status: {schedule.Status}, role: {currentUser.Role}");
 
                 // 화면 분기 로직 (비즈니스 로직)
                 ScheduleNavigationType navigationType;
@@ -423,8 +507,9 @@ public partial class MainViewModel : ViewModelBase
                 {
                     navigationType = ScheduleNavigationType.Confirm;
                 }
-                // 중간관리자/최종관리자는 모든 상태의 일정을 확정 화면(뷰어 모드)으로 조회
+                // 중간관리자/최종관리자/여단총괄은 모든 상태의 일정을 확정 화면(뷰어 모드)으로 조회
                 else if (currentUser.Role == "middle_local" || currentUser.Role == "middle_military" ||
+                         currentUser.Role == "viewer_military" ||
                          currentUser.Role == "super_admin_mois" || currentUser.Role == "super_admin_army")
                 {
                     navigationType = ScheduleNavigationType.Confirm;
@@ -444,13 +529,11 @@ public partial class MainViewModel : ViewModelBase
                     }
                     else
                     {
-                        System.Diagnostics.Debug.WriteLine($"[MainViewModel] Schedule not ready for reservation (status: {schedule.Status})");
                         return;
                     }
                 }
                 else
                 {
-                    System.Diagnostics.Debug.WriteLine($"[MainViewModel] Unsupported role: {currentUser.Role}");
                     return;
                 }
 
@@ -477,14 +560,12 @@ public partial class MainViewModel : ViewModelBase
     {
         _scheduleInputId = scheduleId;
         IsScheduleInputOpen = true;
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleInput - scheduleId: {scheduleId}");
     }
 
     [RelayCommand]
     private void CloseScheduleInput()
     {
         IsScheduleInputOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleInput");
     }
 
     // === 일정 예약 화면 (대대담당자용) ===
@@ -492,14 +573,12 @@ public partial class MainViewModel : ViewModelBase
     {
         _scheduleReserveId = scheduleId;
         IsScheduleReserveOpen = true;
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleReserve - scheduleId: {scheduleId}");
     }
 
     [RelayCommand]
     private void CloseScheduleReserve()
     {
         IsScheduleReserveOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleReserve");
     }
 
     // === 일정 확정 화면 (양측 공통) ===
@@ -507,13 +586,23 @@ public partial class MainViewModel : ViewModelBase
     {
         _scheduleConfirmId = scheduleId;
         IsScheduleConfirmOpen = true;
-        System.Diagnostics.Debug.WriteLine($"[MainViewModel] OpenScheduleConfirm - scheduleId: {scheduleId}");
     }
 
     [RelayCommand]
     private void CloseScheduleConfirm()
     {
         IsScheduleConfirmOpen = false;
-        System.Diagnostics.Debug.WriteLine("[MainViewModel] CloseScheduleConfirm");
+    }
+
+    // === 채팅방 화면 ===
+    public void OpenChatRoom()
+    {
+        IsChatRoomOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseChatRoom()
+    {
+        IsChatRoomOpen = false;
     }
 }

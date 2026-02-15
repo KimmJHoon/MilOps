@@ -52,9 +52,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
     [ObservableProperty]
     private string _militaryUserName = "";
 
-    [ObservableProperty]
-    private string _militaryUserPhone = "";
-
     // === 가능 일자 입력 ===
     [ObservableProperty]
     private DateTime? _availableStartDate;
@@ -191,7 +188,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
 
             // 대대담당자 정보
             MilitaryUserName = detail.MilitaryUserFullDisplayName;
-            MilitaryUserPhone = detail.MilitaryUserPhone ?? "";
             BattalionName = detail.BattalionFullName;
 
             // 현재 사용자 표시 설정
@@ -421,7 +417,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
         }
 
         SuccessMessage = "가능 일정이 저장되었습니다.";
-        System.Diagnostics.Debug.WriteLine($"[ScheduleInputVM] Input saved: {selectedTimes.Count} time slots for {(endDate - startDate).Days + 1} days");
 
         // 상태 변경 이벤트 발생 (inputted, statusOrder=2)
         ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "inputted", 2));

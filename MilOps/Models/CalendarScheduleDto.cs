@@ -88,6 +88,12 @@ public class CalendarScheduleDto
     [JsonProperty("military_battalion_name")]
     public string? MilitaryBattalionName { get; set; }
 
+    [JsonProperty("military_brigade_id")]
+    public Guid? MilitaryBrigadeId { get; set; }
+
+    [JsonProperty("military_brigade_name")]
+    public string? MilitaryBrigadeName { get; set; }
+
     [JsonProperty("military_division_id")]
     public Guid? MilitaryDivisionId { get; set; }
 
@@ -194,8 +200,19 @@ public class CalendarScheduleDto
                 {
                     Id = MilitaryBattalionId.Value,
                     Name = MilitaryBattalionName,
-                    DivisionId = MilitaryDivisionId ?? Guid.Empty
+                    DivisionId = MilitaryDivisionId ?? Guid.Empty,
+                    BrigadeId = MilitaryBrigadeId
                 };
+
+                if (MilitaryBrigadeId.HasValue && !string.IsNullOrEmpty(MilitaryBrigadeName))
+                {
+                    schedule.MilitaryUser.Battalion.Brigade = new Brigade
+                    {
+                        Id = MilitaryBrigadeId.Value,
+                        Name = MilitaryBrigadeName,
+                        DivisionId = MilitaryDivisionId ?? Guid.Empty
+                    };
+                }
 
                 if (MilitaryDivisionId.HasValue && !string.IsNullOrEmpty(MilitaryDivisionName))
                 {

@@ -236,6 +236,40 @@ Deno.serve(async (req) => {
       }
     }
 
+    // chat_message 타입이면 notifications 테이블에도 저장 (앱 내 알림 탭 표시용)
+    if (payload.type === "chat_message" && sentCount > 0) {
+      try {
+        const senderId = payload.data?.sender_id || "";
+
+        // 발신자 이름 조회
+        let senderDisplayName = "새 메시지";
+        if (senderId) {
+          const { data: sender } = await supabase
+            .from("users")
+            .select("name")
+            .eq("id", senderId)
+            .single();
+
+          if (sender?.name) {
+            senderDisplayName = `${sender.name}님의 메시지`;
+          }
+        }
+
+        await supabase.from("notifications").insert({
+          user_id: payload.user_id,
+          type: "chat_message",
+          title: senderDisplayName,
+          message: payload.body,
+          is_read: false,
+        });
+
+        console.log(`Notification saved for user: ${payload.user_id}`);
+      } catch (notifError) {
+        console.error(`Failed to save notification: ${notifError.message}`);
+        // 알림 저장 실패해도 FCM 전송 결과는 정상 반환
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

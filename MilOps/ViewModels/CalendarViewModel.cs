@@ -27,8 +27,8 @@ public static class CalendarConverters
 /// </summary>
 public class DayBackgroundMultiConverter : IMultiValueConverter
 {
-    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#2A4A6A"));
-    private static readonly IBrush TodayBrush = new SolidColorBrush(Color.Parse("#1A3A1A"));
+    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#D1E3F6"));
+    private static readonly IBrush TodayBrush = new SolidColorBrush(Color.Parse("#E8F5E9"));
     private static readonly IBrush DefaultBrush = Brushes.Transparent;
 
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
@@ -168,7 +168,6 @@ public partial class CalendarViewModel : ViewModelBase
         if (CalendarDataService.IsLoading)
         {
             IsLoading = true;
-            System.Diagnostics.Debug.WriteLine("[CalendarViewModel] Constructor - Already loading (preloaded)");
         }
     }
 
@@ -191,15 +190,12 @@ public partial class CalendarViewModel : ViewModelBase
         // 현재 표시 중인 월과 다르면 무시 (이전 요청 응답)
         if (args.Year != CurrentYear || args.Month != CurrentMonth)
         {
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Ignoring stale data for {args.Year}-{args.Month}");
             return;
         }
 
         // UI 스레드에서 컬렉션 업데이트
         Dispatcher.UIThread.Post(() =>
         {
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] [UI Thread] Updating Days collection with {args.Days.Count} items");
-
             // CalendarDayData → CalendarDay 변환 및 컬렉션 교체
             var newDays = new ObservableCollection<CalendarDay>();
             foreach (var data in args.Days)
@@ -236,9 +232,6 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             Days = newDays;
-
-            var daysWithSchedules = newDays.Count(d => d.HasSchedules);
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] [UI Thread] Days updated. HasSchedules count: {daysWithSchedules}");
         });
     }
 
@@ -247,8 +240,6 @@ public partial class CalendarViewModel : ViewModelBase
     /// </summary>
     public void RequestLoadSchedules()
     {
-        System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] RequestLoadSchedules for {CurrentYear}-{CurrentMonth}");
-
         var selectedRegionId = SelectedRegionFilter?.Id;
         var selectedDivisionId = SelectedDivisionFilter?.Id;
         var selectedDistrictId = SelectedDistrictFilter?.Id;
@@ -297,6 +288,13 @@ public partial class CalendarViewModel : ViewModelBase
             FilterType = "battalion";
             await LoadBattalionFiltersAsync();
         }
+        else if (CurrentRole == UserRole.ViewerMilitary)
+        {
+            ShowFilter = true;
+            ShowLegend = false;
+            FilterType = "battalion";
+            await LoadBattalionFiltersForBrigadeAsync();
+        }
         else
         {
             ShowFilter = false;
@@ -325,7 +323,7 @@ public partial class CalendarViewModel : ViewModelBase
             {
                 Id = Guid.Empty,
                 Name = "전체",
-                Color = "#808080",
+                Color = "#8E8E93",
                 IsSelected = true
             });
 
@@ -341,7 +339,6 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             SelectedRegionFilter = RegionFilters.FirstOrDefault();
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Loaded {RegionFilters.Count} region filters");
         }
         catch (Exception ex)
         {
@@ -370,7 +367,7 @@ public partial class CalendarViewModel : ViewModelBase
             {
                 Id = Guid.Empty,
                 Name = "전체",
-                Color = "#808080",
+                Color = "#8E8E93",
                 IsSelected = true
             });
 
@@ -386,7 +383,6 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             SelectedDivisionFilter = DivisionFilters.FirstOrDefault();
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Loaded {DivisionFilters.Count} division filters");
         }
         catch (Exception ex)
         {
@@ -408,7 +404,6 @@ public partial class CalendarViewModel : ViewModelBase
             var currentUser = AuthService.CurrentUser;
             if (currentUser?.RegionId == null)
             {
-                System.Diagnostics.Debug.WriteLine("[CalendarViewModel] LoadDistrictFiltersAsync - No RegionId for current user");
                 return;
             }
 
@@ -425,7 +420,7 @@ public partial class CalendarViewModel : ViewModelBase
             {
                 Id = Guid.Empty,
                 Name = "전체",
-                Color = "#808080",
+                Color = "#8E8E93",
                 IsSelected = true
             });
 
@@ -441,7 +436,6 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             SelectedDistrictFilter = DistrictFilters.FirstOrDefault();
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Loaded {DistrictFilters.Count} district filters for region {currentUser.RegionId}");
         }
         catch (Exception ex)
         {
@@ -463,7 +457,6 @@ public partial class CalendarViewModel : ViewModelBase
             var currentUser = AuthService.CurrentUser;
             if (currentUser?.DivisionId == null)
             {
-                System.Diagnostics.Debug.WriteLine("[CalendarViewModel] LoadBattalionFiltersAsync - No DivisionId for current user");
                 return;
             }
 
@@ -480,7 +473,7 @@ public partial class CalendarViewModel : ViewModelBase
             {
                 Id = Guid.Empty,
                 Name = "전체",
-                Color = "#808080",
+                Color = "#8E8E93",
                 IsSelected = true
             });
 
@@ -496,11 +489,63 @@ public partial class CalendarViewModel : ViewModelBase
             }
 
             SelectedBattalionFilter = BattalionFilters.FirstOrDefault();
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] Loaded {BattalionFilters.Count} battalion filters for division {currentUser.DivisionId}");
         }
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadBattalionFiltersAsync error: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 대대 필터 목록 로드 (여단총괄용)
+    /// 본인이 속한 여단의 대대만 표시
+    /// </summary>
+    private async Task LoadBattalionFiltersForBrigadeAsync()
+    {
+        try
+        {
+            var client = SupabaseService.Client;
+            if (client == null) return;
+
+            var currentUser = AuthService.CurrentUser;
+            if (currentUser?.BrigadeId == null)
+            {
+                return;
+            }
+
+            // 본인 관할 여단의 대대만 조회
+            var response = await client.From<Battalion>()
+                .Filter("brigade_id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.BrigadeId.Value.ToString())
+                .Order("name", Supabase.Postgrest.Constants.Ordering.Ascending)
+                .Get();
+
+            BattalionFilters.Clear();
+
+            // 전체 옵션 추가
+            BattalionFilters.Add(new BattalionFilterItem
+            {
+                Id = Guid.Empty,
+                Name = "전체",
+                Color = "#8E8E93",
+                IsSelected = true
+            });
+
+            foreach (var battalion in response.Models)
+            {
+                BattalionFilters.Add(new BattalionFilterItem
+                {
+                    Id = battalion.Id,
+                    Name = battalion.Name,
+                    Color = CalendarColorHelper.GetColorForGroup(battalion.Id, UserRole.ViewerMilitary),
+                    IsSelected = false
+                });
+            }
+
+            SelectedBattalionFilter = BattalionFilters.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadBattalionFiltersForBrigadeAsync error: {ex.Message}");
         }
     }
 
@@ -618,7 +663,7 @@ public partial class CalendarViewModel : ViewModelBase
                     FilteredSelectedDaySchedules.Add(item);
                 }
             }
-            else if (CurrentRole == UserRole.MiddleMilitary)
+            else if (CurrentRole == UserRole.MiddleMilitary || CurrentRole == UserRole.ViewerMilitary)
             {
                 // 전체 선택 또는 해당 대대와 일치하는 경우
                 if (SelectedBattalionFilter == null || SelectedBattalionFilter.Id == Guid.Empty ||
@@ -671,8 +716,6 @@ public partial class CalendarViewModel : ViewModelBase
     [RelayCommand]
     private void SelectDay(CalendarDay? day)
     {
-        System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] SelectDay called - day: {day?.Day}, HasSchedules: {day?.HasSchedules}, ScheduleCount: {day?.Schedules?.Count ?? 0}");
-
         if (day == null || day.Day == 0) return;
 
         // 이전 선택 해제
@@ -684,7 +727,6 @@ public partial class CalendarViewModel : ViewModelBase
         // 일정이 없는 날짜 (Schedules가 null이거나 비어있으면 HasSchedules로 판단)
         if (!day.HasSchedules || day.Schedules == null || day.Schedules.Count == 0)
         {
-            System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] SelectDay - No schedules for this day");
             HasSelectedDaySchedules = false;
             SelectedDaySchedules.Clear();
             SelectedDay = null;
@@ -694,8 +736,6 @@ public partial class CalendarViewModel : ViewModelBase
         // 새 날짜 선택
         day.IsSelected = true;
         SelectedDay = day;
-
-        System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] SelectDay - Opening schedule list with {day.Schedules.Count} schedules");
 
         // 일정 목록 패널 업데이트
         UpdateSelectedDaySchedules(day);
@@ -759,7 +799,7 @@ public partial class CalendarViewModel : ViewModelBase
                 f.IsSelected = f.Id == Guid.Empty;
             SelectedDistrictFilter = DistrictFilters.FirstOrDefault(f => f.Id == Guid.Empty);
         }
-        else if (CurrentRole == UserRole.MiddleMilitary)
+        else if (CurrentRole == UserRole.MiddleMilitary || CurrentRole == UserRole.ViewerMilitary)
         {
             foreach (var f in BattalionFilters)
                 f.IsSelected = f.Id == Guid.Empty;
@@ -823,7 +863,6 @@ public partial class CalendarViewModel : ViewModelBase
     /// </summary>
     public void ClearCache()
     {
-        System.Diagnostics.Debug.WriteLine("[CalendarViewModel] ClearCache called - resetting all cached data");
         _scheduleCache.Clear();
         SelectedDaySchedules.Clear();
         FilteredSelectedDaySchedules.Clear();
@@ -853,11 +892,8 @@ public partial class CalendarViewModel : ViewModelBase
     /// </summary>
     public Task LoadSchedulesAsync()
     {
-        System.Diagnostics.Debug.WriteLine($"[CalendarViewModel] LoadSchedulesAsync called - delegating to RequestLoadSchedules");
-
         if (!AuthService.IsLoggedIn || AuthService.CurrentUser == null)
         {
-            System.Diagnostics.Debug.WriteLine("[CalendarViewModel] Not logged in, skipping schedule load");
             return Task.CompletedTask;
         }
 
@@ -966,7 +1002,7 @@ public partial class CalendarViewModel : ViewModelBase
 
             // 그룹명 (역할에 따라 다름)
             string groupName = "";
-            string groupColor = "#808080";
+            string groupColor = "#8E8E93";
             if (CurrentRole == UserRole.SuperAdminMois && regionId.HasValue)
             {
                 groupName = regionName;
@@ -982,7 +1018,7 @@ public partial class CalendarViewModel : ViewModelBase
                 groupName = districtName;
                 groupColor = CalendarColorHelper.GetColorForGroup(districtId.Value, CurrentRole);
             }
-            else if (CurrentRole == UserRole.MiddleMilitary && battalionId.HasValue)
+            else if ((CurrentRole == UserRole.MiddleMilitary || CurrentRole == UserRole.ViewerMilitary) && battalionId.HasValue)
             {
                 groupName = battalionName;
                 groupColor = CalendarColorHelper.GetColorForGroup(battalionId.Value, CurrentRole);
@@ -1121,10 +1157,10 @@ public partial class CalendarDay : ObservableObject
     {
         get
         {
-            if (IsToday) return "#00FF00";
-            if (IsSunday) return "#FF6B6B";
-            if (IsSaturday) return "#6B9FFF";
-            return "White";
+            if (IsToday) return "#2E7D32";
+            if (IsSunday) return "#D32F2F";
+            if (IsSaturday) return "#1565C0";
+            return "#1C1C1E";
         }
     }
 
@@ -1249,7 +1285,7 @@ public partial class CalendarDay : ObservableObject
                     {
                         GroupId = Guid.Empty,
                         Count = overflowCount,
-                        Color = "#6a6a6a",
+                        Color = "#AEAEB2",
                         IsOverflow = true
                     });
                 }
@@ -1287,7 +1323,7 @@ public partial class CalendarDay : ObservableObject
                     {
                         GroupId = Guid.Empty,
                         Count = overflowCount,
-                        Color = "#6a6a6a",
+                        Color = "#AEAEB2",
                         IsOverflow = true
                     });
                 }
@@ -1344,6 +1380,7 @@ public class CalendarDayScheduleDisplay
                 UserRole.UserMilitary => DistrictName,       // 대대담당자: 시군구명
                 UserRole.MiddleLocal => DistrictName,        // 지자체(도): 시군구명
                 UserRole.MiddleMilitary => BattalionName,    // 사단담당자: 대대명
+                UserRole.ViewerMilitary => BattalionName,    // 여단총괄: 대대명
                 UserRole.SuperAdminMois => RegionName,       // 행정안전부: 시도명
                 UserRole.SuperAdminArmy => DivisionName,     // 육군본부: 사단명
                 _ => BattalionName                           // 그 외(지자체담당자): 대대명
@@ -1400,7 +1437,7 @@ public class CalendarScheduleItem
     public Guid? BattalionId { get; set; }
     public string BattalionName { get; set; } = "";
     public string GroupName { get; set; } = "";
-    public string GroupColor { get; set; } = "#808080";
+    public string GroupColor { get; set; } = "#8E8E93";
 
     // 그룹명이 있는지 여부 (XAML 바인딩용)
     public bool HasGroupName => !string.IsNullOrEmpty(GroupName);
@@ -1424,7 +1461,7 @@ public partial class RegionFilterItem : ObservableObject
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
 
     [ObservableProperty]
     private bool _isSelected;
@@ -1437,7 +1474,7 @@ public partial class DivisionFilterItem : ObservableObject
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
 
     [ObservableProperty]
     private bool _isSelected;
@@ -1450,7 +1487,7 @@ public partial class DistrictFilterItem : ObservableObject
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
 
     [ObservableProperty]
     private bool _isSelected;
@@ -1463,7 +1500,7 @@ public partial class BattalionFilterItem : ObservableObject
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
 
     [ObservableProperty]
     private bool _isSelected;
@@ -1476,7 +1513,7 @@ public class GroupBadgeItem
 {
     public Guid GroupId { get; set; }
     public int Count { get; set; }
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
     public bool IsOverflow { get; set; } = false; // "+N" 오버플로우 뱃지 여부
     public string CountText => IsOverflow ? $"+{Count}" : Count.ToString();
 }
@@ -1489,7 +1526,7 @@ public static class CalendarColorHelper
     private static readonly string[] RegionColors =
     {
         "#E57373", "#81C784", "#64B5F6", "#FFB74D", "#BA68C8",
-        "#4DD0E1", "#F06292", "#AED581", "#FFD54F", "#90A4AE",
+        "#4DD0E1", "#F06292", "#AED581", "#E65100", "#90A4AE",
         "#7986CB", "#4DB6AC", "#FF8A65", "#A1887F", "#9575CD",
         "#4FC3F7", "#FFF176"
     };

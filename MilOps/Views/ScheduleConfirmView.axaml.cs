@@ -26,8 +26,6 @@ public partial class ScheduleConfirmView : UserControl
     /// </summary>
     public async Task InitializeAsync(Guid scheduleId)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmView] InitializeAsync - scheduleId: {scheduleId}");
-
         // 기존 ViewModel 정리
         if (_viewModel != null)
         {
@@ -46,13 +44,11 @@ public partial class ScheduleConfirmView : UserControl
 
     private void OnViewModelCloseRequested(object? sender, EventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleConfirmView] CloseRequested from ViewModel");
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnViewModelScheduleStatusChanged(object? sender, ScheduleStatusChangedEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmView] ScheduleStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
         ScheduleStatusChanged?.Invoke(this, e);
     }
 

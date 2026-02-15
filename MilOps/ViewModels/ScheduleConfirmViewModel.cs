@@ -82,19 +82,16 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     private string _localUserRank = "";
 
     [ObservableProperty]
-    private string _localUserPhone = "";
-
-    [ObservableProperty]
     private bool _localConfirmed = false;
 
     [ObservableProperty]
     private string _localConfirmedText = "미확정";
 
     [ObservableProperty]
-    private IBrush _localConfirmedBg = new SolidColorBrush(Color.Parse("#333333"));
+    private IBrush _localConfirmedBg = new SolidColorBrush(Color.Parse("#E5E5EA"));
 
     [ObservableProperty]
-    private IBrush _localConfirmedFg = new SolidColorBrush(Color.Parse("#888888"));
+    private IBrush _localConfirmedFg = new SolidColorBrush(Color.Parse("#8E8E93"));
 
     // 대대담당자 정보
     [ObservableProperty]
@@ -104,19 +101,16 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     private string _militaryUserRank = "";
 
     [ObservableProperty]
-    private string _militaryUserPhone = "";
-
-    [ObservableProperty]
     private bool _militaryConfirmed = false;
 
     [ObservableProperty]
     private string _militaryConfirmedText = "미확정";
 
     [ObservableProperty]
-    private IBrush _militaryConfirmedBg = new SolidColorBrush(Color.Parse("#333333"));
+    private IBrush _militaryConfirmedBg = new SolidColorBrush(Color.Parse("#E5E5EA"));
 
     [ObservableProperty]
-    private IBrush _militaryConfirmedFg = new SolidColorBrush(Color.Parse("#888888"));
+    private IBrush _militaryConfirmedFg = new SolidColorBrush(Color.Parse("#8E8E93"));
 
     // 메모
     [ObservableProperty]
@@ -251,13 +245,11 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
 
             // 지자체담당자 정보
             LocalUserName = detail.LocalUserName ?? "";
-            LocalUserRank = detail.LocalUserPosition ?? "";
-            LocalUserPhone = detail.LocalUserPhone ?? "";
+            LocalUserRank = "";
 
             // 대대담당자 정보
             MilitaryUserName = detail.MilitaryUserName ?? "";
             MilitaryUserRank = detail.MilitaryUserRank ?? "";
-            MilitaryUserPhone = detail.MilitaryUserPhone ?? "";
 
             // 현재 사용자 표시 설정 (RPC 결과에서 가져온 정보 활용)
             SetCurrentUserDisplay(detail);
@@ -311,16 +303,12 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         }
         else if (_currentUserRole == "user_military")
         {
-            // 대대담당자 - RPC에서 가져온 division/battalion 정보 활용
-            string battalionDisplay = "";
-            if (!string.IsNullOrEmpty(detail.DivisionName) && !string.IsNullOrEmpty(detail.BattalionName))
-            {
-                battalionDisplay = $"{detail.DivisionName} {detail.BattalionName}";
-            }
-            else if (!string.IsNullOrEmpty(detail.BattalionName))
-            {
-                battalionDisplay = detail.BattalionName;
-            }
+            // 대대담당자 - RPC에서 가져온 division/brigade/battalion 정보 활용
+            var battalionParts = new System.Collections.Generic.List<string>();
+            if (!string.IsNullOrEmpty(detail.DivisionName)) battalionParts.Add(detail.DivisionName);
+            if (!string.IsNullOrEmpty(detail.BrigadeName)) battalionParts.Add(detail.BrigadeName);
+            if (!string.IsNullOrEmpty(detail.BattalionName)) battalionParts.Add(detail.BattalionName);
+            string battalionDisplay = string.Join(" ", battalionParts);
             CurrentUserDisplay = $"{currentUser.FullDisplayName} ({battalionDisplay} 대대담당자)";
         }
     }
@@ -329,23 +317,19 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     {
         if (_schedule == null) return;
 
-        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] UpdateConfirmationStatus - Role: {_currentUserRole}");
-        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] UpdateConfirmationStatus - Schedule.LocalConfirmed: {_schedule.LocalConfirmed}, Schedule.MilitaryConfirmed: {_schedule.MilitaryConfirmed}");
-        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] UpdateConfirmationStatus - Schedule.Status: {_schedule.Status}");
-
         // 지자체담당자 확정 상태
         LocalConfirmed = _schedule.LocalConfirmed;
         if (LocalConfirmed)
         {
             LocalConfirmedText = "확정함";
-            LocalConfirmedBg = new SolidColorBrush(Color.Parse("#2A5F2A"));
-            LocalConfirmedFg = new SolidColorBrush(Color.Parse("#88FF88"));
+            LocalConfirmedBg = new SolidColorBrush(Color.Parse("#E8F5E9"));
+            LocalConfirmedFg = new SolidColorBrush(Color.Parse("#2E7D32"));
         }
         else
         {
             LocalConfirmedText = "미확정";
-            LocalConfirmedBg = new SolidColorBrush(Color.Parse("#333333"));
-            LocalConfirmedFg = new SolidColorBrush(Color.Parse("#888888"));
+            LocalConfirmedBg = new SolidColorBrush(Color.Parse("#E5E5EA"));
+            LocalConfirmedFg = new SolidColorBrush(Color.Parse("#8E8E93"));
         }
 
         // 대대담당자 확정 상태
@@ -353,14 +337,14 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         if (MilitaryConfirmed)
         {
             MilitaryConfirmedText = "확정함";
-            MilitaryConfirmedBg = new SolidColorBrush(Color.Parse("#2A5F2A"));
-            MilitaryConfirmedFg = new SolidColorBrush(Color.Parse("#88FF88"));
+            MilitaryConfirmedBg = new SolidColorBrush(Color.Parse("#E8F5E9"));
+            MilitaryConfirmedFg = new SolidColorBrush(Color.Parse("#2E7D32"));
         }
         else
         {
             MilitaryConfirmedText = "미확정";
-            MilitaryConfirmedBg = new SolidColorBrush(Color.Parse("#333333"));
-            MilitaryConfirmedFg = new SolidColorBrush(Color.Parse("#888888"));
+            MilitaryConfirmedBg = new SolidColorBrush(Color.Parse("#E5E5EA"));
+            MilitaryConfirmedFg = new SolidColorBrush(Color.Parse("#8E8E93"));
         }
 
         // 상태 표시
@@ -383,7 +367,6 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         {
             AlreadyConfirmedByMe = true;  // 버튼 숨김
             CanConfirm = false;
-            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Middle admin ({_currentUserRole}) - view-only mode");
         }
         // "confirmed" 상태면 이미 양측 모두 확정한 것
         else if (_schedule.Status == "confirmed")
@@ -397,9 +380,6 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
             // 확정 버튼 활성화 (예약 상태이고 아직 확정하지 않은 경우)
             CanConfirm = _schedule.Status == "reserved" && !AlreadyConfirmedByMe;
         }
-
-        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] UpdateConfirmationStatus - isLocalUser: {isLocalUser}, isMilitaryUser: {isMilitaryUser}");
-        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] UpdateConfirmationStatus - AlreadyConfirmedByMe: {AlreadyConfirmedByMe}, CanConfirm: {CanConfirm}");
 
         // 메시지 설정
         ShowWaitingMessage = false;
@@ -442,12 +422,9 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     [RelayCommand]
     private void ShowConfirmDialog()
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ShowConfirmDialog - CanConfirm: {CanConfirm}, Status: {_schedule?.Status}, AlreadyConfirmedByMe: {AlreadyConfirmedByMe}");
-
         // 이미 확정된 일정이거나 확정 불가능한 상태면 모달 표시 안 함
         if (!CanConfirm || _schedule?.Status == "confirmed")
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ShowConfirmDialog - Cannot confirm, returning");
             return;
         }
 
@@ -473,14 +450,11 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     [RelayCommand]
     private async Task ConfirmAsync()
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ConfirmAsync called - CanConfirm: {CanConfirm}, Role: {_currentUserRole}");
-
         // 모달 닫기
         ShowConfirmModal = false;
 
         if (!CanConfirm)
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ConfirmAsync - CanConfirm is false, returning");
             return;
         }
 
@@ -493,7 +467,6 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
             var client = SupabaseService.Client;
             if (client == null || _schedule == null)
             {
-                System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ConfirmAsync - client or schedule is null");
                 return;
             }
 
@@ -501,13 +474,9 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
             bool isMilitaryUser = _currentUserRole == "user_military";
             var now = DateTime.UtcNow;
 
-            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ConfirmAsync - isLocalUser: {isLocalUser}, isMilitaryUser: {isMilitaryUser}");
-            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ConfirmAsync - Before: LocalConfirmed={_schedule.LocalConfirmed}, MilitaryConfirmed={_schedule.MilitaryConfirmed}");
-
             if (isLocalUser)
             {
                 // 지자체담당자 확정
-                System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Updating LocalConfirmed to true");
 #pragma warning disable CS8603 // Possible null reference return
                 await client.From<Schedule>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
@@ -522,7 +491,6 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
             else if (isMilitaryUser)
             {
                 // 대대담당자 확정
-                System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Updating MilitaryConfirmed to true");
 #pragma warning disable CS8603 // Possible null reference return
                 await client.From<Schedule>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
@@ -536,20 +504,15 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Unknown role: {_currentUserRole}");
                 ErrorMessage = "알 수 없는 사용자 역할입니다.";
                 return;
             }
 
-            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] ConfirmAsync - After: LocalConfirmed={_schedule.LocalConfirmed}, MilitaryConfirmed={_schedule.MilitaryConfirmed}");
-
             // 양측 모두 확정 시 상태 변경
             bool bothConfirmed = _schedule.LocalConfirmed && _schedule.MilitaryConfirmed;
-            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] bothConfirmed: {bothConfirmed}");
 
             if (bothConfirmed)
             {
-                System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Updating status to confirmed");
 #pragma warning disable CS8603 // Possible null reference return
                 await client.From<Schedule>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
@@ -572,8 +535,6 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
 
             // UI 업데이트
             UpdateConfirmationStatus();
-
-            System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Confirmed by {_currentUserRole}, bothConfirmed: {bothConfirmed}");
 
             // 상태 변경 이벤트 발생 (양측 확정 시에만 상태가 변경됨)
             if (bothConfirmed)

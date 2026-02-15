@@ -33,6 +33,9 @@ public partial class NotificationViewModel : ViewModelBase
     // 일정 상세 화면으로 이동 이벤트
     public event Action<Guid>? OnScheduleSelected;
 
+    // 채팅 탭으로 이동 이벤트
+    public event EventHandler? OnChatSelected;
+
     // 닫기 이벤트
     public event EventHandler? CloseRequested;
 
@@ -46,7 +49,6 @@ public partial class NotificationViewModel : ViewModelBase
     /// </summary>
     public void ClearCache()
     {
-        System.Diagnostics.Debug.WriteLine("[NotificationVM] ClearCache called - resetting all data");
         Notifications.Clear();
         HasNotifications = false;
         UnreadCount = 0;
@@ -71,8 +73,6 @@ public partial class NotificationViewModel : ViewModelBase
 
             HasNotifications = Notifications.Any();
             UnreadCount = Notifications.Count(n => !n.IsRead);
-
-            System.Diagnostics.Debug.WriteLine($"[NotificationVM] Loaded {Notifications.Count} notifications, {UnreadCount} unread");
         }
         catch (Exception ex)
         {
@@ -92,7 +92,6 @@ public partial class NotificationViewModel : ViewModelBase
         try
         {
             UnreadCount = await NotificationService.GetUnreadCountAsync();
-            System.Diagnostics.Debug.WriteLine($"[NotificationVM] Unread count: {UnreadCount}");
         }
         catch (Exception ex)
         {
@@ -126,9 +125,15 @@ public partial class NotificationViewModel : ViewModelBase
             }
         }
 
-        // 일정으로 이동
-        if (notification.ScheduleId.HasValue)
+        // 타입에 따라 화면 이동
+        if (notification.Type == "chat_message")
         {
+            // 채팅 탭으로 이동
+            OnChatSelected?.Invoke(this, EventArgs.Empty);
+        }
+        else if (notification.ScheduleId.HasValue)
+        {
+            // 일정으로 이동
             OnScheduleSelected?.Invoke(notification.ScheduleId.Value);
         }
     }

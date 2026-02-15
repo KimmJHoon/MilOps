@@ -74,12 +74,6 @@ public class ScheduleConfirmDetailDto
     [JsonProperty("local_user_name")]
     public string LocalUserName { get; set; } = "";
 
-    [JsonProperty("local_user_position")]
-    public string? LocalUserPosition { get; set; }
-
-    [JsonProperty("local_user_phone")]
-    public string? LocalUserPhone { get; set; }
-
     // 대대담당자 정보
     [JsonProperty("military_user_id")]
     public Guid MilitaryUserId { get; set; }
@@ -90,15 +84,18 @@ public class ScheduleConfirmDetailDto
     [JsonProperty("military_user_rank")]
     public string? MilitaryUserRank { get; set; }
 
-    [JsonProperty("military_user_phone")]
-    public string? MilitaryUserPhone { get; set; }
-
-    // 대대/사단 정보
+    // 대대/여단/사단 정보
     [JsonProperty("battalion_id")]
     public Guid? BattalionId { get; set; }
 
     [JsonProperty("battalion_name")]
     public string? BattalionName { get; set; }
+
+    [JsonProperty("brigade_id")]
+    public Guid? BrigadeId { get; set; }
+
+    [JsonProperty("brigade_name")]
+    public string? BrigadeName { get; set; }
 
     [JsonProperty("division_id")]
     public Guid? DivisionId { get; set; }

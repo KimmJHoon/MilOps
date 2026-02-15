@@ -5,6 +5,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Util;
 using Android.Views;
+using AndroidX.Activity;
 using AndroidX.Core.App;
 using AndroidX.Core.Content;
 using Avalonia;
@@ -23,15 +24,9 @@ namespace MilOps.Android;
     Label = "@string/app_name",
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@drawable/icon",
-    MainLauncher = true,
     LaunchMode = LaunchMode.SingleTop,
     WindowSoftInputMode = SoftInput.AdjustResize,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
-[IntentFilter(
-    new[] { Intent.ActionView },
-    Categories = new[] { Intent.CategoryDefault, Intent.CategoryBrowsable },
-    DataScheme = "milops",
-    DataHost = "invite")]
 public class MainActivity : AvaloniaMainActivity<App>
 {
     private const string TAG = "MilOps";
@@ -54,11 +49,12 @@ public class MainActivity : AvaloniaMainActivity<App>
 
             base.OnCreate(savedInstanceState);
 
+            // 시스템 뒤로가기 버튼 핸들러 등록 (API 33+ 대응)
+            OnBackPressedDispatcher.AddCallback(this, new BackPressedCallback(this));
+
             // Android 13+ 알림 권한 요청
             RequestNotificationPermission();
 
-            // 딥링크 처리 (앱이 시작될 때)
-            HandleIntent(Intent);
         }
         catch (Exception ex)
         {
@@ -84,18 +80,29 @@ public class MainActivity : AvaloniaMainActivity<App>
                 intent.AddFlags(ActivityFlags.ClearTop | ActivityFlags.NewTask | ActivityFlags.ClearTask);
 
                 // PendingIntent로 앱 재시작 예약
+                var flags = PendingIntentFlags.CancelCurrent;
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
+                {
+#pragma warning disable CA1416
+                    flags |= PendingIntentFlags.Immutable;
+#pragma warning restore CA1416
+                }
+
                 var pendingIntent = PendingIntent.GetActivity(
                     this,
                     0,
                     intent,
-                    PendingIntentFlags.CancelCurrent | PendingIntentFlags.Immutable);
+                    flags);
 
                 // AlarmManager로 100ms 후 재시작
                 var alarmManager = GetSystemService(AlarmService) as AlarmManager;
-                alarmManager?.Set(
-                    AlarmType.Rtc,
-                    Java.Lang.JavaSystem.CurrentTimeMillis() + 100,
-                    pendingIntent);
+                if (pendingIntent != null)
+                {
+                    alarmManager?.Set(
+                        AlarmType.Rtc,
+                        Java.Lang.JavaSystem.CurrentTimeMillis() + 100,
+                        pendingIntent);
+                }
 
                 // 현재 액티비티 종료
                 FinishAffinity();
@@ -109,15 +116,6 @@ public class MainActivity : AvaloniaMainActivity<App>
             FinishAffinity();
             Java.Lang.JavaSystem.Exit(0);
         };
-    }
-
-    /// <summary>
-    /// 앱이 이미 실행 중일 때 새 인텐트 수신 (딥링크)
-    /// </summary>
-    protected override void OnNewIntent(Intent? intent)
-    {
-        base.OnNewIntent(intent);
-        HandleIntent(intent);
     }
 
     /// <summary>
@@ -175,6 +173,7 @@ public class MainActivity : AvaloniaMainActivity<App>
     {
         if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
         {
+#pragma warning disable CA1416 // 런타임 버전 체크 완료
             if (ContextCompat.CheckSelfPermission(this, Manifest.Permission.PostNotifications)
                 != Permission.Granted)
             {
@@ -183,30 +182,7 @@ public class MainActivity : AvaloniaMainActivity<App>
                     new[] { Manifest.Permission.PostNotifications },
                     1001);
             }
-        }
-    }
-
-    /// <summary>
-    /// 딥링크 인텐트 처리
-    /// </summary>
-    private void HandleIntent(Intent? intent)
-    {
-        if (intent?.Data == null)
-            return;
-
-        var uri = intent.Data;
-        Log.Info(TAG, $"Deep link received: {uri}");
-
-        // milops://invite/{code} 형식 처리
-        if (uri.Scheme == "milops" && uri.Host == "invite")
-        {
-            var inviteCode = uri.LastPathSegment;
-            if (!string.IsNullOrEmpty(inviteCode))
-            {
-                Log.Info(TAG, $"Invite code: {inviteCode}");
-                // 초대 코드를 앱에 전달 (정적 변수 또는 이벤트 사용)
-                DeepLinkHandler.PendingInviteCode = inviteCode;
-            }
+#pragma warning restore CA1416
         }
     }
 
@@ -249,6 +225,10 @@ public class MainActivity : AvaloniaMainActivity<App>
                 SupabaseConfig.Url = value;
             else if (key == "SUPABASE_ANON_KEY")
                 SupabaseConfig.AnonKey = value;
+            else if (key == "CHAT_SERVER_HOST")
+                ChatServerConfig.Host = value;
+            else if (key == "CHAT_SERVER_PORT" && int.TryParse(value, out var port))
+                ChatServerConfig.Port = port;
         }
     }
 
@@ -257,31 +237,29 @@ public class MainActivity : AvaloniaMainActivity<App>
         return base.CustomizeAppBuilder(builder)
             .LogToTrace();
     }
-}
-
-/// <summary>
-/// 딥링크 처리를 위한 정적 클래스
-/// </summary>
-public static class DeepLinkHandler
-{
-    /// <summary>
-    /// 처리 대기 중인 초대 코드
-    /// 앱이 초대 링크로 실행된 경우 설정됨
-    /// </summary>
-    public static string? PendingInviteCode { get; set; }
 
     /// <summary>
-    /// 초대 코드 소비 (한 번 읽으면 null로 리셋)
+    /// 시스템 뒤로가기 버튼 처리 콜백 (OnBackPressedDispatcher 방식, API 33+ 대응)
     /// </summary>
-    public static string? ConsumePendingInviteCode()
+    private class BackPressedCallback : OnBackPressedCallback
     {
-        var code = PendingInviteCode;
-        PendingInviteCode = null;
-        return code;
-    }
+        private readonly MainActivity _activity;
 
-    /// <summary>
-    /// 초대 코드가 있는지 확인
-    /// </summary>
-    public static bool HasPendingInvite => !string.IsNullOrEmpty(PendingInviteCode);
+        public BackPressedCallback(MainActivity activity) : base(true)
+        {
+            _activity = activity;
+        }
+
+        public override void HandleOnBackPressed()
+        {
+            // Avalonia 앱에서 뒤로가기 처리 (오버레이 닫기 등)
+            if (AppRestartService.OnBackPressed?.Invoke() == true)
+            {
+                return;
+            }
+
+            // 처리되지 않으면 앱을 백그라운드로 보냄 (종료하지 않음)
+            _activity.MoveTaskToBack(true);
+        }
+    }
 }
