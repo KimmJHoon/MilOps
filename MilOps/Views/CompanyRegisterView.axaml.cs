@@ -22,7 +22,6 @@ public partial class CompanyRegisterView : UserControl
     protected override async void OnAttachedToVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnAttachedToVisualTree(e);
-        System.Diagnostics.Debug.WriteLine("[CompanyRegisterView] OnAttachedToVisualTree called");
         await InitializeViewModelAsync();
     }
 
@@ -31,7 +30,6 @@ public partial class CompanyRegisterView : UserControl
     /// </summary>
     public async Task RefreshAsync()
     {
-        System.Diagnostics.Debug.WriteLine("[CompanyRegisterView] RefreshAsync called");
         await InitializeViewModelAsync();
     }
 
@@ -40,14 +38,11 @@ public partial class CompanyRegisterView : UserControl
     /// </summary>
     public async Task ForceInitializeAsync()
     {
-        System.Diagnostics.Debug.WriteLine("[CompanyRegisterView] ForceInitializeAsync called");
         await InitializeViewModelAsync();
     }
 
     private async Task InitializeViewModelAsync()
     {
-        System.Diagnostics.Debug.WriteLine("[CompanyRegisterView] InitializeViewModelAsync called");
-
         var currentUser = MilOps.Services.AuthService.CurrentUser;
         var currentUserId = currentUser?.Id;
 
@@ -56,8 +51,6 @@ public partial class CompanyRegisterView : UserControl
 
         if (needsNewViewModel)
         {
-            System.Diagnostics.Debug.WriteLine($"[CompanyRegisterView] Creating new ViewModel - User changed: {_lastUserId} -> {currentUserId}");
-
             // 기존 ViewModel 정리
             if (_viewModel != null)
             {

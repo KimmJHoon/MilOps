@@ -24,7 +24,6 @@ public partial class NotificationView : UserControl
 
     private void OnCleanupBeforeLogout()
     {
-        System.Diagnostics.Debug.WriteLine("[NotificationView] CleanupBeforeLogout - resetting state");
         _lastUserId = null;
         _isInitialized = false;
         _viewModel?.ClearCache();
@@ -35,7 +34,6 @@ public partial class NotificationView : UserControl
     /// </summary>
     public async void OnTabEntered()
     {
-        System.Diagnostics.Debug.WriteLine("[NotificationView] OnTabEntered called");
         await InitializeOrRefreshAsync();
     }
 
@@ -46,29 +44,19 @@ public partial class NotificationView : UserControl
         var currentUserId = AuthService.CurrentUser?.Id;
 
         // 로그인하지 않은 상태면 무시
-        if (currentUserId == null)
-        {
-            System.Diagnostics.Debug.WriteLine("[NotificationView] No user logged in, skipping");
-            return;
-        }
+        if (currentUserId == null) return;
 
         // 사용자가 변경되었는지 확인
         bool userChanged = _lastUserId != currentUserId;
 
         if (userChanged || !_isInitialized)
         {
-            System.Diagnostics.Debug.WriteLine($"[NotificationView] User changed or first init. LastUser: {_lastUserId}, CurrentUser: {currentUserId}");
-
             // 캐시 초기화 및 새로 로드
             _viewModel.ClearCache();
             _lastUserId = currentUserId;
 
             await _viewModel.LoadNotificationsAsync();
             _isInitialized = true;
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine("[NotificationView] Same user, no refresh needed");
         }
     }
 

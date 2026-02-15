@@ -25,8 +25,6 @@ public partial class ScheduleReserveView : UserControl
     /// </summary>
     public async Task InitializeAsync(Guid scheduleId)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleReserveView] InitializeAsync - scheduleId: {scheduleId}");
-
         // 기존 ViewModel 정리
         if (_viewModel != null)
         {
@@ -45,13 +43,11 @@ public partial class ScheduleReserveView : UserControl
 
     private void OnViewModelCloseRequested(object? sender, EventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine("[ScheduleReserveView] CloseRequested from ViewModel");
         CloseRequested?.Invoke(this, EventArgs.Empty);
     }
 
     private void OnViewModelScheduleStatusChanged(object? sender, ScheduleStatusChangedEventArgs e)
     {
-        System.Diagnostics.Debug.WriteLine($"[ScheduleReserveView] ScheduleStatusChanged - id: {e.ScheduleId}, status: {e.NewStatus}");
         ScheduleStatusChanged?.Invoke(this, e);
     }
 

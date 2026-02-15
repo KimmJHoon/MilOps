@@ -41,14 +41,12 @@ public static class FcmService
 
             if (string.IsNullOrEmpty(token))
             {
-                System.Diagnostics.Debug.WriteLine("[FcmService] No FCM token available");
                 return false;
             }
 
             // 현재 로그인된 사용자 확인
             if (!AuthService.IsLoggedIn || AuthService.CurrentUser == null)
             {
-                System.Diagnostics.Debug.WriteLine("[FcmService] User not logged in, storing token locally");
                 CurrentToken = token;
                 return false;
             }
@@ -56,17 +54,13 @@ public static class FcmService
             var client = SupabaseService.Client;
             if (client == null)
             {
-                System.Diagnostics.Debug.WriteLine("[FcmService] Supabase client not initialized");
                 CurrentToken = token;
                 return false;
             }
 
             var userId = AuthService.CurrentUser.Id;
 
-            System.Diagnostics.Debug.WriteLine($"[FcmService] Saving FCM token for user {userId}");
-
             // 1. 해당 FCM 토큰의 다른 사용자 등록을 모두 비활성화 (디바이스 1개 = 1명만 활성)
-            System.Diagnostics.Debug.WriteLine("[FcmService] Deactivating other users' registrations for this token");
 #pragma warning disable CS8603
             await client
                 .From<UserDevice>()
@@ -86,7 +80,6 @@ public static class FcmService
             if (existingDevices.Models.Count > 0)
             {
                 // 이미 등록된 토큰 - last_used_at만 업데이트
-                System.Diagnostics.Debug.WriteLine("[FcmService] Token already exists, updating last_used_at");
 #pragma warning disable CS8603
                 await client
                     .From<UserDevice>()
@@ -100,7 +93,6 @@ public static class FcmService
             else
             {
                 // 새 토큰 등록
-                System.Diagnostics.Debug.WriteLine("[FcmService] Registering new FCM token");
                 await client
                     .From<UserDevice>()
                     .Insert(new UserDevice
@@ -117,7 +109,6 @@ public static class FcmService
             }
 
             CurrentToken = token;
-            System.Diagnostics.Debug.WriteLine("[FcmService] FCM token saved successfully");
             return true;
         }
         catch (Exception ex)
@@ -154,7 +145,6 @@ public static class FcmService
                 .Update();
 #pragma warning restore CS8603
 
-            System.Diagnostics.Debug.WriteLine("[FcmService] FCM token deactivated");
         }
         catch (Exception ex)
         {

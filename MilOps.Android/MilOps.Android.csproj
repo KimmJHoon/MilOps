@@ -20,6 +20,15 @@
     <AndroidUseSharedRuntime>false</AndroidUseSharedRuntime>
   </PropertyGroup>
 
+  <!-- Release 서명 설정 -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <AndroidKeyStore>true</AndroidKeyStore>
+    <AndroidSigningKeyStore>..\milops.keystore</AndroidSigningKeyStore>
+    <AndroidSigningKeyAlias>milops</AndroidSigningKeyAlias>
+    <AndroidSigningKeyPass>184500@</AndroidSigningKeyPass>
+    <AndroidSigningStorePass>184500@</AndroidSigningStorePass>
+  </PropertyGroup>
+
   <ItemGroup>
     <AndroidResource Include="Icon.png">
       <Link>Resources\drawable\Icon.png</Link>

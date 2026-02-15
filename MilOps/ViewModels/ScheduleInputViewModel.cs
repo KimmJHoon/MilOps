@@ -421,7 +421,6 @@ public partial class ScheduleInputViewModel : ViewModelBase
         }
 
         SuccessMessage = "가능 일정이 저장되었습니다.";
-        System.Diagnostics.Debug.WriteLine($"[ScheduleInputVM] Input saved: {selectedTimes.Count} time slots for {(endDate - startDate).Days + 1} days");
 
         // 상태 변경 이벤트 발생 (inputted, statusOrder=2)
         ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "inputted", 2));

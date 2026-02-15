@@ -41,7 +41,6 @@ public static class SupabaseService
         {
             supabaseUrl = SupabaseConfig.Url;
             supabaseKey = SupabaseConfig.AnonKey;
-            System.Diagnostics.Debug.WriteLine("[SupabaseService] Loaded from SupabaseConfig");
         }
 
         // 2. 환경변수에서 확인
@@ -49,10 +48,7 @@ public static class SupabaseService
         {
             supabaseUrl = Environment.GetEnvironmentVariable("SUPABASE_URL");
             supabaseKey = Environment.GetEnvironmentVariable("SUPABASE_ANON_KEY");
-            if (!string.IsNullOrEmpty(supabaseUrl) && !string.IsNullOrEmpty(supabaseKey))
-            {
-                System.Diagnostics.Debug.WriteLine("[SupabaseService] Loaded from environment variables");
-            }
+            // already loaded from env vars
         }
 
         // 3. 데스크탑: 파일 시스템에서 .env 로드
@@ -62,7 +58,6 @@ public static class SupabaseService
             if (File.Exists(envPath))
             {
                 Env.Load(envPath);
-                System.Diagnostics.Debug.WriteLine($"[SupabaseService] Loaded .env from {envPath}");
             }
             else
             {
@@ -71,7 +66,6 @@ public static class SupabaseService
                 if (File.Exists(devEnvPath))
                 {
                     Env.Load(devEnvPath);
-                    System.Diagnostics.Debug.WriteLine($"[SupabaseService] Loaded .env from {devEnvPath}");
                 }
             }
 
@@ -95,7 +89,6 @@ public static class SupabaseService
         await _client.InitializeAsync();
 
         _initialized = true;
-        System.Diagnostics.Debug.WriteLine("[SupabaseService] Initialized with Realtime enabled");
     }
 
     /// <summary>
@@ -105,15 +98,7 @@ public static class SupabaseService
     {
         if (_client?.Realtime != null)
         {
-            System.Diagnostics.Debug.WriteLine($"[SupabaseService] Realtime connecting...");
-
             await _client.Realtime.ConnectAsync();
-
-            System.Diagnostics.Debug.WriteLine($"[SupabaseService] Realtime connected");
-        }
-        else
-        {
-            System.Diagnostics.Debug.WriteLine("[SupabaseService] Realtime client is null!");
         }
     }
 
@@ -168,12 +153,10 @@ public static class SupabaseService
             var session = Client.Auth.CurrentSession;
             if (session?.User == null)
             {
-                System.Diagnostics.Debug.WriteLine("[SupabaseService] GetCurrentUserProfileAsync: No session or user");
                 return null;
             }
 
             var userEmail = session.User.Email;
-            System.Diagnostics.Debug.WriteLine($"[SupabaseService] GetCurrentUserProfileAsync: User ID = {session.User.Id}, Email = {userEmail}");
 
             // email로 조회 (RLS 정책과 관계없이 작동)
             var response = await Client.From<Models.User>()
@@ -182,22 +165,10 @@ public static class SupabaseService
 
             if (response == null)
             {
-                System.Diagnostics.Debug.WriteLine("[SupabaseService] GetCurrentUserProfileAsync: User profile not found by email");
-
                 // email로 못 찾으면 id로 시도
                 response = await Client.From<Models.User>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, session.User.Id!)
                     .Single();
-
-                if (response == null)
-                {
-                    System.Diagnostics.Debug.WriteLine("[SupabaseService] GetCurrentUserProfileAsync: User profile not found by id either");
-                }
-            }
-
-            if (response != null)
-            {
-                System.Diagnostics.Debug.WriteLine($"[SupabaseService] GetCurrentUserProfileAsync: Found user {response.LoginId}, Role={response.Role}");
             }
 
             return response;
@@ -205,7 +176,6 @@ public static class SupabaseService
         catch (Exception ex)
         {
             System.Diagnostics.Debug.WriteLine($"[SupabaseService] GetCurrentUserProfileAsync Error: {ex.Message}");
-            System.Diagnostics.Debug.WriteLine($"[SupabaseService] Stack trace: {ex.StackTrace}");
             return null;
         }
     }

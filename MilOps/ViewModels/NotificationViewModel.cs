@@ -46,7 +46,6 @@ public partial class NotificationViewModel : ViewModelBase
     /// </summary>
     public void ClearCache()
     {
-        System.Diagnostics.Debug.WriteLine("[NotificationVM] ClearCache called - resetting all data");
         Notifications.Clear();
         HasNotifications = false;
         UnreadCount = 0;
@@ -71,8 +70,6 @@ public partial class NotificationViewModel : ViewModelBase
 
             HasNotifications = Notifications.Any();
             UnreadCount = Notifications.Count(n => !n.IsRead);
-
-            System.Diagnostics.Debug.WriteLine($"[NotificationVM] Loaded {Notifications.Count} notifications, {UnreadCount} unread");
         }
         catch (Exception ex)
         {
@@ -92,7 +89,6 @@ public partial class NotificationViewModel : ViewModelBase
         try
         {
             UnreadCount = await NotificationService.GetUnreadCountAsync();
-            System.Diagnostics.Debug.WriteLine($"[NotificationVM] Unread count: {UnreadCount}");
         }
         catch (Exception ex)
         {
