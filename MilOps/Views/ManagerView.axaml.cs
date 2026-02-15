@@ -1,5 +1,6 @@
 using Avalonia.Controls;
 using Avalonia.Interactivity;
+using MilOps.Models;
 using MilOps.Services;
 using MilOps.ViewModels;
 using System;
@@ -11,6 +12,9 @@ public partial class ManagerView : UserControl
     private ManagerViewModel? _viewModel;
     private Guid? _lastUserId;
     private string? _lastUserRole;
+
+    // 채팅 시작 요청 이벤트 (MainView에서 구독)
+    public event Action<ChatListItem>? OnChatStartRequested;
 
     public ManagerView()
     {
@@ -63,11 +67,16 @@ public partial class ManagerView : UserControl
 
         if (needsNewViewModel)
         {
-            // 기존 ViewModel 정리
-            _viewModel?.Cleanup();
+            // 기존 ViewModel 이벤트 해제 및 정리
+            if (_viewModel != null)
+            {
+                _viewModel.ChatStartRequested -= OnViewModelChatStartRequested;
+                _viewModel.Cleanup();
+            }
 
             // 새 ViewModel 생성
             _viewModel = new ManagerViewModel();
+            _viewModel.ChatStartRequested += OnViewModelChatStartRequested;
             DataContext = _viewModel;
             _lastUserId = currentUserId;
             _lastUserRole = currentUserRole;
@@ -79,10 +88,19 @@ public partial class ManagerView : UserControl
         }
     }
 
+    private void OnViewModelChatStartRequested(ChatListItem partner)
+    {
+        OnChatStartRequested?.Invoke(partner);
+    }
+
     protected override void OnDetachedFromVisualTree(Avalonia.VisualTreeAttachmentEventArgs e)
     {
         base.OnDetachedFromVisualTree(e);
-        // View가 제거될 때 타이머 정지 (리소스 절약)
-        _viewModel?.Cleanup();
+        // View가 제거될 때 이벤트 해제 및 리소스 정리
+        if (_viewModel != null)
+        {
+            _viewModel.ChatStartRequested -= OnViewModelChatStartRequested;
+            _viewModel.Cleanup();
+        }
     }
 }

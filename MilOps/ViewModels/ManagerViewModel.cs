@@ -43,6 +43,13 @@ public partial class ManagerViewModel : ViewModelBase
     [ObservableProperty]
     private string _headerTitle = "담당자 목록";
 
+    // === 채팅 시작 가능 여부 (역할 기반) ===
+    [ObservableProperty]
+    private bool _canStartChat = false;
+
+    // 채팅 시작 요청 이벤트
+    public event Action<ChatListItem>? ChatStartRequested;
+
     // === 내부 캐시 ===
     private List<UserListItem> _allUserItems = new();
     private Dictionary<Guid, string> _regionNames = new();
@@ -130,11 +137,13 @@ public partial class ManagerViewModel : ViewModelBase
                 .GroupBy(m => m.BattalionId)
                 .ToDictionary(g => g.Key, g => g.Select(m => m.DistrictId).ToList());
 
-            // 역할에 따른 유저 필터링
-            var filteredUsers = FilterUsersByRole(allUsers, currentUser);
+            // 삭제된 유저 및 자기 자신 제외 (모든 가입 유저 표시)
+            var filteredUsers = allUsers
+                .Where(u => !u.IsDeleted && u.Id != currentUser.Id)
+                .ToList();
 
-            // 삭제된 유저 제외
-            filteredUsers = filteredUsers.Where(u => !u.IsDeleted).ToList();
+            // 채팅 가능 여부 설정 (조회 전용 역할은 채팅 불가)
+            CanStartChat = currentUser.Role is not ("super_admin_mois" or "super_admin_army" or "viewer_military");
 
             // UserListItem 변환
             _allUserItems = filteredUsers.Select(u => CreateUserListItem(u)).ToList();
@@ -333,17 +342,26 @@ public partial class ManagerViewModel : ViewModelBase
 
     private void SetHeaderTitle(User currentUser)
     {
-        HeaderTitle = currentUser.Role switch
+        HeaderTitle = "담당자 목록";
+    }
+
+    // === 채팅 시작 ===
+
+    [RelayCommand]
+    private void SelectUser(UserListItem? item)
+    {
+        if (item == null || !CanStartChat) return;
+
+        var chatItem = new ChatListItem
         {
-            "super_admin_mois" or "super_admin_army" => "전체 담당자 목록",
-            "middle_local" => _regionNames.TryGetValue(currentUser.RegionId ?? Guid.Empty, out var rn)
-                ? $"{rn} 담당자 목록" : "담당자 목록",
-            "middle_military" => _divisionNames.TryGetValue(currentUser.DivisionId ?? Guid.Empty, out var dn)
-                ? $"{dn} 담당자 목록" : "담당자 목록",
-            "viewer_military" => _brigadeNames.TryGetValue(currentUser.BrigadeId ?? Guid.Empty, out var bn)
-                ? $"{bn} 담당자 목록" : "담당자 목록",
-            _ => "담당자 목록"
+            PartnerId = item.Id,
+            PartnerName = item.Name,
+            PartnerRole = item.Role,
+            LastMessage = "",
+            LastMessageAt = DateTimeOffset.UtcNow,
+            UnreadCount = 0
         };
+        ChatStartRequested?.Invoke(chatItem);
     }
 
     // === 필터 커맨드 ===
