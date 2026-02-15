@@ -1,0 +1,115 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:MilOps.ViewModels"
+             xmlns:models="using:MilOps.Models"
+             xmlns:controls="using:MilOps.Views.Controls"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="600"
+             x:Class="MilOps.Views.ChatListView"
+             x:DataType="vm:ChatListViewModel"
+             DataContext="{x:Null}">
+
+  <Grid Background="#F2F2F7" RowDefinitions="Auto,*">
+    <!-- 상단 바 -->
+    <Border Grid.Row="0" Background="#FFFFFF" Padding="16,12" CornerRadius="0,0,20,20">
+      <Grid ColumnDefinitions="*,Auto">
+        <!-- 연결 상태 -->
+        <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center" Spacing="8">
+          <!-- 연결됨 -->
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding IsConnected}">
+            <Border Width="10" Height="10" CornerRadius="5" Background="#34C759"/>
+            <TextBlock Text="연결됨" FontSize="13" Foreground="#34C759" VerticalAlignment="Center"/>
+          </StackPanel>
+          <!-- 오프라인 -->
+          <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding !IsConnected}">
+            <Border Width="10" Height="10" CornerRadius="5" Background="#AEAEB2"/>
+            <TextBlock Text="오프라인" FontSize="13" Foreground="#AEAEB2" VerticalAlignment="Center"/>
+          </StackPanel>
+        </StackPanel>
+
+        <!-- 새로고침 -->
+        <Button Grid.Column="1" Command="{Binding RefreshCommand}"
+                Background="#E5E5EA" Padding="10,8" CornerRadius="10">
+          <TextBlock Text="&#xe5d5;" FontFamily="{StaticResource MaterialIcons}"
+                     FontSize="20" Foreground="#1C1C1E"/>
+        </Button>
+      </Grid>
+    </Border>
+
+    <!-- 대화 목록 -->
+    <Grid Grid.Row="1" Margin="12,12,12,0">
+      <!-- 빈 상태 -->
+      <Border Background="#FFFFFF" CornerRadius="16" Padding="24"
+              VerticalAlignment="Center" HorizontalAlignment="Center"
+              IsVisible="{Binding !HasConversations}">
+        <StackPanel>
+          <Border Background="#E5E5EA" Width="80" Height="80" CornerRadius="40" HorizontalAlignment="Center">
+            <TextBlock Text="&#xe0c9;" FontFamily="{StaticResource MaterialIcons}"
+                       FontSize="36" Foreground="#8E8E93"
+                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <TextBlock Text="{Binding EmptyMessage}" FontSize="16" Foreground="#8E8E93"
+                     HorizontalAlignment="Center" Margin="0,20,0,0"/>
+        </StackPanel>
+      </Border>
+
+      <!-- 대화 리스트 -->
+      <ScrollViewer VerticalScrollBarVisibility="Auto"
+                    IsVisible="{Binding HasConversations}">
+        <ItemsControl ItemsSource="{Binding Conversations}">
+          <ItemsControl.ItemTemplate>
+            <DataTemplate x:DataType="models:ChatListItem">
+              <Button Command="{Binding $parent[ItemsControl].((vm:ChatListViewModel)DataContext).SelectConversationCommand}"
+                      CommandParameter="{Binding}"
+                      Background="Transparent" Padding="0" Margin="0,0,0,8"
+                      HorizontalAlignment="Stretch"
+                      HorizontalContentAlignment="Stretch">
+                <Border Background="#FFFFFF" Padding="14" CornerRadius="14"
+                        BorderBrush="#E5E5EA" BorderThickness="1">
+                  <Grid ColumnDefinitions="Auto,*,Auto">
+                    <!-- 역할 아이콘 -->
+                    <Border Grid.Column="0" Width="44" Height="44" CornerRadius="22"
+                            Background="{Binding RoleColor}" Margin="0,0,12,0"
+                            VerticalAlignment="Center">
+                      <TextBlock Text="{Binding RoleIcon}" FontSize="18"
+                                 Foreground="{Binding RoleIconColor}"
+                                 HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+
+                    <!-- 이름 + 마지막 메시지 -->
+                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
+                      <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding PartnerName}" FontSize="15" Foreground="#1C1C1E"/>
+                        <TextBlock Text="{Binding PartnerRoleDisplayName}" FontSize="11"
+                                   Foreground="#8E8E93" VerticalAlignment="Center"/>
+                      </StackPanel>
+                      <TextBlock Text="{Binding LastMessage}" FontSize="13" Foreground="#8E8E93"
+                                 MaxLines="1" TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+
+                    <!-- 시간 + 읽지않음 배지 -->
+                    <StackPanel Grid.Column="2" Spacing="6" VerticalAlignment="Center"
+                                HorizontalAlignment="Right">
+                      <TextBlock Text="{Binding TimeAgo}" FontSize="11" Foreground="#AEAEB2"
+                                 HorizontalAlignment="Right"/>
+                      <Border Background="#FF3B30" CornerRadius="10" MinWidth="20" Height="20"
+                              Padding="6,0" HorizontalAlignment="Right"
+                              IsVisible="{Binding HasUnread}">
+                        <TextBlock Text="{Binding UnreadCount}" FontSize="11" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      </Border>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+      </ScrollViewer>
+
+      <!-- 로딩 -->
+      <controls:LoadingOverlay IsVisible="{Binding IsLoading}"/>
+    </Grid>
+  </Grid>
+</UserControl>
