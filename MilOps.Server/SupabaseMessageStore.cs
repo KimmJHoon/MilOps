@@ -55,4 +55,48 @@ public class SupabaseMessageStore
             .Set(x => x.IsRead, true)
             .Update();
     }
+
+    /// <summary>
+    /// 채팅 메시지 알림을 notifications 테이블에 저장 (앱 내 알림 탭 표시용)
+    /// </summary>
+    public async Task SaveChatNotificationAsync(Guid receiverId, Guid senderId, string messagePreview)
+    {
+        if (_client == null) return;
+
+        try
+        {
+            // 발신자 이름 조회
+            var senderName = "알 수 없음";
+            try
+            {
+                var senderUser = await _client.From<ServerUser>()
+                    .Filter("id", Operator.Equals, senderId.ToString())
+                    .Single();
+
+                if (senderUser != null && !string.IsNullOrEmpty(senderUser.Name))
+                {
+                    senderName = senderUser.Name;
+                }
+            }
+            catch { /* 이름 조회 실패 시 기본값 사용 */ }
+
+            var notification = new ServerNotification
+            {
+                Id = Guid.NewGuid(),
+                UserId = receiverId,
+                Type = "chat_message",
+                Title = $"{senderName}님의 메시지",
+                Message = messagePreview,
+                IsRead = false,
+                CreatedAt = DateTimeOffset.UtcNow
+            };
+
+            await _client.From<ServerNotification>().Insert(notification);
+            Console.WriteLine($"[MessageStore] Chat notification saved for user {receiverId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[MessageStore] SaveChatNotification error: {ex.Message}");
+        }
+    }
 }
