@@ -33,6 +33,9 @@ public partial class NotificationViewModel : ViewModelBase
     // 일정 상세 화면으로 이동 이벤트
     public event Action<Guid>? OnScheduleSelected;
 
+    // 채팅 탭으로 이동 이벤트
+    public event EventHandler? OnChatSelected;
+
     // 닫기 이벤트
     public event EventHandler? CloseRequested;
 
@@ -122,9 +125,15 @@ public partial class NotificationViewModel : ViewModelBase
             }
         }
 
-        // 일정으로 이동
-        if (notification.ScheduleId.HasValue)
+        // 타입에 따라 화면 이동
+        if (notification.Type == "chat_message")
         {
+            // 채팅 탭으로 이동
+            OnChatSelected?.Invoke(this, EventArgs.Empty);
+        }
+        else if (notification.ScheduleId.HasValue)
+        {
+            // 일정으로 이동
             OnScheduleSelected?.Invoke(notification.ScheduleId.Value);
         }
     }

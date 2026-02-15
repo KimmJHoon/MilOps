@@ -52,6 +52,7 @@ public class Notification : BaseModel
         "schedule_reserved" => "일정 예약",
         "schedule_confirmed" => "일정 확정",
         "schedule_reminder" => "일정 알림",
+        "chat_message" => "새 메시지",
         _ => "알림"
     };
 
@@ -66,6 +67,7 @@ public class Notification : BaseModel
         "schedule_reserved" => "\ue935",   // calendar_today
         "schedule_confirmed" => "\ue86c",  // check_circle
         "schedule_reminder" => "\ue855",   // alarm
+        "chat_message" => "\ue0b7",        // chat
         _ => "\ue7f4"                       // notifications
     };
 
@@ -77,6 +79,7 @@ public class Notification : BaseModel
         "schedule_reserved" => "#FF9800",
         "schedule_confirmed" => "#4CAF50",
         "schedule_reminder" => "#F44336",
+        "chat_message" => "#007AFF",
         _ => "#9E9E9E"
     };
 

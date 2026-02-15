@@ -94,4 +94,10 @@ public partial class NotificationView : UserControl
         add => _viewModel!.OnScheduleSelected += value;
         remove => _viewModel!.OnScheduleSelected -= value;
     }
+
+    public event EventHandler? OnChatSelected
+    {
+        add => _viewModel!.OnChatSelected += value;
+        remove => _viewModel!.OnChatSelected -= value;
+    }
 }
