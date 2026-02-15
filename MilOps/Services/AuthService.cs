@@ -1,5 +1,6 @@
 using System;
 using System.Threading.Tasks;
+using Supabase.Gotrue;
 using Supabase.Gotrue.Exceptions;
 using UserModel = MilOps.Models.User;
 
@@ -73,6 +74,53 @@ public static class AuthService
                 var m when m.Contains("Email not confirmed") => "이메일 인증이 필요합니다",
                 _ => $"로그인 오류: {ex.Message}"
             });
+        }
+        catch (Exception ex)
+        {
+            return (false, $"오류가 발생했습니다: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 비밀번호 변경
+    /// </summary>
+    public static async Task<(bool success, string? errorMessage)> ChangePasswordAsync(
+        string currentPassword, string newPassword)
+    {
+        try
+        {
+            if (CurrentUser == null || string.IsNullOrEmpty(CurrentUser.Email))
+            {
+                return (false, "로그인 상태가 아닙니다");
+            }
+
+            // 1. 현재 비밀번호 검증 (재인증)
+            try
+            {
+                await SupabaseService.Client.Auth.SignIn(CurrentUser.Email, currentPassword);
+            }
+            catch (GotrueException)
+            {
+                return (false, "현재 비밀번호가 일치하지 않습니다");
+            }
+
+            // 2. 새 비밀번호로 업데이트
+            var attrs = new UserAttributes { Password = newPassword };
+            await SupabaseService.Client.Auth.Update(attrs);
+
+            // 3. 세션 토큰 갱신
+            var session = SupabaseService.Client.Auth.CurrentSession;
+            if (session?.AccessToken != null && session.RefreshToken != null && CurrentUser.LoginId != null)
+            {
+                await SessionStorageService.SaveSessionAsync(
+                    session.AccessToken, session.RefreshToken, CurrentUser.LoginId);
+            }
+
+            return (true, null);
+        }
+        catch (GotrueException ex)
+        {
+            return (false, $"비밀번호 변경 실패: {ex.Message}");
         }
         catch (Exception ex)
         {
