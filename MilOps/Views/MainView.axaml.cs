@@ -1,6 +1,8 @@
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Media;
+using MilOps.Services;
 using MilOps.ViewModels;
 using System;
 using System.Threading.Tasks;
@@ -35,6 +37,102 @@ public partial class MainView : UserControl
         SetupScheduleReserveView();
         SetupScheduleConfirmView();
         SetupNotificationView();
+        SetupChatViews();
+
+        // 시스템 뒤로가기 버튼 핸들러 등록 (fallback for MoveTaskToBack)
+        AppRestartService.OnBackPressed = HandleBackPressed;
+
+        // Avalonia TopLevel.BackRequested 이벤트 구독 (Android 뒤로가기 버튼 처리)
+        AttachedToVisualTree += OnAttachedToVisualTree;
+        DetachedFromVisualTree += OnDetachedFromVisualTree;
+    }
+
+    private void OnAttachedToVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel != null)
+        {
+            topLevel.BackRequested += OnBackRequested;
+        }
+    }
+
+    private void OnDetachedFromVisualTree(object? sender, Avalonia.VisualTreeAttachmentEventArgs e)
+    {
+        var topLevel = TopLevel.GetTopLevel(this);
+        if (topLevel != null)
+        {
+            topLevel.BackRequested -= OnBackRequested;
+        }
+    }
+
+    private void OnBackRequested(object? sender, RoutedEventArgs e)
+    {
+        if (HandleBackPressed())
+        {
+            e.Handled = true;
+        }
+        // Handled=false이면 Avalonia가 기본 동작(앱 종료) 실행
+        // → MainActivity의 BackPressedCallback에서 MoveTaskToBack 처리
+    }
+
+    /// <summary>
+    /// 시스템 뒤로가기 버튼 처리 - 열린 오버레이를 닫음
+    /// </summary>
+    private bool HandleBackPressed()
+    {
+        // 비밀번호 변경 모달이 열려있으면 닫기
+        if (_viewModel.IsPasswordChangeVisible)
+        {
+            _viewModel.HidePasswordChangeCommand.Execute(null);
+            return true;
+        }
+
+        // 드로어가 열려있으면 닫기
+        if (_viewModel.IsDrawerOpen)
+        {
+            _viewModel.CloseDrawerCommand.Execute(null);
+            return true;
+        }
+
+        // 채팅방이 열려있으면 닫기
+        if (_viewModel.IsChatRoomOpen)
+        {
+            _viewModel.CloseChatRoomCommand.Execute(null);
+            ChatListView.OnTabEntered();
+            return true;
+        }
+
+        // 일정 관련 오버레이 닫기
+        if (_viewModel.IsScheduleInputOpen)
+        {
+            _viewModel.CloseScheduleInputCommand.Execute(null);
+            return true;
+        }
+        if (_viewModel.IsScheduleReserveOpen)
+        {
+            _viewModel.CloseScheduleReserveCommand.Execute(null);
+            return true;
+        }
+        if (_viewModel.IsScheduleConfirmOpen)
+        {
+            _viewModel.CloseScheduleConfirmCommand.Execute(null);
+            return true;
+        }
+        if (_viewModel.IsScheduleCreateOpen)
+        {
+            _viewModel.CloseScheduleCreateCommand.Execute(null);
+            return true;
+        }
+
+        // 업체 등록 오버레이 닫기
+        if (_viewModel.IsCompanyRegisterOpen)
+        {
+            _viewModel.CloseCompanyRegisterCommand.Execute(null);
+            return true;
+        }
+
+        // 열린 오버레이 없음 - 기본 동작(백그라운드)으로 위임
+        return false;
     }
 
     private async void OnScheduleNavigationRequested(ScheduleNavigationArgs args)
@@ -63,11 +161,17 @@ public partial class MainView : UserControl
             case "calendar":
                 CalendarView.OnTabEntered();
                 break;
+            case "chat":
+                ChatListView.OnTabEntered();
+                break;
             case "notification":
                 NotificationView.OnTabEntered();
                 break;
             case "schedule":
                 ScheduleListView.ForceInitialize();
+                break;
+            case "manager":
+                ManagerView.ForceInitialize();
                 break;
         }
     }
@@ -110,6 +214,7 @@ public partial class MainView : UserControl
     {
         NotificationView.CloseRequested += OnNotificationCloseRequested;
         NotificationView.OnScheduleSelected += OnNotificationScheduleSelected;
+        NotificationView.OnChatSelected += OnNotificationChatSelected;
     }
 
     private void OnNotificationCloseRequested(object? sender, EventArgs e)
@@ -120,6 +225,12 @@ public partial class MainView : UserControl
     private void OnNotificationScheduleSelected(Guid scheduleId)
     {
         OpenScheduleInput(scheduleId, "view");
+    }
+
+    private void OnNotificationChatSelected(object? sender, EventArgs e)
+    {
+        // 채팅 탭으로 이동
+        _viewModel.SelectTabCommand.Execute("chat");
     }
 
     private void OnCompanyRegisterCloseRequested(object? sender, EventArgs e)
@@ -191,6 +302,32 @@ public partial class MainView : UserControl
         CalendarView.RefreshCalendar();
     }
 
+    private void SetupChatViews()
+    {
+        ChatListView.OnConversationSelected += OnConversationSelected;
+        ChatRoomView.CloseRequested += OnChatRoomCloseRequested;
+        ManagerView.OnChatStartRequested += OnManagerChatStartRequested;
+    }
+
+    private void OnManagerChatStartRequested(Models.ChatListItem partner)
+    {
+        _viewModel.OpenChatRoom();
+        ChatRoomView.EnterRoom(partner);
+    }
+
+    private void OnConversationSelected(Models.ChatListItem partner)
+    {
+        _viewModel.OpenChatRoom();
+        ChatRoomView.EnterRoom(partner);
+    }
+
+    private void OnChatRoomCloseRequested(object? sender, EventArgs e)
+    {
+        _viewModel.CloseChatRoomCommand.Execute(null);
+        // 대화방 닫으면 목록 새로고침
+        ChatListView.OnTabEntered();
+    }
+
     public async void OpenScheduleConfirm(Guid scheduleId)
     {
         try
@@ -225,6 +362,10 @@ public partial class MainView : UserControl
         {
             ScheduleListView.ForceInitialize();
         }
+        else if (_viewModel.IsChatSelected)
+        {
+            ChatListView.OnTabEntered();
+        }
         else if (_viewModel.IsManagerSelected)
         {
             ManagerView.ForceInitialize();
@@ -236,6 +377,11 @@ public partial class MainView : UserControl
     }
 
     private void OnOverlayPressed(object? sender, PointerPressedEventArgs e)
+    {
+        _viewModel.CloseDrawerCommand.Execute(null);
+    }
+
+    private void OnOverlayTapped(object? sender, Avalonia.Interactivity.RoutedEventArgs e)
     {
         _viewModel.CloseDrawerCommand.Execute(null);
     }
