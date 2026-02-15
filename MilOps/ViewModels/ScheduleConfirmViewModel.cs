@@ -303,16 +303,12 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         }
         else if (_currentUserRole == "user_military")
         {
-            // 대대담당자 - RPC에서 가져온 division/battalion 정보 활용
-            string battalionDisplay = "";
-            if (!string.IsNullOrEmpty(detail.DivisionName) && !string.IsNullOrEmpty(detail.BattalionName))
-            {
-                battalionDisplay = $"{detail.DivisionName} {detail.BattalionName}";
-            }
-            else if (!string.IsNullOrEmpty(detail.BattalionName))
-            {
-                battalionDisplay = detail.BattalionName;
-            }
+            // 대대담당자 - RPC에서 가져온 division/brigade/battalion 정보 활용
+            var battalionParts = new System.Collections.Generic.List<string>();
+            if (!string.IsNullOrEmpty(detail.DivisionName)) battalionParts.Add(detail.DivisionName);
+            if (!string.IsNullOrEmpty(detail.BrigadeName)) battalionParts.Add(detail.BrigadeName);
+            if (!string.IsNullOrEmpty(detail.BattalionName)) battalionParts.Add(detail.BattalionName);
+            string battalionDisplay = string.Join(" ", battalionParts);
             CurrentUserDisplay = $"{currentUser.FullDisplayName} ({battalionDisplay} 대대담당자)";
         }
     }

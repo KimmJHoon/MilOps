@@ -12,6 +12,7 @@ public enum UserRole
     SuperAdminArmy,    // 육군본부 최종관리자
     MiddleLocal,       // 지자체 중간관리자
     MiddleMilitary,    // 군부대 중간관리자
+    ViewerMilitary,    // 여단총괄 (뷰어 전용)
     UserLocal,         // 지자체 실무자
     UserMilitary       // 군부대 실무자
 }
@@ -26,6 +27,7 @@ public static class AuthService
                                        CurrentUserRole == UserRole.SuperAdminArmy;
     public static bool IsMiddleManager => CurrentUserRole == UserRole.MiddleLocal ||
                                           CurrentUserRole == UserRole.MiddleMilitary;
+    public static bool IsViewer => CurrentUserRole == UserRole.ViewerMilitary;
 
     // 하위 호환용 프로퍼티
     public static string? CurrentUserId => CurrentUser?.LoginId;
@@ -207,6 +209,7 @@ public static class AuthService
             "super_admin_army" => UserRole.SuperAdminArmy,
             "middle_local" => UserRole.MiddleLocal,
             "middle_military" => UserRole.MiddleMilitary,
+            "viewer_military" => UserRole.ViewerMilitary,
             "user_local" => UserRole.UserLocal,
             "user_military" => UserRole.UserMilitary,
             _ => UserRole.None

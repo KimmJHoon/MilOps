@@ -135,7 +135,7 @@ public partial class MainViewModel : ViewModelBase
             var client = SupabaseService.Client;
             if (client == null) return;
 
-            // 4개 쿼리를 병렬로 실행 (순차 실행 대비 4배 빠름)
+            // 5개 쿼리를 병렬로 실행
             var regionTask = user.RegionId.HasValue
                 ? client.From<Models.Region>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.RegionId.ToString())
@@ -154,6 +154,12 @@ public partial class MainViewModel : ViewModelBase
                     .Single()
                 : Task.FromResult<Models.Division?>(null);
 
+            var brigadeTask = user.BrigadeId.HasValue
+                ? client.From<Models.Brigade>()
+                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.BrigadeId.ToString())
+                    .Single()
+                : Task.FromResult<Models.Brigade?>(null);
+
             var battalionTask = user.BattalionId.HasValue
                 ? client.From<Models.Battalion>()
                     .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.BattalionId.ToString())
@@ -161,7 +167,7 @@ public partial class MainViewModel : ViewModelBase
                 : Task.FromResult<Models.Battalion?>(null);
 
             // 모든 쿼리 병렬 대기
-            await Task.WhenAll(regionTask, districtTask, divisionTask, battalionTask);
+            await Task.WhenAll(regionTask, districtTask, divisionTask, brigadeTask, battalionTask);
 
             // 결과 조합
             var parts = new List<string>();
@@ -174,6 +180,9 @@ public partial class MainViewModel : ViewModelBase
 
             if (divisionTask.Result != null)
                 parts.Add(divisionTask.Result.Name);
+
+            if (brigadeTask.Result != null)
+                parts.Add(brigadeTask.Result.Name);
 
             if (battalionTask.Result != null)
                 parts.Add(battalionTask.Result.Name);
@@ -212,7 +221,7 @@ public partial class MainViewModel : ViewModelBase
         var roleString = AuthService.CurrentUser?.Role ?? "null";
 
         IsSuperAdmin = AuthService.IsSuperAdmin;
-        IsMiddleAdmin = role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary;
+        IsMiddleAdmin = role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary || role == UserRole.ViewerMilitary;
         IsUser = role == UserRole.UserLocal || role == UserRole.UserMilitary;
 
         // 역할이 None인 경우 기본값으로 사용자 처리 (담당자 메뉴 숨김)
@@ -387,8 +396,9 @@ public partial class MainViewModel : ViewModelBase
                 {
                     navigationType = ScheduleNavigationType.Confirm;
                 }
-                // 중간관리자/최종관리자는 모든 상태의 일정을 확정 화면(뷰어 모드)으로 조회
+                // 중간관리자/최종관리자/여단총괄은 모든 상태의 일정을 확정 화면(뷰어 모드)으로 조회
                 else if (currentUser.Role == "middle_local" || currentUser.Role == "middle_military" ||
+                         currentUser.Role == "viewer_military" ||
                          currentUser.Role == "super_admin_mois" || currentUser.Role == "super_admin_army")
                 {
                     navigationType = ScheduleNavigationType.Confirm;

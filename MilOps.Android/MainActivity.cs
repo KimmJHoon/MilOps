@@ -77,18 +77,27 @@ public class MainActivity : AvaloniaMainActivity<App>
                 intent.AddFlags(ActivityFlags.ClearTop | ActivityFlags.NewTask | ActivityFlags.ClearTask);
 
                 // PendingIntent로 앱 재시작 예약
+                var flags = PendingIntentFlags.CancelCurrent;
+                if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
+                {
+                    flags |= PendingIntentFlags.Immutable;
+                }
+
                 var pendingIntent = PendingIntent.GetActivity(
                     this,
                     0,
                     intent,
-                    PendingIntentFlags.CancelCurrent | PendingIntentFlags.Immutable);
+                    flags);
 
                 // AlarmManager로 100ms 후 재시작
                 var alarmManager = GetSystemService(AlarmService) as AlarmManager;
-                alarmManager?.Set(
-                    AlarmType.Rtc,
-                    Java.Lang.JavaSystem.CurrentTimeMillis() + 100,
-                    pendingIntent);
+                if (pendingIntent != null)
+                {
+                    alarmManager?.Set(
+                        AlarmType.Rtc,
+                        Java.Lang.JavaSystem.CurrentTimeMillis() + 100,
+                        pendingIntent);
+                }
 
                 // 현재 액티비티 종료
                 FinishAffinity();
@@ -159,6 +168,7 @@ public class MainActivity : AvaloniaMainActivity<App>
     {
         if (Build.VERSION.SdkInt >= BuildVersionCodes.Tiramisu)
         {
+#pragma warning disable CA1416 // 런타임 버전 체크 완료
             if (ContextCompat.CheckSelfPermission(this, Manifest.Permission.PostNotifications)
                 != Permission.Granted)
             {
@@ -167,6 +177,7 @@ public class MainActivity : AvaloniaMainActivity<App>
                     new[] { Manifest.Permission.PostNotifications },
                     1001);
             }
+#pragma warning restore CA1416
         }
     }
 
