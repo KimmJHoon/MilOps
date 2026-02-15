@@ -226,6 +226,7 @@
               <TextBlock Text="취소" Foreground="White" FontSize="13"/>
             </Button>
             <Button Grid.Column="1" Command="{Binding SaveCompanyCommand}"
+                    Focusable="False"
                     Background="#2196F3" Margin="4,0,0,0" HorizontalAlignment="Stretch"
                     HorizontalContentAlignment="Center" Padding="10" CornerRadius="6"
                     IsEnabled="{Binding !IsLoading}">

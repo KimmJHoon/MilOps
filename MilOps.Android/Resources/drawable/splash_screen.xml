@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <layer-list xmlns:android="http://schemas.android.com/apk/res/android">
 
   <item>
@@ -6,8 +6,8 @@
   </item>
 
   <item android:drawable="@drawable/icon"
-        android:width="200dp"
-        android:height="200dp"
+        android:width="120dp"
+        android:height="120dp"
         android:gravity="center" />
 
 </layer-list>

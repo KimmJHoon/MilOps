@@ -192,6 +192,7 @@
             <TextBlock Text="취소" FontSize="15" Foreground="#1C1C1E"/>
           </Button>
           <Button Grid.Column="1" Command="{Binding ReserveCommand}"
+                  Focusable="False"
                   IsEnabled="{Binding CanReserve}"
                   Background="#4CAF50"
                   CornerRadius="8"

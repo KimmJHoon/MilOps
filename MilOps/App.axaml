@@ -19,6 +19,11 @@
             <Setter Property="FontSize" Value="20"/>
         </Style>
 
+        <!-- 모든 버튼 포커스 라인 제거 -->
+        <Style Selector="Button">
+            <Setter Property="FocusAdorner" Value="{x:Null}"/>
+        </Style>
+
         <!-- 글로벌 버튼 스타일 (iOS 스타일 둥근 모서리) -->
         <Style Selector="Button.primary">
             <Setter Property="Background" Value="#00a872"/>

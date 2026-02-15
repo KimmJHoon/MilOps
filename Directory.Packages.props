@@ -22,11 +22,19 @@
         <PackageVersion Include="Supabase" Version="1.1.1" />
         <PackageVersion Include="DotNetEnv" Version="3.1.1" />
 
+        <!-- SQLite (로컬 채팅 캐시 + 로컬 큐) -->
+        <PackageVersion Include="sqlite-net-pcl" Version="1.9.172" />
+        <PackageVersion Include="SQLitePCLRaw.bundle_green" Version="2.1.10" />
+
         <PackageVersion Include="Xamarin.AndroidX.Core.SplashScreen" Version="1.0.1.15" />
 
         <!-- Firebase Cloud Messaging -->
         <PackageVersion Include="Xamarin.Firebase.Messaging" Version="124.0.3.1" />
         <PackageVersion Include="Xamarin.GooglePlayServices.Base" Version="118.5.0.3" />
+
+        <!-- Microsoft.Extensions.Configuration (TCP 서버용) -->
+        <PackageVersion Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+        <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.0" />
 
         <!-- Test packages -->
         <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />

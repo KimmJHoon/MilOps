@@ -26,6 +26,12 @@ public static class AppRestartService
     public static Action? CleanupBeforeLogout { get; set; }
 
     /// <summary>
+    /// 시스템 뒤로가기 버튼 처리 (Android)
+    /// 반환값: true면 뒤로가기 처리됨, false면 기본 동작
+    /// </summary>
+    public static Func<bool>? OnBackPressed { get; set; }
+
+    /// <summary>
     /// 로그아웃 후 앱 재시작 수행
     /// </summary>
     public static async Task LogoutAndRestartAsync()

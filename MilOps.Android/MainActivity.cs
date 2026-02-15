@@ -5,6 +5,7 @@ using Android.Content.PM;
 using Android.OS;
 using Android.Util;
 using Android.Views;
+using AndroidX.Activity;
 using AndroidX.Core.App;
 using AndroidX.Core.Content;
 using Avalonia;
@@ -23,7 +24,6 @@ namespace MilOps.Android;
     Label = "@string/app_name",
     Theme = "@style/MyTheme.NoActionBar",
     Icon = "@drawable/icon",
-    MainLauncher = true,
     LaunchMode = LaunchMode.SingleTop,
     WindowSoftInputMode = SoftInput.AdjustResize,
     ConfigurationChanges = ConfigChanges.Orientation | ConfigChanges.ScreenSize | ConfigChanges.UiMode)]
@@ -48,6 +48,9 @@ public class MainActivity : AvaloniaMainActivity<App>
             SetupAppRestartService();
 
             base.OnCreate(savedInstanceState);
+
+            // 시스템 뒤로가기 버튼 핸들러 등록 (API 33+ 대응)
+            OnBackPressedDispatcher.AddCallback(this, new BackPressedCallback(this));
 
             // Android 13+ 알림 권한 요청
             RequestNotificationPermission();
@@ -80,7 +83,9 @@ public class MainActivity : AvaloniaMainActivity<App>
                 var flags = PendingIntentFlags.CancelCurrent;
                 if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
                 {
+#pragma warning disable CA1416
                     flags |= PendingIntentFlags.Immutable;
+#pragma warning restore CA1416
                 }
 
                 var pendingIntent = PendingIntent.GetActivity(
@@ -220,6 +225,10 @@ public class MainActivity : AvaloniaMainActivity<App>
                 SupabaseConfig.Url = value;
             else if (key == "SUPABASE_ANON_KEY")
                 SupabaseConfig.AnonKey = value;
+            else if (key == "CHAT_SERVER_HOST")
+                ChatServerConfig.Host = value;
+            else if (key == "CHAT_SERVER_PORT" && int.TryParse(value, out var port))
+                ChatServerConfig.Port = port;
         }
     }
 
@@ -227,5 +236,30 @@ public class MainActivity : AvaloniaMainActivity<App>
     {
         return base.CustomizeAppBuilder(builder)
             .LogToTrace();
+    }
+
+    /// <summary>
+    /// 시스템 뒤로가기 버튼 처리 콜백 (OnBackPressedDispatcher 방식, API 33+ 대응)
+    /// </summary>
+    private class BackPressedCallback : OnBackPressedCallback
+    {
+        private readonly MainActivity _activity;
+
+        public BackPressedCallback(MainActivity activity) : base(true)
+        {
+            _activity = activity;
+        }
+
+        public override void HandleOnBackPressed()
+        {
+            // Avalonia 앱에서 뒤로가기 처리 (오버레이 닫기 등)
+            if (AppRestartService.OnBackPressed?.Invoke() == true)
+            {
+                return;
+            }
+
+            // 처리되지 않으면 앱을 백그라운드로 보냄 (종료하지 않음)
+            _activity.MoveTaskToBack(true);
+        }
     }
 }

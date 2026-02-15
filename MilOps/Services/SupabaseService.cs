@@ -79,6 +79,9 @@ public static class SupabaseService
                 "SUPABASE_URL and SUPABASE_ANON_KEY must be set in SupabaseConfig, environment variables, or .env file");
         }
 
+        // ChatServerConfig 로드 (.env / 환경변수 → ChatServerConfig에 미설정 시)
+        LoadChatServerConfig();
+
         var options = new SupabaseOptions
         {
             AutoRefreshToken = true,
@@ -178,6 +181,24 @@ public static class SupabaseService
             System.Diagnostics.Debug.WriteLine($"[SupabaseService] GetCurrentUserProfileAsync Error: {ex.Message}");
             return null;
         }
+    }
+
+    /// <summary>
+    /// 환경변수 또는 ChatServerConfig에서 채팅 서버 설정 로드
+    /// </summary>
+    private static void LoadChatServerConfig()
+    {
+        // ChatServerConfig에 이미 기본값이 아닌 값이 설정되어 있으면 스킵 (Android 등)
+        if (ChatServerConfig.Host != "127.0.0.1") return;
+
+        var host = Environment.GetEnvironmentVariable("CHAT_SERVER_HOST");
+        var portStr = Environment.GetEnvironmentVariable("CHAT_SERVER_PORT");
+
+        if (!string.IsNullOrEmpty(host))
+            ChatServerConfig.Host = host;
+
+        if (!string.IsNullOrEmpty(portStr) && int.TryParse(portStr, out var port))
+            ChatServerConfig.Port = port;
     }
 
     /// <summary>
