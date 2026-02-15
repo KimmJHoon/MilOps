@@ -119,14 +119,43 @@ public class MessageRouter
                     Timestamp = timestamp
                 });
             }
-            else
+
+            // 4-a. FCM 푸시 — 오프라인일 때만
+            if (receiverSession == null)
             {
-                // 오프라인 → FCM 푸시
-                await _fcmNotifier.NotifyAsync(
-                    packet.ReceiverId.Value,
-                    session.UserId.ToString(),
-                    packet.Content.Length > 50 ? packet.Content[..50] + "..." : packet.Content);
+                _ = Task.Run(async () =>
+                {
+                    var preview = packet.Content.Length > 50
+                        ? packet.Content[..50] + "..." : packet.Content;
+                    try
+                    {
+                        await _fcmNotifier.NotifyAsync(
+                            packet.ReceiverId.Value,
+                            session.UserId.ToString(),
+                            preview);
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Router] FCM notify error: {ex.Message}");
+                    }
+                });
             }
+
+            // 4-b. 알림 탭 저장 — 항상 (트리거에서 chat_message 제외됨 → 무한루프 없음)
+            _ = Task.Run(async () =>
+            {
+                var preview = packet.Content.Length > 50
+                    ? packet.Content[..50] + "..." : packet.Content;
+                try
+                {
+                    await _messageStore.SaveChatNotificationAsync(
+                        packet.ReceiverId.Value, session.UserId, preview);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[Router] Notification save error: {ex.Message}");
+                }
+            });
 
             Console.WriteLine($"[Router] MSG {session.UserId} → {packet.ReceiverId} ({messageId})");
         }
@@ -144,15 +173,17 @@ public class MessageRouter
 
     private async Task HandleMessageReadAsync(ClientSession session, ChatPacket packet)
     {
-        if (!session.IsAuthenticated || packet.SenderId == null) return;
+        if (!session.IsAuthenticated || packet.ReceiverId == null) return;
 
         try
         {
-            // senderId가 보낸 메시지 중 현재 유저가 받은 것 → 읽음 처리
-            await _messageStore.MarkAsReadAsync(packet.SenderId.Value, session.UserId);
+            // packet.ReceiverId = partnerId (원래 메시지를 보낸 사람)
+            // session.UserId = myId (읽는 사람)
+            // → partnerId가 보낸 메시지 중 myId가 받은 것 → 읽음 처리
+            await _messageStore.MarkAsReadAsync(packet.ReceiverId.Value, session.UserId);
 
-            // 원 발신자가 온라인이면 읽음 확인 전달
-            var senderSession = _connectionManager.GetSession(packet.SenderId.Value);
+            // 원 발신자(partnerId)가 온라인이면 읽음 확인 전달
+            var senderSession = _connectionManager.GetSession(packet.ReceiverId.Value);
             if (senderSession != null)
             {
                 await senderSession.SendPacketAsync(new ChatPacket
@@ -162,7 +193,7 @@ public class MessageRouter
                 });
             }
 
-            Console.WriteLine($"[Router] READ {session.UserId} read messages from {packet.SenderId}");
+            Console.WriteLine($"[Router] READ {session.UserId} read messages from {packet.ReceiverId}");
         }
         catch (Exception ex)
         {

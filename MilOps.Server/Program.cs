@@ -47,7 +47,7 @@ class Program
         await messageStore.InitializeAsync();
 
         var connectionManager = new ConnectionManager();
-        var fcmNotifier = new FcmNotifier();
+        var fcmNotifier = new FcmNotifier(supabaseUrl, supabaseKey);
         var messageRouter = new MessageRouter(connectionManager, messageStore, fcmNotifier);
         var server = new TcpChatServer(port, connectionManager, messageRouter);
 
