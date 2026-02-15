@@ -48,6 +48,9 @@ public partial class MainViewModel : ViewModelBase
     private bool _isNotificationSelected = false;
 
     [ObservableProperty]
+    private bool _isChatSelected = false;
+
+    [ObservableProperty]
     private bool _isSettingsSelected = false;
 
     [ObservableProperty]
@@ -91,6 +94,31 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isScheduleConfirmOpen = false;
 
+    [ObservableProperty]
+    private bool _isChatRoomOpen = false;
+
+    // 비밀번호 변경
+    [ObservableProperty]
+    private bool _isPasswordChangeVisible = false;
+
+    [ObservableProperty]
+    private string _currentPassword = "";
+
+    [ObservableProperty]
+    private string _newPassword = "";
+
+    [ObservableProperty]
+    private string _confirmPassword = "";
+
+    [ObservableProperty]
+    private string _passwordChangeMessage = "";
+
+    [ObservableProperty]
+    private bool _isPasswordChangeError = false;
+
+    [ObservableProperty]
+    private string _passwordChangeMessageColor = "#00a872";
+
     // 일정 입력/예약/확정 화면에 전달할 데이터
     private Guid _scheduleInputId;
     private Guid _scheduleReserveId;
@@ -102,7 +130,8 @@ public partial class MainViewModel : ViewModelBase
 
     // 메뉴 표시 여부 (역할별)
     public bool ShowScheduleTab => IsUser || IsMiddleAdmin;  // 사용자, 중간관리자
-    public bool ShowManagerTab => IsMiddleAdmin || IsSuperAdmin;  // 중간관리자, 최종관리자
+    public bool ShowChatTab => IsUser || IsMiddleAdmin;      // 사용자, 중간관리자 (최종관리자 제외)
+    public bool ShowManagerTab => true;  // 모든 역할에서 담당자 탭 접근 가능
 
     public MainViewModel()
     {
@@ -200,15 +229,15 @@ public partial class MainViewModel : ViewModelBase
     /// </summary>
     private void ResetToValidTab()
     {
-        // 담당자 탭은 중간관리자, 최종관리자만 접근 가능
-        if (IsManagerSelected && !ShowManagerTab)
+        // 일정 탭은 사용자, 중간관리자만 접근 가능
+        if (IsScheduleSelected && !ShowScheduleTab)
         {
             SelectTab("calendar");
             return;
         }
 
-        // 일정 탭은 사용자, 중간관리자만 접근 가능
-        if (IsScheduleSelected && !ShowScheduleTab)
+        // 채팅 탭은 사용자, 중간관리자만 접근 가능
+        if (IsChatSelected && !ShowChatTab)
         {
             SelectTab("calendar");
             return;
@@ -234,6 +263,7 @@ public partial class MainViewModel : ViewModelBase
 
         // 속성 변경 알림 (메뉴 표시 여부 갱신)
         OnPropertyChanged(nameof(ShowScheduleTab));
+        OnPropertyChanged(nameof(ShowChatTab));
         OnPropertyChanged(nameof(ShowManagerTab));
     }
 
@@ -248,6 +278,7 @@ public partial class MainViewModel : ViewModelBase
         // 모든 탭 선택 해제
         IsCalendarSelected = false;
         IsScheduleSelected = false;
+        IsChatSelected = false;
         IsManagerSelected = false;
         IsNotificationSelected = false;
         IsSettingsSelected = false;
@@ -263,13 +294,17 @@ public partial class MainViewModel : ViewModelBase
                 IsScheduleSelected = true;
                 CurrentPageTitle = "일정";
                 break;
+            case "chat":
+                IsChatSelected = true;
+                CurrentPageTitle = "메시지";
+                break;
             case "notification":
                 IsNotificationSelected = true;
                 CurrentPageTitle = "알림";
                 break;
             case "manager":
                 IsManagerSelected = true;
-                CurrentPageTitle = "담당자 관리";
+                CurrentPageTitle = "담당자";
                 break;
             case "settings":
                 IsSettingsSelected = true;
@@ -291,6 +326,82 @@ public partial class MainViewModel : ViewModelBase
     private void CloseDrawer()
     {
         IsDrawerOpen = false;
+        ResetPasswordChangeForm();
+    }
+
+    [RelayCommand]
+    private void ShowPasswordChange()
+    {
+        // 드로어를 먼저 닫고 모달을 표시
+        IsDrawerOpen = false;
+        IsPasswordChangeVisible = true;
+        PasswordChangeMessage = "";
+        IsPasswordChangeError = false;
+    }
+
+    [RelayCommand]
+    private void HidePasswordChange()
+    {
+        ResetPasswordChangeForm();
+    }
+
+    [RelayCommand]
+    private async Task SubmitPasswordChange()
+    {
+        // 입력 검증
+        if (string.IsNullOrWhiteSpace(CurrentPassword))
+        {
+            SetPasswordError("현재 비밀번호를 입력해주세요");
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(NewPassword))
+        {
+            SetPasswordError("새 비밀번호를 입력해주세요");
+            return;
+        }
+        if (NewPassword.Length < 6)
+        {
+            SetPasswordError("비밀번호는 6자 이상이어야 합니다");
+            return;
+        }
+        if (NewPassword != ConfirmPassword)
+        {
+            SetPasswordError("새 비밀번호가 일치하지 않습니다");
+            return;
+        }
+
+        var (success, errorMessage) = await AuthService.ChangePasswordAsync(CurrentPassword, NewPassword);
+        if (success)
+        {
+            PasswordChangeMessage = "비밀번호가 변경되었습니다";
+            IsPasswordChangeError = false;
+            PasswordChangeMessageColor = "#00a872";
+            // 1.5초 후 폼 닫기
+            await Task.Delay(1500);
+            ResetPasswordChangeForm();
+        }
+        else
+        {
+            SetPasswordError(errorMessage ?? "비밀번호 변경에 실패했습니다");
+        }
+    }
+
+    private void SetPasswordError(string message)
+    {
+        PasswordChangeMessage = message;
+        IsPasswordChangeError = true;
+        PasswordChangeMessageColor = "#D32F2F";
+    }
+
+    private void ResetPasswordChangeForm()
+    {
+        IsPasswordChangeVisible = false;
+        CurrentPassword = "";
+        NewPassword = "";
+        ConfirmPassword = "";
+        PasswordChangeMessage = "";
+        IsPasswordChangeError = false;
+        PasswordChangeMessageColor = "#00a872";
     }
 
     // 로그아웃 완료 이벤트
@@ -481,5 +592,17 @@ public partial class MainViewModel : ViewModelBase
     private void CloseScheduleConfirm()
     {
         IsScheduleConfirmOpen = false;
+    }
+
+    // === 채팅방 화면 ===
+    public void OpenChatRoom()
+    {
+        IsChatRoomOpen = true;
+    }
+
+    [RelayCommand]
+    private void CloseChatRoom()
+    {
+        IsChatRoomOpen = false;
     }
 }
