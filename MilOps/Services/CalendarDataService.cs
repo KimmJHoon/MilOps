@@ -442,7 +442,7 @@ public static class CalendarDataService
                 {
                     GroupId = Guid.Empty,
                     Count = allGroups.Count - maxBadges,
-                    Color = "#6a6a6a",
+                    Color = "#AEAEB2",
                     IsOverflow = true
                 });
             }
@@ -469,7 +469,7 @@ public static class CalendarDataService
                 {
                     GroupId = Guid.Empty,
                     Count = allGroups.Count - maxBadges,
-                    Color = "#6a6a6a",
+                    Color = "#AEAEB2",
                     IsOverflow = true
                 });
             }
@@ -496,7 +496,7 @@ public static class CalendarDataService
                 {
                     GroupId = Guid.Empty,
                     Count = allGroups.Count - maxBadges,
-                    Color = "#6a6a6a",
+                    Color = "#AEAEB2",
                     IsOverflow = true
                 });
             }
@@ -523,7 +523,7 @@ public static class CalendarDataService
                 {
                     GroupId = Guid.Empty,
                     Count = allGroups.Count - maxBadges,
-                    Color = "#6a6a6a",
+                    Color = "#AEAEB2",
                     IsOverflow = true
                 });
             }
@@ -572,6 +572,6 @@ public class GroupBadgeData
 {
     public Guid GroupId { get; set; }
     public int Count { get; set; }
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
     public bool IsOverflow { get; set; } = false; // "+N" 오버플로우 뱃지 여부
 }

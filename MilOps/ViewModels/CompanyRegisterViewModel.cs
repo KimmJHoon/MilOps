@@ -65,12 +65,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
     [ObservableProperty]
     private string _products = "";
 
-    [ObservableProperty]
-    private string _contactName = "";
-
-    [ObservableProperty]
-    private string _contactPhone = "";
-
     // 에러 메시지
     [ObservableProperty]
     private string _errorMessage = "";
@@ -270,8 +264,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
             Name = company.Name,
             Address = company.Address,
             Products = company.Products ?? "",
-            ContactName = company.ContactName ?? "",
-            ContactPhone = company.ContactPhone ?? "",
             DistrictId = company.DistrictId,
             RegionName = regionName,
             DistrictName = districtName,
@@ -307,8 +299,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
         CompanyName = item.Name;
         Address = item.Address;
         Products = item.Products;
-        ContactName = item.ContactName;
-        ContactPhone = item.ContactPhone;
 
         // 지역 선택
         var district = _allDistricts.FirstOrDefault(d => d.Id == item.DistrictId);
@@ -348,8 +338,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                     Name = CompanyName.Trim(),
                     Address = Address.Trim(),
                     Products = string.IsNullOrWhiteSpace(Products) ? null : Products.Trim(),
-                    ContactName = string.IsNullOrWhiteSpace(ContactName) ? null : ContactName.Trim(),
-                    ContactPhone = string.IsNullOrWhiteSpace(ContactPhone) ? null : ContactPhone.Trim(),
                     DistrictId = SelectedDistrict!.Id,
                     CreatedBy = currentUser.Id,
                     IsActive = true
@@ -367,8 +355,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                     .Set(c => c.Name, CompanyName.Trim())
                     .Set(c => c.Address, Address.Trim())
                     .Set(c => c.Products, string.IsNullOrWhiteSpace(Products) ? null : Products.Trim())
-                    .Set(c => c.ContactName, string.IsNullOrWhiteSpace(ContactName) ? null : ContactName.Trim())
-                    .Set(c => c.ContactPhone, string.IsNullOrWhiteSpace(ContactPhone) ? null : ContactPhone.Trim())
                     .Set(c => c.DistrictId, SelectedDistrict!.Id)
                     .Update();
 #pragma warning restore CS8603
@@ -465,8 +451,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
         CompanyName = "";
         Address = "";
         Products = "";
-        ContactName = "";
-        ContactPhone = "";
         SelectedDistrict = null;
         ErrorMessage = "";
         SuccessMessage = "";
@@ -482,8 +466,6 @@ public class CompanyListItem
     public string Name { get; set; } = "";
     public string Address { get; set; } = "";
     public string Products { get; set; } = "";
-    public string ContactName { get; set; } = "";
-    public string ContactPhone { get; set; } = "";
     public Guid DistrictId { get; set; }
     public string RegionName { get; set; } = "";
     public string DistrictName { get; set; } = "";

@@ -27,8 +27,8 @@ public static class CalendarConverters
 /// </summary>
 public class DayBackgroundMultiConverter : IMultiValueConverter
 {
-    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#2A4A6A"));
-    private static readonly IBrush TodayBrush = new SolidColorBrush(Color.Parse("#1A3A1A"));
+    private static readonly IBrush SelectedBrush = new SolidColorBrush(Color.Parse("#D1E3F6"));
+    private static readonly IBrush TodayBrush = new SolidColorBrush(Color.Parse("#E8F5E9"));
     private static readonly IBrush DefaultBrush = Brushes.Transparent;
 
     public object? Convert(IList<object?> values, Type targetType, object? parameter, CultureInfo culture)
@@ -316,7 +316,7 @@ public partial class CalendarViewModel : ViewModelBase
             {
                 Id = Guid.Empty,
                 Name = "전체",
-                Color = "#808080",
+                Color = "#8E8E93",
                 IsSelected = true
             });
 
@@ -360,7 +360,7 @@ public partial class CalendarViewModel : ViewModelBase
             {
                 Id = Guid.Empty,
                 Name = "전체",
-                Color = "#808080",
+                Color = "#8E8E93",
                 IsSelected = true
             });
 
@@ -413,7 +413,7 @@ public partial class CalendarViewModel : ViewModelBase
             {
                 Id = Guid.Empty,
                 Name = "전체",
-                Color = "#808080",
+                Color = "#8E8E93",
                 IsSelected = true
             });
 
@@ -466,7 +466,7 @@ public partial class CalendarViewModel : ViewModelBase
             {
                 Id = Guid.Empty,
                 Name = "전체",
-                Color = "#808080",
+                Color = "#8E8E93",
                 IsSelected = true
             });
 
@@ -942,7 +942,7 @@ public partial class CalendarViewModel : ViewModelBase
 
             // 그룹명 (역할에 따라 다름)
             string groupName = "";
-            string groupColor = "#808080";
+            string groupColor = "#8E8E93";
             if (CurrentRole == UserRole.SuperAdminMois && regionId.HasValue)
             {
                 groupName = regionName;
@@ -1097,10 +1097,10 @@ public partial class CalendarDay : ObservableObject
     {
         get
         {
-            if (IsToday) return "#00FF00";
-            if (IsSunday) return "#FF6B6B";
-            if (IsSaturday) return "#6B9FFF";
-            return "White";
+            if (IsToday) return "#2E7D32";
+            if (IsSunday) return "#D32F2F";
+            if (IsSaturday) return "#1565C0";
+            return "#1C1C1E";
         }
     }
 
@@ -1225,7 +1225,7 @@ public partial class CalendarDay : ObservableObject
                     {
                         GroupId = Guid.Empty,
                         Count = overflowCount,
-                        Color = "#6a6a6a",
+                        Color = "#AEAEB2",
                         IsOverflow = true
                     });
                 }
@@ -1263,7 +1263,7 @@ public partial class CalendarDay : ObservableObject
                     {
                         GroupId = Guid.Empty,
                         Count = overflowCount,
-                        Color = "#6a6a6a",
+                        Color = "#AEAEB2",
                         IsOverflow = true
                     });
                 }
@@ -1376,7 +1376,7 @@ public class CalendarScheduleItem
     public Guid? BattalionId { get; set; }
     public string BattalionName { get; set; } = "";
     public string GroupName { get; set; } = "";
-    public string GroupColor { get; set; } = "#808080";
+    public string GroupColor { get; set; } = "#8E8E93";
 
     // 그룹명이 있는지 여부 (XAML 바인딩용)
     public bool HasGroupName => !string.IsNullOrEmpty(GroupName);
@@ -1400,7 +1400,7 @@ public partial class RegionFilterItem : ObservableObject
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
 
     [ObservableProperty]
     private bool _isSelected;
@@ -1413,7 +1413,7 @@ public partial class DivisionFilterItem : ObservableObject
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
 
     [ObservableProperty]
     private bool _isSelected;
@@ -1426,7 +1426,7 @@ public partial class DistrictFilterItem : ObservableObject
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
 
     [ObservableProperty]
     private bool _isSelected;
@@ -1439,7 +1439,7 @@ public partial class BattalionFilterItem : ObservableObject
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = "";
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
 
     [ObservableProperty]
     private bool _isSelected;
@@ -1452,7 +1452,7 @@ public class GroupBadgeItem
 {
     public Guid GroupId { get; set; }
     public int Count { get; set; }
-    public string Color { get; set; } = "#808080";
+    public string Color { get; set; } = "#8E8E93";
     public bool IsOverflow { get; set; } = false; // "+N" 오버플로우 뱃지 여부
     public string CountText => IsOverflow ? $"+{Count}" : Count.ToString();
 }
@@ -1465,7 +1465,7 @@ public static class CalendarColorHelper
     private static readonly string[] RegionColors =
     {
         "#E57373", "#81C784", "#64B5F6", "#FFB74D", "#BA68C8",
-        "#4DD0E1", "#F06292", "#AED581", "#FFD54F", "#90A4AE",
+        "#4DD0E1", "#F06292", "#AED581", "#E65100", "#90A4AE",
         "#7986CB", "#4DB6AC", "#FF8A65", "#A1887F", "#9575CD",
         "#4FC3F7", "#FFF176"
     };

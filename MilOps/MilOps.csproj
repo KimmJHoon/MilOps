@@ -19,6 +19,7 @@
       <PrivateAssets Condition="'$(Configuration)' != 'Debug'">All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="Avalonia.Svg.Skia" />
     <PackageReference Include="Supabase" />
     <PackageReference Include="DotNetEnv" />
   </ItemGroup>

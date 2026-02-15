@@ -82,19 +82,16 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     private string _localUserRank = "";
 
     [ObservableProperty]
-    private string _localUserPhone = "";
-
-    [ObservableProperty]
     private bool _localConfirmed = false;
 
     [ObservableProperty]
     private string _localConfirmedText = "미확정";
 
     [ObservableProperty]
-    private IBrush _localConfirmedBg = new SolidColorBrush(Color.Parse("#333333"));
+    private IBrush _localConfirmedBg = new SolidColorBrush(Color.Parse("#E5E5EA"));
 
     [ObservableProperty]
-    private IBrush _localConfirmedFg = new SolidColorBrush(Color.Parse("#888888"));
+    private IBrush _localConfirmedFg = new SolidColorBrush(Color.Parse("#8E8E93"));
 
     // 대대담당자 정보
     [ObservableProperty]
@@ -104,19 +101,16 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
     private string _militaryUserRank = "";
 
     [ObservableProperty]
-    private string _militaryUserPhone = "";
-
-    [ObservableProperty]
     private bool _militaryConfirmed = false;
 
     [ObservableProperty]
     private string _militaryConfirmedText = "미확정";
 
     [ObservableProperty]
-    private IBrush _militaryConfirmedBg = new SolidColorBrush(Color.Parse("#333333"));
+    private IBrush _militaryConfirmedBg = new SolidColorBrush(Color.Parse("#E5E5EA"));
 
     [ObservableProperty]
-    private IBrush _militaryConfirmedFg = new SolidColorBrush(Color.Parse("#888888"));
+    private IBrush _militaryConfirmedFg = new SolidColorBrush(Color.Parse("#8E8E93"));
 
     // 메모
     [ObservableProperty]
@@ -251,13 +245,11 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
 
             // 지자체담당자 정보
             LocalUserName = detail.LocalUserName ?? "";
-            LocalUserRank = detail.LocalUserPosition ?? "";
-            LocalUserPhone = detail.LocalUserPhone ?? "";
+            LocalUserRank = "";
 
             // 대대담당자 정보
             MilitaryUserName = detail.MilitaryUserName ?? "";
             MilitaryUserRank = detail.MilitaryUserRank ?? "";
-            MilitaryUserPhone = detail.MilitaryUserPhone ?? "";
 
             // 현재 사용자 표시 설정 (RPC 결과에서 가져온 정보 활용)
             SetCurrentUserDisplay(detail);
@@ -334,14 +326,14 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         if (LocalConfirmed)
         {
             LocalConfirmedText = "확정함";
-            LocalConfirmedBg = new SolidColorBrush(Color.Parse("#2A5F2A"));
-            LocalConfirmedFg = new SolidColorBrush(Color.Parse("#88FF88"));
+            LocalConfirmedBg = new SolidColorBrush(Color.Parse("#E8F5E9"));
+            LocalConfirmedFg = new SolidColorBrush(Color.Parse("#2E7D32"));
         }
         else
         {
             LocalConfirmedText = "미확정";
-            LocalConfirmedBg = new SolidColorBrush(Color.Parse("#333333"));
-            LocalConfirmedFg = new SolidColorBrush(Color.Parse("#888888"));
+            LocalConfirmedBg = new SolidColorBrush(Color.Parse("#E5E5EA"));
+            LocalConfirmedFg = new SolidColorBrush(Color.Parse("#8E8E93"));
         }
 
         // 대대담당자 확정 상태
@@ -349,14 +341,14 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
         if (MilitaryConfirmed)
         {
             MilitaryConfirmedText = "확정함";
-            MilitaryConfirmedBg = new SolidColorBrush(Color.Parse("#2A5F2A"));
-            MilitaryConfirmedFg = new SolidColorBrush(Color.Parse("#88FF88"));
+            MilitaryConfirmedBg = new SolidColorBrush(Color.Parse("#E8F5E9"));
+            MilitaryConfirmedFg = new SolidColorBrush(Color.Parse("#2E7D32"));
         }
         else
         {
             MilitaryConfirmedText = "미확정";
-            MilitaryConfirmedBg = new SolidColorBrush(Color.Parse("#333333"));
-            MilitaryConfirmedFg = new SolidColorBrush(Color.Parse("#888888"));
+            MilitaryConfirmedBg = new SolidColorBrush(Color.Parse("#E5E5EA"));
+            MilitaryConfirmedFg = new SolidColorBrush(Color.Parse("#8E8E93"));
         }
 
         // 상태 표시
