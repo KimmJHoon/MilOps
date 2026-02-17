@@ -13,10 +13,10 @@
         <!-- 로고 영역 -->
         <StackPanel Spacing="12" Margin="0,40,0,20">
           <Border Width="80" Height="80" CornerRadius="20" Background="#FFFFFF"
-                  HorizontalAlignment="Center">
-            <TextBlock Text="&#xe7f1;" FontFamily="{StaticResource MaterialIcons}"
-                       FontSize="40" Foreground="#00a872"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                  HorizontalAlignment="Center" Padding="8">
+            <Image Source="{StaticResource Mark31Svg}"
+                   Width="64" Height="64"
+                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
           </Border>
           <TextBlock Text="군-지자체 일정관리"
                      FontSize="26"
