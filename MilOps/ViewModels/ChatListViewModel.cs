@@ -53,11 +53,8 @@ public partial class ChatListViewModel : ViewModelBase
         {
             var items = await ChatDataService.GetConversationsAsync(user.Id);
 
-            Conversations.Clear();
-            foreach (var item in items)
-            {
-                Conversations.Add(item);
-            }
+            // 일괄 교체 — N번 CollectionChanged → 1번
+            Conversations = new ObservableCollection<ChatListItem>(items);
 
             HasConversations = Conversations.Any();
         }

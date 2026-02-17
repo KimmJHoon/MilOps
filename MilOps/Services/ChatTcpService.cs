@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
@@ -33,6 +34,7 @@ public static class ChatTcpService
         if (IsConnected) return;
 
         _userId = userId;
+        var totalSw = Stopwatch.StartNew();
 
         try
         {
@@ -43,6 +45,7 @@ public static class ChatTcpService
             using var connectCts = new CancellationTokenSource(TimeSpan.FromSeconds(3));
             using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(connectCts.Token, _cts.Token);
 
+            var sw = Stopwatch.StartNew();
             try
             {
                 await _tcp.ConnectAsync(ChatServerConfig.Host, ChatServerConfig.Port, linkedCts.Token);
@@ -51,10 +54,12 @@ public static class ChatTcpService
             {
                 throw new TimeoutException($"서버 연결 시간 초과 ({ChatServerConfig.Host}:{ChatServerConfig.Port})");
             }
+            Debug.WriteLine($"[PERF][ChatTcp] TCP 연결: {sw.ElapsedMilliseconds}ms");
 
             _stream = _tcp.GetStream();
 
             // AUTH 패킷 전송
+            sw.Restart();
             var authPacket = new ChatPacket
             {
                 Type = PacketType.AUTH,
@@ -64,6 +69,7 @@ public static class ChatTcpService
 
             // AUTH_ACK 대기
             var ack = await PacketReader.ReadAsync(_stream, _cts.Token);
+            Debug.WriteLine($"[PERF][ChatTcp] AUTH 핸드셰이크: {sw.ElapsedMilliseconds}ms");
             if (ack?.Type != PacketType.AUTH_ACK || ack.Success != true)
             {
                 throw new Exception(ack?.Error ?? "AUTH failed");
@@ -78,11 +84,12 @@ public static class ChatTcpService
             // 로컬 큐 플러시
             _ = Task.Run(() => FlushPendingQueueAsync(userId));
 
-            System.Diagnostics.Debug.WriteLine("[ChatTcpService] Connected & authenticated");
+            totalSw.Stop();
+            Debug.WriteLine($"[PERF][ChatTcp] ===== 연결 총 소요: {totalSw.ElapsedMilliseconds}ms =====");
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ChatTcpService] Connect failed: {ex.Message}");
+            Debug.WriteLine($"[ChatTcpService] Connect failed: {ex.Message}");
             Cleanup();
             throw;
         }
@@ -93,6 +100,7 @@ public static class ChatTcpService
     /// </summary>
     public static async Task SendMessageAsync(Guid senderId, Guid receiverId, string content)
     {
+        var sw = Stopwatch.StartNew();
         // 연결이 끊겨 있으면 재연결 시도
         if (!IsConnected)
         {
@@ -120,11 +128,12 @@ public static class ChatTcpService
                     Content = content
                 };
                 await PacketWriter.WriteAsync(_stream, packet, _cts.Token);
+                Debug.WriteLine($"[PERF][ChatTcp] 메시지 전송 (TCP write): {sw.ElapsedMilliseconds}ms");
                 return;
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[ChatTcpService] Send failed, queueing: {ex.Message}");
+                Debug.WriteLine($"[ChatTcpService] Send failed, queueing: {ex.Message}");
                 Cleanup();
             }
         }

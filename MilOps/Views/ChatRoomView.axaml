@@ -99,6 +99,12 @@
       </Grid>
     </Border>
 
+    <!-- 워터마크 (최상단 레이어, IsHitTestVisible=False로 터치 통과) -->
+    <Image Grid.RowSpan="3" Source="{StaticResource Mark31WatermarkSvg}"
+           Width="240" Height="280"
+           HorizontalAlignment="Center" VerticalAlignment="Center"
+           IsHitTestVisible="False"/>
+
     <!-- 로딩 -->
     <controls:LoadingOverlay Grid.Row="1" IsVisible="{Binding IsLoading}"/>
   </Grid>

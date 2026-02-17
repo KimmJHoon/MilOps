@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using MilOps.Models;
 using static Supabase.Postgrest.Constants;
@@ -16,22 +17,30 @@ public static class ChatDataService
     /// </summary>
     public static async Task<List<ChatListItem>> GetConversationsAsync(Guid userId)
     {
+        var totalSw = Stopwatch.StartNew();
         try
         {
             var client = SupabaseService.Client;
             if (client == null) return new List<ChatListItem>();
 
+            var sw = Stopwatch.StartNew();
             var result = await client.Rpc("get_conversations",
                 new Dictionary<string, object> { { "p_user_id", userId.ToString() } });
+            Debug.WriteLine($"[PERF][ChatData] get_conversations RPC: {sw.ElapsedMilliseconds}ms");
 
             if (result?.Content == null) return new List<ChatListItem>();
 
+            sw.Restart();
             var items = Newtonsoft.Json.JsonConvert.DeserializeObject<List<ChatListItem>>(result.Content);
+            Debug.WriteLine($"[PERF][ChatData] 대화목록 파싱 ({items?.Count ?? 0}건): {sw.ElapsedMilliseconds}ms");
+
+            totalSw.Stop();
+            Debug.WriteLine($"[PERF][ChatData] ===== GetConversations 총 소요: {totalSw.ElapsedMilliseconds}ms =====");
             return items ?? new List<ChatListItem>();
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ChatDataService] GetConversationsAsync error: {ex.Message}");
+            Debug.WriteLine($"[ChatDataService] GetConversationsAsync error: {ex.Message}");
             return new List<ChatListItem>();
         }
     }
@@ -42,25 +51,34 @@ public static class ChatDataService
     /// </summary>
     public static async Task<List<Message>> GetMessagesAsync(Guid myId, Guid partnerId, int limit = 50)
     {
+        var totalSw = Stopwatch.StartNew();
         try
         {
             var client = SupabaseService.Client;
             if (client == null) return new List<Message>();
 
-            var sent = await client.From<Message>()
+            var sw = Stopwatch.StartNew();
+            var sentTask = client.From<Message>()
                 .Filter("sender_id", Operator.Equals, myId.ToString())
                 .Filter("receiver_id", Operator.Equals, partnerId.ToString())
                 .Order("created_at", Ordering.Descending)
                 .Limit(limit)
                 .Get();
 
-            var received = await client.From<Message>()
+            var receivedTask = client.From<Message>()
                 .Filter("sender_id", Operator.Equals, partnerId.ToString())
                 .Filter("receiver_id", Operator.Equals, myId.ToString())
                 .Order("created_at", Ordering.Descending)
                 .Limit(limit)
                 .Get();
 
+            await Task.WhenAll(sentTask, receivedTask);
+            Debug.WriteLine($"[PERF][ChatData] 보낸+받은 메시지 병렬 조회: {sw.ElapsedMilliseconds}ms");
+
+            var sent = await sentTask;
+            var received = await receivedTask;
+
+            sw.Restart();
             var messages = new List<Message>();
             if (sent?.Models != null) messages.AddRange(sent.Models);
             if (received?.Models != null) messages.AddRange(received.Models);
@@ -69,15 +87,19 @@ public static class ChatDataService
 
             if (messages.Count > limit)
                 messages = messages.GetRange(messages.Count - limit, limit);
+            Debug.WriteLine($"[PERF][ChatData] 메시지 병합+정렬 ({messages.Count}건): {sw.ElapsedMilliseconds}ms");
 
-            // 로컬 캐시에 저장
+            sw.Restart();
             await CacheMessagesAsync(messages);
+            Debug.WriteLine($"[PERF][ChatData] 로컬 캐시 저장: {sw.ElapsedMilliseconds}ms");
 
+            totalSw.Stop();
+            Debug.WriteLine($"[PERF][ChatData] ===== GetMessages 총 소요: {totalSw.ElapsedMilliseconds}ms =====");
             return messages;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ChatDataService] GetMessagesAsync error: {ex.Message}");
+            Debug.WriteLine($"[ChatDataService] GetMessagesAsync error: {ex.Message}");
             return await GetCachedMessagesAsync(partnerId.ToString(), limit);
         }
     }
