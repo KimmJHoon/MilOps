@@ -508,20 +508,11 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
                 return;
             }
 
-            // 양측 모두 확정 시 상태 변경
+            // 양측 모두 확정 시 상태 변경 (DB 트리거가 자동으로 status='confirmed'로 변경하므로 별도 Update 불필요)
             bool bothConfirmed = _schedule.LocalConfirmed && _schedule.MilitaryConfirmed;
 
             if (bothConfirmed)
             {
-#pragma warning disable CS8603 // Possible null reference return
-                await client.From<Schedule>()
-                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
-                    .Set(s => s.Status, "confirmed")
-                    .Set(s => s.StatusOrder, 4)
-                    .Set(s => s.ConfirmedAt, now)
-                    .Update();
-#pragma warning restore CS8603
-
                 _schedule.Status = "confirmed";
                 _schedule.StatusOrder = 4;
                 _schedule.ConfirmedAt = now;
@@ -536,11 +527,63 @@ public partial class ScheduleConfirmViewModel : ViewModelBase
             // UI 업데이트
             UpdateConfirmationStatus();
 
-            // 상태 변경 이벤트 발생 (양측 확정 시에만 상태가 변경됨)
+            // super_admin (행정안전부 + 제2작전사)에게 알림 전송 (fire-and-forget)
+            // 한 쪽 확정이든 양측 확정이든 모두 알림
+            var confirmMsg = bothConfirmed
+                ? $"{CompanyName} 방문 일정이 최종 확정되었습니다."
+                : $"{CompanyName} 방문 일정 확정이 진행 중입니다. (한 쪽 확정 완료)";
+            _ = NotificationService.NotifySuperAdminsAsync(
+                "schedule_confirmed",
+                bothConfirmed ? "일정 최종 확정" : "일정 확정 진행",
+                confirmMsg,
+                _scheduleId);
+
+            // 상대방 담당자에게 알림 전송 (fire-and-forget)
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (isLocalUser && _schedule.MilitaryUserId != Guid.Empty)
+                    {
+                        // 지자체가 확정 → 대대담당자에게 알림
+                        var msg = bothConfirmed
+                            ? $"{CompanyName} 방문 일정이 최종 확정되었습니다."
+                            : $"{CompanyName} 방문 일정에 지자체담당자가 확정했습니다. 확정해주세요!";
+                        await NotificationService.CreateNotificationAsync(
+                            _schedule.MilitaryUserId,
+                            "schedule_confirmed",
+                            bothConfirmed ? "일정 최종 확정" : "일정 확정 요청",
+                            msg, _scheduleId);
+                    }
+                    else if (isMilitaryUser && _schedule.LocalUserId != Guid.Empty)
+                    {
+                        // 대대가 확정 → 지자체담당자에게 알림
+                        var msg = bothConfirmed
+                            ? $"{CompanyName} 방문 일정이 최종 확정되었습니다."
+                            : $"{CompanyName} 방문 일정에 대대담당자가 확정했습니다. 확정해주세요!";
+                        await NotificationService.CreateNotificationAsync(
+                            _schedule.LocalUserId,
+                            "schedule_confirmed",
+                            bothConfirmed ? "일정 최종 확정" : "일정 확정 요청",
+                            msg, _scheduleId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[ScheduleConfirmVM] Notify counterpart error: {ex.Message}");
+                }
+            });
+
+            // 상태 변경 이벤트 발생 (한 쪽 확정이든 양측 확정이든 항상 발생)
             if (bothConfirmed)
             {
                 ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "confirmed", 4));
                 CloseRequested?.Invoke(this, EventArgs.Empty);
+            }
+            else
+            {
+                // 한 쪽만 확정한 경우에도 이벤트 발생 → 캘린더 갱신용
+                ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "reserved", 3));
             }
         }
         catch (Exception ex)

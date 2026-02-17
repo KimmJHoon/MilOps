@@ -151,11 +151,11 @@ public partial class ScheduleReserveViewModel : ViewModelBase
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _schedule.MilitaryUserId.ToString())
                 .Single();
 
-            // 모든 지역/대대 정보를 한번에 로드
-            var districtsTask = client.From<District>().Get();
-            var regionsTask = client.From<Region>().Get();
-            var battalionsTask = client.From<Battalion>().Get();
-            var divisionsTask = client.From<Division>().Get();
+            // 모든 지역/대대 정보를 한번에 로드 (QueryHelper 사용)
+            var districtsTask = QueryHelper.GetAllTask<District>();
+            var regionsTask = QueryHelper.GetAllTask<Region>();
+            var battalionsTask = QueryHelper.GetAllTask<Battalion>();
+            var divisionsTask = QueryHelper.GetAllTask<Division>();
 
             await Task.WhenAll(companyTask, localUserTask, militaryUserTask,
                               districtsTask, regionsTask, battalionsTask, divisionsTask);
@@ -163,10 +163,10 @@ public partial class ScheduleReserveViewModel : ViewModelBase
             var company = companyTask.Result;
             var localUser = localUserTask.Result;
             var militaryUser = militaryUserTask.Result;
-            var districts = districtsTask.Result.Models;
-            var regions = regionsTask.Result.Models;
-            var battalions = battalionsTask.Result.Models;
-            var divisions = divisionsTask.Result.Models;
+            var districts = districtsTask.Result;
+            var regions = regionsTask.Result;
+            var battalions = battalionsTask.Result;
+            var divisions = divisionsTask.Result;
 
             // 업체 정보 설정
             if (company != null)
@@ -241,10 +241,9 @@ public partial class ScheduleReserveViewModel : ViewModelBase
 
         Dispatcher.UIThread.Post(() =>
         {
-            AvailableDates.Clear();
-            foreach (var group in dateGroups)
-            {
-                AvailableDates.Add(new ReserveDateItem
+            // 일괄 교체 — N번 CollectionChanged → 1번
+            AvailableDates = new ObservableCollection<ReserveDateItem>(
+                dateGroups.Select(group => new ReserveDateItem
                 {
                     Date = group.Key,
                     DayDisplay = group.Key.Day.ToString() + "일",
@@ -255,8 +254,7 @@ public partial class ScheduleReserveViewModel : ViewModelBase
                         EndTime = t.EndTime,
                         IsSelected = false
                     }).ToList()
-                });
-            }
+                }));
         });
     }
 
@@ -277,13 +275,9 @@ public partial class ScheduleReserveViewModel : ViewModelBase
         dateItem.IsSelected = true;
         SelectedDate = dateItem;
 
-        // 해당 날짜의 시간 슬롯 표시
-        AvailableTimeSlotsForDate.Clear();
-        foreach (var slot in dateItem.TimeSlots)
-        {
-            slot.IsSelected = false;
-            AvailableTimeSlotsForDate.Add(slot);
-        }
+        // 해당 날짜의 시간 슬롯 표시 — 일괄 교체
+        foreach (var slot in dateItem.TimeSlots) slot.IsSelected = false;
+        AvailableTimeSlotsForDate = new ObservableCollection<ReserveTimeSlotItem>(dateItem.TimeSlots);
 
         SelectedTimeSlot = null;
         UpdateReservationDisplay();
@@ -360,10 +354,12 @@ public partial class ScheduleReserveViewModel : ViewModelBase
             }
 
             // 1. 일정 업데이트
+            // 날짜를 UTC로 명시하여 KST→UTC 변환으로 인한 날짜 밀림 방지
+            var reservedDateUtc = DateTime.SpecifyKind(SelectedDate.Date.Date, DateTimeKind.Utc);
 #pragma warning disable CS8603 // Possible null reference return
             await client.From<Schedule>()
                 .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
-                .Set(s => s.ReservedDate, SelectedDate.Date)
+                .Set(s => s.ReservedDate, reservedDateUtc)
                 .Set(s => s.ReservedStartTime, SelectedTimeSlot.StartTime)
                 .Set(s => s.ReservedEndTime, SelectedTimeSlot.EndTime)
                 .Set(s => s.Status, "reserved")
@@ -381,6 +377,13 @@ public partial class ScheduleReserveViewModel : ViewModelBase
             }
 
             SuccessMessage = "예약이 완료되었습니다.";
+
+            // super_admin (행정안전부 + 제2작전사)에게 알림 전송 (fire-and-forget)
+            _ = NotificationService.NotifySuperAdminsAsync(
+                "schedule_reserved",
+                "일정 예약 완료",
+                $"{CompanyName} 방문 일정이 예약되었습니다.",
+                _scheduleId);
 
             // 상태 변경 이벤트 발생 (reserved, statusOrder=3)
             ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "reserved", 3));

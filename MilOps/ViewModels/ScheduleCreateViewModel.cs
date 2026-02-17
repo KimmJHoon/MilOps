@@ -171,26 +171,26 @@ public partial class ScheduleCreateViewModel : ViewModelBase
                 return;
             }
 
-            // 모든 데이터 병렬 로드
-            var regionsTask = client.From<Region>().Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true").Get();
-            var districtsTask = client.From<District>().Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true").Get();
-            var battalionsTask = client.From<Battalion>().Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true").Get();
-            var companiesTask = client.From<Company>().Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true").Get();
-            var usersTask = client.From<User>().Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true").Get();
-            var divisionsTask = client.From<Division>().Get();
+            // 모든 데이터 병렬 로드 (QueryHelper 사용)
+            var regionsTask = QueryHelper.GetActiveTask<Region>();
+            var districtsTask = QueryHelper.GetActiveTask<District>();
+            var battalionsTask = QueryHelper.GetActiveTask<Battalion>();
+            var companiesTask = QueryHelper.GetActiveTask<Company>();
+            var usersTask = QueryHelper.GetActiveTask<User>();
+            var divisionsTask = QueryHelper.GetAllTask<Division>();
 
             await Task.WhenAll(regionsTask, districtsTask, battalionsTask, companiesTask, usersTask, divisionsTask);
 
-            _allRegions = regionsTask.Result.Models;
-            _allDistricts = districtsTask.Result.Models;
-            _allBattalions = battalionsTask.Result.Models;
-            _allCompanies = companiesTask.Result.Models;
-            _allUsers = usersTask.Result.Models;
+            _allRegions = regionsTask.Result;
+            _allDistricts = districtsTask.Result;
+            _allBattalions = battalionsTask.Result;
+            _allCompanies = companiesTask.Result;
+            _allUsers = usersTask.Result;
 
             // 현재 사용자의 Division 표시
             if (currentUser.DivisionId.HasValue)
             {
-                var division = divisionsTask.Result.Models.FirstOrDefault(d => d.Id == currentUser.DivisionId.Value);
+                var division = divisionsTask.Result.FirstOrDefault(d => d.Id == currentUser.DivisionId.Value);
                 if (division != null)
                 {
                     CurrentUserDisplay = $"👤 {currentUser.FullDisplayName} ({division.Name} 사단담당자)";
@@ -484,13 +484,23 @@ public partial class ScheduleCreateViewModel : ViewModelBase
             var currentUser = AuthService.CurrentUser;
             if (currentUser == null) return;
 
+            // 방어적 null 체크
+            var company = SelectedCompany;
+            var localUser = _selectedLocalUser;
+            var militaryUser = _selectedMilitaryUser;
+            if (company == null || localUser == null || militaryUser == null)
+            {
+                ErrorMessage = "필수 정보가 누락되었습니다. 다시 선택해주세요.";
+                return;
+            }
+
             // 새 일정 생성
             var newSchedule = new Schedule
             {
                 Id = Guid.NewGuid(),
-                CompanyId = SelectedCompany!.Id,
-                LocalUserId = _selectedLocalUser!.Id,
-                MilitaryUserId = _selectedMilitaryUser!.Id,
+                CompanyId = company.Id,
+                LocalUserId = localUser.Id,
+                MilitaryUserId = militaryUser.Id,
                 CreatedBy = currentUser.Id,
                 Status = "created",
                 StatusOrder = 1
@@ -500,7 +510,23 @@ public partial class ScheduleCreateViewModel : ViewModelBase
 
             SuccessMessage = "일정이 생성되었습니다.";
 
-            // TODO: 알림 기능 구현 시 지자체담당자에게 알림 발송
+            // super_admin (행정안전부 + 제2작전사)에게 알림 전송 (fire-and-forget)
+            _ = NotificationService.NotifySuperAdminsAsync(
+                "schedule_created",
+                "새 일정 생성",
+                $"{company.Name} 방문 일정이 생성되었습니다.",
+                newSchedule.Id);
+
+            // 담당자(지자체/군)에게도 알림 전송
+            _ = Task.Run(async () =>
+            {
+                await NotificationService.CreateNotificationAsync(
+                    localUser.Id, "schedule_created", "새 일정 배정",
+                    $"{company.Name} 방문 일정이 배정되었습니다.", newSchedule.Id);
+                await NotificationService.CreateNotificationAsync(
+                    militaryUser.Id, "schedule_created", "새 일정 배정",
+                    $"{company.Name} 방문 일정이 배정되었습니다.", newSchedule.Id);
+            });
 
             // 이벤트 발생
             ScheduleCreated?.Invoke(this, EventArgs.Empty);

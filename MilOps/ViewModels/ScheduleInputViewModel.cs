@@ -378,11 +378,14 @@ public partial class ScheduleInputViewModel : ViewModelBase
         }
 
         // 1. 일정 업데이트
+        // 날짜를 UTC로 명시하여 KST→UTC 변환으로 인한 날짜 밀림 방지
+        var availableStartUtc = DateTime.SpecifyKind(AvailableStartDate.Value.Date, DateTimeKind.Utc);
+        var availableEndUtc = DateTime.SpecifyKind(AvailableEndDate.Value.Date, DateTimeKind.Utc);
 #pragma warning disable CS8603 // Possible null reference return
         await client.From<Schedule>()
             .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, _scheduleId.ToString())
-            .Set(s => s.AvailableStart, AvailableStartDate.Value)
-            .Set(s => s.AvailableEnd, AvailableEndDate.Value)
+            .Set(s => s.AvailableStart, availableStartUtc)
+            .Set(s => s.AvailableEnd, availableEndUtc)
             .Set(s => s.Memo, string.IsNullOrWhiteSpace(Memo) ? null : Memo)
             .Set(s => s.Status, "inputted")
             .Set(s => s.StatusOrder, 2)
@@ -395,18 +398,20 @@ public partial class ScheduleInputViewModel : ViewModelBase
             .Delete();
 
         // 3. 새 가능 시간 생성 (선택된 날짜 범위 내 모든 날짜에 대해)
+        // 날짜를 UTC로 명시하여 KST→UTC 변환으로 인한 날짜 밀림 방지
         var startDate = AvailableStartDate.Value.Date;
         var endDate = AvailableEndDate.Value.Date;
 
         for (var date = startDate; date <= endDate; date = date.AddDays(1))
         {
+            var dateUtc = DateTime.SpecifyKind(date, DateTimeKind.Utc);
             foreach (var timeSlot in selectedTimes)
             {
                 var availableTime = new ScheduleAvailableTime
                 {
                     Id = Guid.NewGuid(),
                     ScheduleId = _scheduleId,
-                    AvailableDate = date,
+                    AvailableDate = dateUtc,
                     StartTime = timeSlot.StartTime,
                     EndTime = timeSlot.EndTime,
                     IsSelected = false
@@ -417,6 +422,13 @@ public partial class ScheduleInputViewModel : ViewModelBase
         }
 
         SuccessMessage = "가능 일정이 저장되었습니다.";
+
+        // super_admin (행정안전부 + 제2작전사)에게 알림 전송 (fire-and-forget)
+        _ = NotificationService.NotifySuperAdminsAsync(
+            "schedule_inputted",
+            "일정 입력 완료",
+            $"{CompanyName} 방문 가능 일정이 입력되었습니다.",
+            _scheduleId);
 
         // 상태 변경 이벤트 발생 (inputted, statusOrder=2)
         ScheduleStatusChanged?.Invoke(this, new ScheduleStatusChangedEventArgs(_scheduleId, "inputted", 2));
