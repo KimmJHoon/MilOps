@@ -1,0 +1,246 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="using:MilOps.ViewModels"
+             xmlns:models="using:MilOps.Models"
+             xmlns:svg="using:Avalonia.Svg.Skia"
+             mc:Ignorable="d" d:DesignWidth="400" d:DesignHeight="800"
+             x:Class="MilOps.Views.HomeView"
+             x:DataType="vm:HomeViewModel"
+             DataContext="{x:Null}">
+
+  <UserControl.Styles>
+    <!-- 상태 블록 버튼: hover/focus/pressed 효과 제거 -->
+    <Style Selector="Button.statusBlock">
+      <Setter Property="Cursor" Value="Hand"/>
+    </Style>
+    <Style Selector="Button.statusBlock:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.statusBlock:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+    <Style Selector="Button.statusBlock:focus /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent"/>
+    </Style>
+  </UserControl.Styles>
+
+  <Panel>
+    <!-- 메인 컨텐츠 -->
+    <ScrollViewer Background="#F2F2F7">
+      <StackPanel Spacing="16" Margin="16">
+
+        <!-- ========== 일정 공지 섹션 (최상단) ========== -->
+        <Border Background="#FFFFFF" CornerRadius="16" Padding="20">
+          <StackPanel Spacing="12">
+            <!-- 헤더 -->
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="&#xef49;" FontFamily="{StaticResource MaterialIcons}"
+                           FontSize="20" Foreground="#FF9500" VerticalAlignment="Center"/>
+                <TextBlock Text="일정 공지" FontSize="16" Foreground="#1C1C1E"
+                           VerticalAlignment="Center"/>
+              </StackPanel>
+              <Button Grid.Column="1" Command="{Binding ViewAllSchedulesCommand}"
+                      Background="Transparent" BorderThickness="0" Padding="4">
+                <TextBlock Text="전체보기 ›" FontSize="13" Foreground="#007AFF"/>
+              </Button>
+            </Grid>
+
+            <!-- 빈 상태 -->
+            <Border Background="#F2F2F7" CornerRadius="12" Padding="24"
+                    IsVisible="{Binding !HasRecentSchedules}" HorizontalAlignment="Stretch">
+              <StackPanel HorizontalAlignment="Center" Spacing="8">
+                <TextBlock Text="&#xef49;" FontFamily="{StaticResource MaterialIcons}"
+                           FontSize="32" Foreground="#C7C7CC" HorizontalAlignment="Center"/>
+                <TextBlock Text="최근 일정이 없습니다" FontSize="14" Foreground="#8E8E93"
+                           HorizontalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+
+            <!-- 최근 일정 목록 -->
+            <ItemsControl ItemsSource="{Binding RecentSchedules}"
+                          IsVisible="{Binding HasRecentSchedules}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScheduleListItem">
+                  <Button Command="{Binding $parent[ItemsControl].((vm:HomeViewModel)DataContext).SelectRecentScheduleCommand}"
+                          CommandParameter="{Binding}"
+                          Background="Transparent" BorderThickness="0"
+                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                          Padding="0,4">
+                    <Border Background="#F2F2F7" CornerRadius="10" Padding="14,10">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <!-- 업체명 + 대대명 -->
+                        <StackPanel Grid.Column="0" Spacing="2">
+                          <TextBlock Text="{Binding CompanyName}" FontSize="14" Foreground="#1C1C1E"
+                                     TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding BattalionName}" FontSize="12" Foreground="#8E8E93"
+                                     TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                        <!-- 상태 뱃지 -->
+                        <Border Grid.Column="1" Background="{Binding StatusColor}"
+                                CornerRadius="8" Padding="10,5" Margin="10,0,0,0"
+                                VerticalAlignment="Center">
+                          <TextBlock Text="{Binding StatusDisplay}" FontSize="12" Foreground="White"/>
+                        </Border>
+                      </Grid>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+        <!-- ========== 일정 현황 카드 ========== -->
+        <Border Background="#FFFFFF" CornerRadius="16" Padding="20">
+          <StackPanel Spacing="14">
+            <!-- 헤더 -->
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <TextBlock Text="&#xe0ee;" FontFamily="{StaticResource MaterialIcons}"
+                         FontSize="20" Foreground="#00a872" VerticalAlignment="Center"/>
+              <TextBlock Text="일정 현황" FontSize="16" Foreground="#1C1C1E"
+                         VerticalAlignment="Center"/>
+              <TextBlock Text="{Binding AllCount, StringFormat='총 {0}건'}"
+                         FontSize="13" Foreground="#8E8E93" VerticalAlignment="Center"
+                         Margin="4,0,0,0"/>
+            </StackPanel>
+
+            <!-- 2x2 상태 그리드 (클릭 시 해당 상태로 필터링된 일정 목록 이동) -->
+            <Grid ColumnDefinitions="*,8,*" RowDefinitions="Auto,8,Auto">
+              <!-- 생성 -->
+              <Button Grid.Row="0" Grid.Column="0" Classes="statusBlock"
+                      Command="{Binding SelectStatusFilterCommand}" CommandParameter="created"
+                      Background="Transparent" BorderThickness="0" Padding="0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <Border Background="#F2F2F7" CornerRadius="12" Padding="16,12">
+                  <StackPanel HorizontalAlignment="Center" Spacing="4">
+                    <TextBlock Text="{Binding CreatedCount}" FontSize="28" Foreground="#8E8E93"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="생성" FontSize="12" Foreground="#8E8E93"
+                               HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </Button>
+
+              <!-- 입력 -->
+              <Button Grid.Row="0" Grid.Column="2" Classes="statusBlock"
+                      Command="{Binding SelectStatusFilterCommand}" CommandParameter="inputted"
+                      Background="Transparent" BorderThickness="0" Padding="0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <Border Background="#FFF3E0" CornerRadius="12" Padding="16,12">
+                  <StackPanel HorizontalAlignment="Center" Spacing="4">
+                    <TextBlock Text="{Binding InputtedCount}" FontSize="28" Foreground="#FF9500"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="입력" FontSize="12" Foreground="#FF9500"
+                               HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </Button>
+
+              <!-- 예약 -->
+              <Button Grid.Row="2" Grid.Column="0" Classes="statusBlock"
+                      Command="{Binding SelectStatusFilterCommand}" CommandParameter="reserved"
+                      Background="Transparent" BorderThickness="0" Padding="0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <Border Background="#E3F2FD" CornerRadius="12" Padding="16,12">
+                  <StackPanel HorizontalAlignment="Center" Spacing="4">
+                    <TextBlock Text="{Binding ReservedCount}" FontSize="28" Foreground="#007AFF"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="예약" FontSize="12" Foreground="#007AFF"
+                               HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </Button>
+
+              <!-- 확정 -->
+              <Button Grid.Row="2" Grid.Column="2" Classes="statusBlock"
+                      Command="{Binding SelectStatusFilterCommand}" CommandParameter="confirmed"
+                      Background="Transparent" BorderThickness="0" Padding="0"
+                      HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                <Border Background="#E8F5E9" CornerRadius="12" Padding="16,12">
+                  <StackPanel HorizontalAlignment="Center" Spacing="4">
+                    <TextBlock Text="{Binding ConfirmedCount}" FontSize="28" Foreground="#00a872"
+                               HorizontalAlignment="Center"/>
+                    <TextBlock Text="확정" FontSize="12" Foreground="#00a872"
+                               HorizontalAlignment="Center"/>
+                  </StackPanel>
+                </Border>
+              </Button>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- ========== 오늘의 일정 섹션 ========== -->
+        <Border Background="#FFFFFF" CornerRadius="16" Padding="20" Margin="0,0,0,16">
+          <StackPanel Spacing="12">
+            <!-- 헤더 -->
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}"
+                           FontSize="20" Foreground="#007AFF" VerticalAlignment="Center"/>
+                <TextBlock Text="오늘의 일정" FontSize="16" Foreground="#1C1C1E"
+                           VerticalAlignment="Center"/>
+              </StackPanel>
+              <Button Grid.Column="1" Command="{Binding ViewAllSchedulesCommand}"
+                      Background="Transparent" BorderThickness="0" Padding="4">
+                <TextBlock Text="전체보기 ›" FontSize="13" Foreground="#007AFF"/>
+              </Button>
+            </Grid>
+
+            <!-- 빈 상태 -->
+            <Border Background="#F2F2F7" CornerRadius="12" Padding="24"
+                    IsVisible="{Binding !HasTodaySchedules}" HorizontalAlignment="Stretch">
+              <StackPanel HorizontalAlignment="Center" Spacing="8">
+                <TextBlock Text="&#xe935;" FontFamily="{StaticResource MaterialIcons}"
+                           FontSize="32" Foreground="#C7C7CC" HorizontalAlignment="Center"/>
+                <TextBlock Text="오늘 예정된 일정이 없습니다" FontSize="14" Foreground="#8E8E93"
+                           HorizontalAlignment="Center"/>
+              </StackPanel>
+            </Border>
+
+            <!-- 일정 목록 -->
+            <ItemsControl ItemsSource="{Binding TodaySchedules}"
+                          IsVisible="{Binding HasTodaySchedules}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:ScheduleListItem">
+                  <Button Command="{Binding $parent[ItemsControl].((vm:HomeViewModel)DataContext).SelectScheduleCommand}"
+                          CommandParameter="{Binding}"
+                          Background="Transparent" BorderThickness="0"
+                          HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch"
+                          Padding="0,4">
+                    <Border Background="#F2F2F7" CornerRadius="10" Padding="14,10">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <!-- 업체명 + 시간 -->
+                        <StackPanel Grid.Column="0" Spacing="2">
+                          <TextBlock Text="{Binding CompanyName}" FontSize="14" Foreground="#1C1C1E"
+                                     TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding ReservedTimeDisplay}" FontSize="12" Foreground="#8E8E93"
+                                     IsVisible="{Binding HasReservedTime}"/>
+                        </StackPanel>
+                        <!-- 상태 뱃지 (ScheduleListView와 동일 스타일) -->
+                        <Border Grid.Column="1" Background="{Binding StatusColor}"
+                                CornerRadius="8" Padding="10,5" Margin="10,0,0,0"
+                                VerticalAlignment="Center">
+                          <TextBlock Text="{Binding StatusDisplay}" FontSize="12" Foreground="White"/>
+                        </Border>
+                      </Grid>
+                    </Border>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </StackPanel>
+        </Border>
+
+      </StackPanel>
+    </ScrollViewer>
+
+    <!-- 워터마크 오버레이 (최상단 레이어) -->
+    <Image Source="{StaticResource Mark31WatermarkSvg}"
+           Width="240" Height="280"
+           HorizontalAlignment="Center" VerticalAlignment="Center"
+           IsHitTestVisible="False"/>
+  </Panel>
+</UserControl>

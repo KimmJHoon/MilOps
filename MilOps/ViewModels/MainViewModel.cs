@@ -30,13 +30,16 @@ public class ScheduleNavigationArgs
 public partial class MainViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private string _selectedTab = "calendar";
+    private string _selectedTab = "home";
 
     [ObservableProperty]
-    private string _currentPageTitle = "자원조사 일정표";
+    private string _currentPageTitle = "홈";
 
     [ObservableProperty]
-    private bool _isCalendarSelected = true;
+    private bool _isHomeSelected = true;
+
+    [ObservableProperty]
+    private bool _isCalendarSelected = false;
 
     [ObservableProperty]
     private bool _isScheduleSelected = false;
@@ -52,6 +55,10 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     private bool _isSettingsSelected = false;
+
+    // 헤더 알림 뱃지용 읽지않은 개수
+    [ObservableProperty]
+    private int _unreadNotificationCount = 0;
 
     [ObservableProperty]
     private bool _isDrawerOpen = false;
@@ -136,6 +143,17 @@ public partial class MainViewModel : ViewModelBase
     public MainViewModel()
     {
         UpdateUserRole();
+
+        // 알림 읽음 이벤트 구독 → 헤더 뱃지 실시간 갱신
+        NotificationService.UnreadCountChanged += OnUnreadCountChanged;
+    }
+
+    private void OnUnreadCountChanged(int delta)
+    {
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            UnreadNotificationCount = Math.Max(0, UnreadNotificationCount + delta);
+        });
     }
 
     public void RefreshUserRole()
@@ -147,11 +165,30 @@ public partial class MainViewModel : ViewModelBase
         CurrentUserName = user?.FullDisplayName ?? "";
         CurrentUserRole = user?.RoleDisplayName ?? "";
 
-        // 지역 정보 로드 (비동기)
+        // 지역 정보 로드 (비동기 fire-and-forget — 기존 호환성 유지)
         _ = LoadUserRegionAsync();
 
         // 현재 선택된 탭이 해당 역할에서 접근 불가능하면 기본 탭(캘린더)으로 리셋
         ResetToValidTab();
+    }
+
+    /// <summary>
+    /// RefreshUserRole + LoadUserRegionAsync를 병렬화할 수 있도록 Task를 반환하는 버전.
+    /// MainView.RefreshUserRoleAsync()에서 InitializeCurrentTabAsync()와 Task.WhenAll로 병렬 실행.
+    /// </summary>
+    public Task RefreshUserRoleAndGetRegionTask()
+    {
+        UpdateUserRole();
+        var user = AuthService.CurrentUser;
+
+        CurrentUserId = user?.LoginId ?? "";
+        CurrentUserName = user?.FullDisplayName ?? "";
+        CurrentUserRole = user?.RoleDisplayName ?? "";
+
+        ResetToValidTab();
+
+        // LoadUserRegionAsync의 Task를 반환하여 caller가 병렬화 가능
+        return LoadUserRegionAsync();
     }
 
     private async Task LoadUserRegionAsync()
@@ -161,62 +198,48 @@ public partial class MainViewModel : ViewModelBase
             var user = AuthService.CurrentUser;
             if (user == null) return;
 
-            var client = SupabaseService.Client;
-            if (client == null) return;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
 
-            // 5개 쿼리를 병렬로 실행
-            var regionTask = user.RegionId.HasValue
-                ? client.From<Models.Region>()
-                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.RegionId.ToString())
-                    .Single()
-                : Task.FromResult<Models.Region?>(null);
+            // 백그라운드 스레드에서 조직 캐시 조회 + 문자열 조합
+            var regionString = await Task.Run(async () =>
+            {
+                // 공유 조직 캐시에서 조회 (Preload 완료 시 0ms, 5개 개별쿼리 제거)
+                var (regions, districts, divisions, brigades, battalions) = await QueryHelper.GetOrgDataAsync();
 
-            var districtTask = user.DistrictId.HasValue
-                ? client.From<Models.District>()
-                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.DistrictId.ToString())
-                    .Single()
-                : Task.FromResult<Models.District?>(null);
+                var parts = new List<string>();
 
-            var divisionTask = user.DivisionId.HasValue
-                ? client.From<Models.Division>()
-                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.DivisionId.ToString())
-                    .Single()
-                : Task.FromResult<Models.Division?>(null);
+                if (user.RegionId.HasValue)
+                {
+                    var region = regions.Find(r => r.Id == user.RegionId.Value);
+                    if (region != null) parts.Add(region.Name);
+                }
+                if (user.DistrictId.HasValue)
+                {
+                    var district = districts.Find(d => d.Id == user.DistrictId.Value);
+                    if (district != null) parts.Add(district.Name);
+                }
+                if (user.DivisionId.HasValue)
+                {
+                    var division = divisions.Find(d => d.Id == user.DivisionId.Value);
+                    if (division != null) parts.Add(division.Name);
+                }
+                if (user.BrigadeId.HasValue)
+                {
+                    var brigade = brigades.Find(b => b.Id == user.BrigadeId.Value);
+                    if (brigade != null) parts.Add(brigade.Name);
+                }
+                if (user.BattalionId.HasValue)
+                {
+                    var battalion = battalions.Find(b => b.Id == user.BattalionId.Value);
+                    if (battalion != null) parts.Add(battalion.Name);
+                }
 
-            var brigadeTask = user.BrigadeId.HasValue
-                ? client.From<Models.Brigade>()
-                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.BrigadeId.ToString())
-                    .Single()
-                : Task.FromResult<Models.Brigade?>(null);
+                return string.Join(" ", parts);
+            });
 
-            var battalionTask = user.BattalionId.HasValue
-                ? client.From<Models.Battalion>()
-                    .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, user.BattalionId.ToString())
-                    .Single()
-                : Task.FromResult<Models.Battalion?>(null);
-
-            // 모든 쿼리 병렬 대기
-            await Task.WhenAll(regionTask, districtTask, divisionTask, brigadeTask, battalionTask);
-
-            // 결과 조합
-            var parts = new List<string>();
-
-            if (regionTask.Result != null)
-                parts.Add(regionTask.Result.Name);
-
-            if (districtTask.Result != null)
-                parts.Add(districtTask.Result.Name);
-
-            if (divisionTask.Result != null)
-                parts.Add(divisionTask.Result.Name);
-
-            if (brigadeTask.Result != null)
-                parts.Add(brigadeTask.Result.Name);
-
-            if (battalionTask.Result != null)
-                parts.Add(battalionTask.Result.Name);
-
-            CurrentUserRegion = string.Join(" ", parts);
+            // UI 프로퍼티 업데이트는 호출 스레드(UI)에서 실행
+            CurrentUserRegion = regionString;
+            System.Diagnostics.Debug.WriteLine($"[PERF][MainVM] LoadUserRegionAsync (BG 스레드): {sw.ElapsedMilliseconds}ms");
         }
         catch (Exception ex)
         {
@@ -249,9 +272,9 @@ public partial class MainViewModel : ViewModelBase
         var role = AuthService.CurrentUserRole;
         var roleString = AuthService.CurrentUser?.Role ?? "null";
 
-        IsSuperAdmin = AuthService.IsSuperAdmin;
-        IsMiddleAdmin = role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary || role == UserRole.ViewerMilitary;
-        IsUser = role == UserRole.UserLocal || role == UserRole.UserMilitary;
+        IsSuperAdmin = role.IsSuperAdmin();
+        IsMiddleAdmin = role.IsMiddleManager() || role.IsViewer();
+        IsUser = role.IsUser();
 
         // 역할이 None인 경우 기본값으로 사용자 처리 (담당자 메뉴 숨김)
         if (role == UserRole.None && AuthService.IsLoggedIn)
@@ -276,6 +299,7 @@ public partial class MainViewModel : ViewModelBase
         SelectedTab = tabName;
 
         // 모든 탭 선택 해제
+        IsHomeSelected = false;
         IsCalendarSelected = false;
         IsScheduleSelected = false;
         IsChatSelected = false;
@@ -286,6 +310,10 @@ public partial class MainViewModel : ViewModelBase
         // 선택된 탭 활성화
         switch (tabName)
         {
+            case "home":
+                IsHomeSelected = true;
+                CurrentPageTitle = "홈";
+                break;
             case "calendar":
                 IsCalendarSelected = true;
                 CurrentPageTitle = "자원조사 일정표";
@@ -337,6 +365,13 @@ public partial class MainViewModel : ViewModelBase
         IsPasswordChangeVisible = true;
         PasswordChangeMessage = "";
         IsPasswordChangeError = false;
+    }
+
+    [RelayCommand]
+    private void OpenManual()
+    {
+        IsDrawerOpen = false;
+        PdfViewerService.OpenManual();
     }
 
     [RelayCommand]
@@ -404,6 +439,21 @@ public partial class MainViewModel : ViewModelBase
         PasswordChangeMessageColor = "#00a872";
     }
 
+    /// <summary>
+    /// 헤더 알림 뱃지용 읽지않은 알림 개수 로드
+    /// </summary>
+    public async Task LoadUnreadNotificationCountAsync()
+    {
+        try
+        {
+            UnreadNotificationCount = await NotificationService.GetUnreadCountAsync();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[MainViewModel] LoadUnreadNotificationCountAsync error: {ex.Message}");
+        }
+    }
+
     // 로그아웃 완료 이벤트
     public event Action? LogoutCompleted;
 
@@ -424,13 +474,16 @@ public partial class MainViewModel : ViewModelBase
                 System.Diagnostics.Debug.WriteLine($"[MainViewModel] Cleanup error (continuing): {ex.Message}");
             }
 
-            // 2. 세션 저장소 클리어
+            // 2. 조직 데이터 공유 캐시 초기화
+            QueryHelper.ClearOrgCache();
+
+            // 3. 세션 저장소 클리어
             SessionStorageService.ClearSession();
 
-            // 3. AuthService 로그아웃
+            // 4. AuthService 로그아웃
             await AuthService.LogoutAsync();
 
-            // 4. 로그아웃 완료 이벤트 발생 (UI에서 로그인 화면으로 전환)
+            // 5. 로그아웃 완료 이벤트 발생 (UI에서 로그인 화면으로 전환)
             LogoutCompleted?.Invoke();
         }
         catch (Exception ex)

@@ -5,20 +5,20 @@ using System;
 
 namespace MilOps.Views;
 
-public partial class NotificationView : UserControl
+public partial class HomeView : UserControl
 {
-    private NotificationViewModel? _viewModel;
+    private HomeViewModel? _viewModel;
     private Guid? _lastUserId;
     private DateTime _lastLoadTime = DateTime.MinValue;
 
     // 캐시 유효 시간: 30초 이내 재진입 시 서버 재조회 스킵
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(30);
 
-    public NotificationView()
+    public HomeView()
     {
         InitializeComponent();
 
-        _viewModel = new NotificationViewModel();
+        _viewModel = new HomeViewModel();
         DataContext = _viewModel;
 
         // 로그아웃 시 상태 초기화
@@ -61,45 +61,17 @@ public partial class NotificationView : UserControl
         }
 
         // 캐시 유효 시간 내 재진입이면 서버 재조회 스킵 (빠른 탭 전환 최적화)
-        if (!userChanged && (DateTime.UtcNow - _lastLoadTime) < CacheTtl && _viewModel.HasNotifications)
+        if (!userChanged && (DateTime.UtcNow - _lastLoadTime) < CacheTtl)
         {
-            System.Diagnostics.Debug.WriteLine("[NotificationView] Cache hit — skip reload");
+            System.Diagnostics.Debug.WriteLine("[HomeView] Cache hit — skip reload");
             return;
         }
 
-        await _viewModel.LoadNotificationsAsync();
+        await _viewModel.LoadDashboardAsync();
         _lastLoadTime = DateTime.UtcNow;
     }
 
-    /// <summary>
-    /// 알림 새로고침 (외부에서 호출 가능 — 캐시 무시)
-    /// </summary>
-    public async void RefreshNotifications()
-    {
-        if (_viewModel != null)
-        {
-            await _viewModel.LoadNotificationsAsync();
-            _lastLoadTime = DateTime.UtcNow;
-        }
-    }
-
-    /// <summary>
-    /// 읽지 않은 알림 개수 조회 (외부에서 호출 가능)
-    /// </summary>
-    public async void LoadUnreadCount()
-    {
-        if (_viewModel != null)
-        {
-            await _viewModel.LoadUnreadCountAsync();
-        }
-    }
-
-    // 이벤트 노출 (MainView에서 구독용)
-    public event EventHandler? CloseRequested
-    {
-        add => _viewModel!.CloseRequested += value;
-        remove => _viewModel!.CloseRequested -= value;
-    }
+    // === 이벤트 노출 (MainView에서 구독용) ===
 
     public event Action<Guid>? OnScheduleSelected
     {
@@ -107,9 +79,16 @@ public partial class NotificationView : UserControl
         remove => _viewModel!.OnScheduleSelected -= value;
     }
 
-    public event EventHandler? OnChatSelected
+    public event Action? OnViewAllSchedules
     {
-        add => _viewModel!.OnChatSelected += value;
-        remove => _viewModel!.OnChatSelected -= value;
+        add => _viewModel!.OnViewAllSchedules += value;
+        remove => _viewModel!.OnViewAllSchedules -= value;
     }
+
+    public event Action<string>? OnStatusFilterSelected
+    {
+        add => _viewModel!.OnStatusFilterSelected += value;
+        remove => _viewModel!.OnStatusFilterSelected -= value;
+    }
+
 }

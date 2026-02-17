@@ -21,6 +21,9 @@ public partial class ScheduleListView : UserControl
     public ScheduleListView()
     {
         InitializeComponent();
+        // 부모(MainView)의 MainViewModel DataContext 상속을 차단
+        // x:DataType=ScheduleListViewModel 컴파일 바인딩이 MainViewModel로 캐스트 시도 → InvalidCastException 방지
+        DataContext = null;
     }
 
     private void RegisterCleanupHandler()
@@ -73,18 +76,22 @@ public partial class ScheduleListView : UserControl
         InitializeViewModel();
     }
 
-    protected override void OnLoaded(RoutedEventArgs e)
-    {
-        base.OnLoaded(e);
-        InitializeViewModel();
-    }
+    // OnLoaded 제거: OnAttachedToVisualTree에서 이미 InitializeViewModel() 호출됨.
+    // 두 이벤트 모두에서 호출하면 ViewModel이 생성 직후 Refresh까지 실행되어
+    // 네트워크 요청이 2배로 발생하고 Supabase 연결 포화 → 전체 앱 12초+ 지연 유발.
 
     /// <summary>
     /// 강제 초기화 (탭 전환 시 호출)
     /// </summary>
-    public void ForceInitialize()
+    public void ForceInitialize(string? statusFilter = null)
     {
         InitializeViewModel();
+
+        // 상태 필터가 지정된 경우 적용
+        if (!string.IsNullOrEmpty(statusFilter) && _viewModel != null)
+        {
+            _viewModel.SetStatusFilterCommand.Execute(statusFilter);
+        }
     }
 
     private void InitializeViewModel()
@@ -92,6 +99,7 @@ public partial class ScheduleListView : UserControl
         // 현재 사용자 정보가 없으면 무시
         if (AuthService.CurrentUser == null) return;
 
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         var currentUserId = AuthService.CurrentUser.Id;
         var currentUserRole = AuthService.CurrentUser.Role;
 
@@ -102,6 +110,7 @@ public partial class ScheduleListView : UserControl
 
         if (needsNewViewModel)
         {
+            System.Diagnostics.Debug.WriteLine($"[PERF][ScheduleListInit] 새 ViewModel 생성 시작");
             // 기존 ViewModel 정리
             if (_viewModel != null)
             {
@@ -119,11 +128,14 @@ public partial class ScheduleListView : UserControl
             DataContext = _viewModel;
             _lastUserId = currentUserId;
             _lastUserRole = currentUserRole;
+            System.Diagnostics.Debug.WriteLine($"[PERF][ScheduleListInit] 새 ViewModel 생성 완료: {sw.ElapsedMilliseconds}ms");
         }
         else
         {
+            System.Diagnostics.Debug.WriteLine($"[PERF][ScheduleListInit] Refresh 시작");
             // 동일 사용자면 데이터만 새로고침
             _viewModel?.RefreshCommand.Execute(null);
+            System.Diagnostics.Debug.WriteLine($"[PERF][ScheduleListInit] Refresh 호출 완료: {sw.ElapsedMilliseconds}ms");
         }
     }
 
