@@ -38,13 +38,18 @@ public class FcmNotifier
             };
 
             var json = System.Text.Json.JsonSerializer.Serialize(payload);
-            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+            var httpContent = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-            _httpClient.DefaultRequestHeaders.Clear();
-            _httpClient.DefaultRequestHeaders.Add("Authorization", $"Bearer {_supabaseKey}");
+            // HttpRequestMessage 사용 (thread-safe, DefaultRequestHeaders 변경 안 함)
+            var request = new HttpRequestMessage(HttpMethod.Post, url)
+            {
+                Content = httpContent
+            };
+            request.Headers.Add("Authorization", $"Bearer {_supabaseKey}");
 
-            var response = await _httpClient.PostAsync(url, content);
-            Console.WriteLine($"[FCM] Notify user {userId}: {response.StatusCode}");
+            var response = await _httpClient.SendAsync(request);
+            var responseBody = await response.Content.ReadAsStringAsync();
+            Console.WriteLine($"[FCM] Notify user {userId}: {response.StatusCode} - {responseBody}");
         }
         catch (Exception ex)
         {

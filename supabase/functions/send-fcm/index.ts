@@ -107,7 +107,13 @@ async function getAccessToken(serviceAccount: any): Promise<string> {
   return tokenData.access_token;
 }
 
-// FCM 메시지 전송
+// FCM 메시지 전송 — 결과에 에러 정보 포함
+interface SendResult {
+  success: boolean;
+  error?: string;
+  tokenInvalid?: boolean;
+}
+
 async function sendFCM(
   accessToken: string,
   projectId: string,
@@ -115,7 +121,7 @@ async function sendFCM(
   title: string,
   body: string,
   data?: Record<string, string>
-): Promise<boolean> {
+): Promise<SendResult> {
   const message: FCMMessage = {
     message: {
       token: fcmToken,
@@ -149,11 +155,13 @@ async function sendFCM(
   if (!response.ok) {
     const errorText = await response.text();
     console.error(`FCM send failed: ${response.status} - ${errorText}`);
-    return false;
+    // 토큰이 무효한 경우만 비활성화 (404 = NOT_FOUND, UNREGISTERED)
+    const tokenInvalid = response.status === 404 || errorText.includes("UNREGISTERED") || errorText.includes("NOT_FOUND");
+    return { success: false, error: `${response.status}: ${errorText}`, tokenInvalid };
   }
 
   console.log(`FCM sent successfully to token: ${fcmToken.substring(0, 20)}...`);
-  return true;
+  return { success: true };
 }
 
 Deno.serve(async (req) => {
@@ -207,6 +215,7 @@ Deno.serve(async (req) => {
 
     // 각 디바이스에 FCM 전송
     let sentCount = 0;
+    const errors: string[] = [];
     const fcmData: Record<string, string> = {
       type: payload.type || "notification",
       title: payload.title,
@@ -216,7 +225,13 @@ Deno.serve(async (req) => {
     };
 
     for (const device of devices) {
-      const success = await sendFCM(
+      // Desktop 토큰은 FCM 전송 대상이 아님 (desktop_ 접두사)
+      if (device.fcm_token.startsWith("desktop_")) {
+        console.log(`Skipping desktop token: ${device.fcm_token}`);
+        continue;
+      }
+
+      const result = await sendFCM(
         accessToken,
         firebaseServiceAccount.project_id,
         device.fcm_token,
@@ -225,14 +240,18 @@ Deno.serve(async (req) => {
         fcmData
       );
 
-      if (success) {
+      if (result.success) {
         sentCount++;
       } else {
-        // 실패한 토큰은 비활성화 (선택적)
-        await supabase
-          .from("user_devices")
-          .update({ is_active: false })
-          .eq("fcm_token", device.fcm_token);
+        errors.push(result.error || "unknown");
+        // 토큰이 무효한 경우만 비활성화 (만료/삭제된 토큰)
+        if (result.tokenInvalid) {
+          console.log(`Deactivating invalid token: ${device.fcm_token.substring(0, 20)}...`);
+          await supabase
+            .from("user_devices")
+            .update({ is_active: false })
+            .eq("fcm_token", device.fcm_token);
+        }
       }
     }
 
@@ -275,6 +294,7 @@ Deno.serve(async (req) => {
         success: true,
         sent: sentCount,
         total: devices.length,
+        ...(errors.length > 0 && { errors }),
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
