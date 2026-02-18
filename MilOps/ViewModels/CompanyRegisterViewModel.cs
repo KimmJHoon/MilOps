@@ -77,6 +77,23 @@ public partial class CompanyRegisterViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasPermission = false;
 
+    // 삭제 확인 모달
+    [ObservableProperty]
+    private bool _isDeleteConfirmVisible = false;
+
+    [ObservableProperty]
+    private string _deleteConfirmCompanyName = "";
+
+    // 삭제 불가 에러 모달
+    [ObservableProperty]
+    private bool _isDeleteErrorVisible = false;
+
+    [ObservableProperty]
+    private string _deleteErrorMessage = "";
+
+    // 삭제 대기 중인 아이템
+    private CompanyListItem? _pendingDeleteItem;
+
     // 수정 중인 업체 ID
     private Guid? _editingCompanyId;
 
@@ -129,39 +146,26 @@ public partial class CompanyRegisterViewModel : ViewModelBase
             }
 
             // Region 로드 (현재 사용자의 지역만)
-            var regionResponse = await client.From<Region>()
-                .Filter("id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.RegionId.ToString())
-                .Get();
-            _allRegions = regionResponse.Models;
+            _allRegions = await QueryHelper.GetByFilterAsync<Region>("id", currentUser.RegionId.ToString()!);
             _regionNames = _allRegions.ToDictionary(r => r.Id, r => r.Name);
 
             // District 로드 (해당 Region의 시군구만)
-            var districtResponse = await client.From<District>()
-                .Filter("region_id", Supabase.Postgrest.Constants.Operator.Equals, currentUser.RegionId.ToString())
-                .Get();
-            _allDistricts = districtResponse.Models;
+            _allDistricts = await QueryHelper.GetByFilterAsync<District>("region_id", currentUser.RegionId.ToString()!);
             _districtNames = _allDistricts.ToDictionary(d => d.Id, d => d.Name);
 
             // UI 업데이트
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                Regions.Clear();
-                foreach (var region in _allRegions)
-                {
-                    Regions.Add(region);
-                }
+                // 일괄 교체 — N번 CollectionChanged → 1번
+                Regions = new ObservableCollection<Region>(_allRegions);
 
                 if (Regions.Count > 0)
                 {
                     SelectedRegion = Regions[0];
                 }
 
-                // Districts도 바로 표시
-                Districts.Clear();
-                foreach (var district in _allDistricts)
-                {
-                    Districts.Add(district);
-                }
+                // Districts도 바로 표시 — 일괄 교체
+                Districts = new ObservableCollection<District>(_allDistricts);
             });
         }
         catch (Exception ex)
@@ -175,13 +179,9 @@ public partial class CompanyRegisterViewModel : ViewModelBase
     {
         if (value == null) return;
 
-        // 해당 Region의 District만 필터링
-        Districts.Clear();
-        var filtered = _allDistricts.Where(d => d.RegionId == value.Id).ToList();
-        foreach (var district in filtered)
-        {
-            Districts.Add(district);
-        }
+        // 해당 Region의 District만 필터링 — 일괄 교체
+        Districts = new ObservableCollection<District>(
+            _allDistricts.Where(d => d.RegionId == value.Id));
 
         SelectedDistrict = null;
     }
@@ -228,11 +228,9 @@ public partial class CompanyRegisterViewModel : ViewModelBase
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                Companies.Clear();
-                foreach (var company in companies)
-                {
-                    Companies.Add(CreateCompanyListItem(company));
-                }
+                // 일괄 교체 — N번 CollectionChanged → 1번
+                Companies = new ObservableCollection<CompanyListItem>(
+                    companies.Select(c => CreateCompanyListItem(c)));
                 ShowEmptyMessage = Companies.Count == 0;
             });
         }
@@ -340,7 +338,9 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                     Products = string.IsNullOrWhiteSpace(Products) ? null : Products.Trim(),
                     DistrictId = SelectedDistrict!.Id,
                     CreatedBy = currentUser.Id,
-                    IsActive = true
+                    IsActive = true,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
                 };
 
                 await client.From<Company>().Insert(newCompany);
@@ -378,10 +378,28 @@ public partial class CompanyRegisterViewModel : ViewModelBase
         }
     }
 
+    /// <summary>
+    /// 삭제 버튼 클릭 → 확인 모달 표시
+    /// </summary>
     [RelayCommand]
-    private async Task DeleteCompanyAsync(CompanyListItem? item)
+    private void DeleteCompany(CompanyListItem? item)
     {
         if (item == null) return;
+
+        _pendingDeleteItem = item;
+        DeleteConfirmCompanyName = item.Name;
+        IsDeleteConfirmVisible = true;
+    }
+
+    /// <summary>
+    /// 삭제 확인 모달에서 "삭제" 클릭 → 일정 존재 여부 확인 후 삭제 실행
+    /// </summary>
+    [RelayCommand]
+    private async Task ConfirmDeleteAsync()
+    {
+        IsDeleteConfirmVisible = false;
+
+        if (_pendingDeleteItem == null) return;
 
         ErrorMessage = "";
 
@@ -393,10 +411,28 @@ public partial class CompanyRegisterViewModel : ViewModelBase
             var currentUser = AuthService.CurrentUser;
             if (currentUser == null) return;
 
-            // Soft delete
+            // 해당 업체에 활성 일정이 있는지 확인 (삭제되지 않은 일정)
+            var schedulesResponse = await client.From<Schedule>()
+                .Filter("company_id", Supabase.Postgrest.Constants.Operator.Equals, _pendingDeleteItem.Id.ToString())
+                .Get();
+
+            var activeSchedules = schedulesResponse.Models
+                .Where(s => !s.IsDeleted)
+                .ToList();
+
+            if (activeSchedules.Count > 0)
+            {
+                // 일정이 존재하면 삭제 불가 에러 모달 표시
+                DeleteErrorMessage = "이미 일정이 등록된 업체는 삭제가 불가능합니다.";
+                IsDeleteErrorVisible = true;
+                _pendingDeleteItem = null;
+                return;
+            }
+
+            // 일정이 없으면 Soft delete 실행
 #pragma warning disable CS8603 // Possible null reference return
             await client.From<Company>()
-                .Where(c => c.Id == item.Id)
+                .Where(c => c.Id == _pendingDeleteItem.Id)
                 .Set(c => c.DeletedAt, DateTime.UtcNow)
                 .Set(c => c.DeletedBy, currentUser.Id)
                 .Set(c => c.IsActive, false)
@@ -404,6 +440,7 @@ public partial class CompanyRegisterViewModel : ViewModelBase
 #pragma warning restore CS8603
 
             SuccessMessage = "업체가 삭제되었습니다.";
+            _pendingDeleteItem = null;
 
             // 목록 새로고침
             await LoadCompaniesAsync();
@@ -412,7 +449,28 @@ public partial class CompanyRegisterViewModel : ViewModelBase
         {
             System.Diagnostics.Debug.WriteLine($"업체 삭제 실패: {ex.Message}\n{ex.StackTrace}");
             ErrorMessage = "업체 삭제에 실패했습니다.";
+            _pendingDeleteItem = null;
         }
+    }
+
+    /// <summary>
+    /// 삭제 확인 모달에서 "취소" 클릭
+    /// </summary>
+    [RelayCommand]
+    private void CancelDelete()
+    {
+        IsDeleteConfirmVisible = false;
+        _pendingDeleteItem = null;
+    }
+
+    /// <summary>
+    /// 삭제 에러 모달 닫기
+    /// </summary>
+    [RelayCommand]
+    private void CloseDeleteError()
+    {
+        IsDeleteErrorVisible = false;
+        DeleteErrorMessage = "";
     }
 
     [RelayCommand]
@@ -472,5 +530,5 @@ public class CompanyListItem
     public DateTime CreatedAt { get; set; }
 
     public string LocationDisplay => $"{RegionName} {DistrictName}";
-    public string CreatedAtDisplay => CreatedAt.ToLocalTime().ToString("yyyy-MM-dd");
+    public string CreatedAtDisplay => CreatedAt.Year > 2000 ? CreatedAt.ToLocalTime().ToString("yyyy-MM-dd") : "";
 }

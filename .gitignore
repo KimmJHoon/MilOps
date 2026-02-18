@@ -504,3 +504,10 @@ service-account*.json
 /nul
 /담당자관리.png
 milops-987b8-firebase-adminsdk-fbsvc-80a779707d.json
+
+# Android SDK platform-tools
+platform-tools/
+
+# Generated reports
+work-report.html
+fcm-setup-guide.html

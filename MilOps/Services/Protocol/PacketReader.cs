@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -11,6 +12,8 @@ public static class PacketReader
 {
     public static async Task<ChatPacket?> ReadAsync(Stream stream, CancellationToken ct = default)
     {
+        var sw = Stopwatch.StartNew();
+
         // 4-byte length prefix (big-endian)
         var lengthBytes = new byte[4];
         var bytesRead = await ReadExactAsync(stream, lengthBytes, 0, 4, ct);
@@ -26,9 +29,14 @@ public static class PacketReader
         var payloadBytes = new byte[length];
         bytesRead = await ReadExactAsync(stream, payloadBytes, 0, length, ct);
         if (bytesRead < length) return null;
+        var networkMs = sw.ElapsedMilliseconds;
 
+        sw.Restart();
         var json = Encoding.UTF8.GetString(payloadBytes);
-        return JsonConvert.DeserializeObject<ChatPacket>(json);
+        var packet = JsonConvert.DeserializeObject<ChatPacket>(json);
+        Debug.WriteLine($"[PERF][Packet] Read: 네트워크={networkMs}ms, 파싱={sw.ElapsedMilliseconds}ms, 크기={length}bytes, 타입={packet?.Type}");
+
+        return packet;
     }
 
     private static async Task<int> ReadExactAsync(

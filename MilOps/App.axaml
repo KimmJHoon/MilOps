@@ -31,20 +31,12 @@
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="16,12"/>
         </Style>
-        <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#488e72"/>
-        </Style>
-
         <Style Selector="Button.secondary">
             <Setter Property="Background" Value="#E5E5EA"/>
             <Setter Property="Foreground" Value="#1C1C1E"/>
             <Setter Property="CornerRadius" Value="12"/>
             <Setter Property="Padding" Value="16,12"/>
         </Style>
-        <Style Selector="Button.secondary:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#D1D1D6"/>
-        </Style>
-
         <!-- 카드 스타일 -->
         <Style Selector="Border.card">
             <Setter Property="Background" Value="#FFFFFF"/>
@@ -109,6 +101,8 @@
 
         <!-- 31사단 마크 SVG -->
         <svg:SvgImage x:Key="Mark31Svg" Source="avares://MilOps/Assets/31_mark.svg"/>
+        <!-- 워터마크용 SVG (SVG 내부에 opacity 0.08 적용) -->
+        <svg:SvgImage x:Key="Mark31WatermarkSvg" Source="avares://MilOps/Assets/31_mark_watermark.svg"/>
         <converters:StatusFilterConverter x:Key="StatusFilterConverter"/>
         <converters:BoolToTabBgConverter x:Key="BoolToTabBgConverter"/>
         <converters:BoolToTabFgConverter x:Key="BoolToTabFgConverter"/>
@@ -121,5 +115,6 @@
         <converters:BoolToSaveBtnTextConverter x:Key="BoolToSaveBtnTextConverter"/>
         <converters:BoolToFilterBgConverter x:Key="BoolToFilterBgConverter"/>
         <converters:BoolToFilterFgConverter x:Key="BoolToFilterFgConverter"/>
+        <converters:DistrictSvgConverter x:Key="DistrictSvgConverter"/>
     </Application.Resources>
 </Application>

@@ -31,6 +31,7 @@ public partial class MainView : UserControl
         _drawerTransform = DrawerPanel.RenderTransform as TranslateTransform;
 
         // View 이벤트 연결
+        SetupHomeView();
         SetupCompanyRegisterView();
         SetupScheduleCreateView();
         SetupScheduleInputView();
@@ -41,6 +42,9 @@ public partial class MainView : UserControl
 
         // 시스템 뒤로가기 버튼 핸들러 등록 (fallback for MoveTaskToBack)
         AppRestartService.OnBackPressed = HandleBackPressed;
+
+        // 딥링크/푸시 알림 네비게이션 구독
+        DeepLinkService.NavigationRequested += OnDeepLinkNavigationRequested;
 
         // Avalonia TopLevel.BackRequested 이벤트 구독 (Android 뒤로가기 버튼 처리)
         AttachedToVisualTree += OnAttachedToVisualTree;
@@ -158,6 +162,9 @@ public partial class MainView : UserControl
     {
         switch (tabName)
         {
+            case "home":
+                HomeView.OnTabEntered();
+                break;
             case "calendar":
                 CalendarView.OnTabEntered();
                 break;
@@ -168,7 +175,9 @@ public partial class MainView : UserControl
                 NotificationView.OnTabEntered();
                 break;
             case "schedule":
-                ScheduleListView.ForceInitialize();
+                var filter = _pendingStatusFilter;
+                _pendingStatusFilter = null;
+                ScheduleListView.ForceInitialize(filter);
                 break;
             case "manager":
                 ManagerView.ForceInitialize();
@@ -179,6 +188,31 @@ public partial class MainView : UserControl
     private void OnLogoutCompleted()
     {
         LogoutRequested?.Invoke();
+    }
+
+    private void SetupHomeView()
+    {
+        HomeView.OnScheduleSelected += OnHomeScheduleSelected;
+        HomeView.OnViewAllSchedules += OnHomeViewAllSchedules;
+        HomeView.OnStatusFilterSelected += OnHomeStatusFilterSelected;
+    }
+
+    private void OnHomeScheduleSelected(Guid scheduleId)
+    {
+        OpenScheduleInput(scheduleId, "view");
+    }
+
+    private void OnHomeViewAllSchedules()
+    {
+        _viewModel.SelectTabCommand.Execute("schedule");
+    }
+
+    private string? _pendingStatusFilter;
+
+    private void OnHomeStatusFilterSelected(string statusFilter)
+    {
+        _pendingStatusFilter = statusFilter;
+        _viewModel.SelectTabCommand.Execute("schedule");
     }
 
     private void SetupCompanyRegisterView()
@@ -247,6 +281,7 @@ public partial class MainView : UserControl
     {
         _viewModel.CloseScheduleCreateCommand.Execute(null);
         RefreshScheduleList();
+        InvalidateAndRefreshCalendar();
     }
 
     public void RefreshScheduleList()
@@ -279,6 +314,7 @@ public partial class MainView : UserControl
     private void OnScheduleInputStatusChanged(object? sender, MilOps.ViewModels.ScheduleStatusChangedEventArgs e)
     {
         ScheduleListView.ViewModel?.UpdateScheduleStatus(e.ScheduleId, e.NewStatus, e.NewStatusOrder);
+        InvalidateAndRefreshCalendar();
     }
 
     private void OnScheduleReserveCloseRequested(object? sender, EventArgs e)
@@ -289,6 +325,7 @@ public partial class MainView : UserControl
     private void OnScheduleReserveStatusChanged(object? sender, MilOps.ViewModels.ScheduleStatusChangedEventArgs e)
     {
         ScheduleListView.ViewModel?.UpdateScheduleStatus(e.ScheduleId, e.NewStatus, e.NewStatusOrder);
+        InvalidateAndRefreshCalendar();
     }
 
     private void OnScheduleConfirmCloseRequested(object? sender, EventArgs e)
@@ -299,6 +336,23 @@ public partial class MainView : UserControl
     private void OnScheduleConfirmStatusChanged(object? sender, MilOps.ViewModels.ScheduleStatusChangedEventArgs e)
     {
         ScheduleListView.ViewModel?.UpdateScheduleStatus(e.ScheduleId, e.NewStatus, e.NewStatusOrder);
+        InvalidateAndRefreshCalendar();
+    }
+
+    /// <summary>
+    /// 캘린더 캐시 무효화 후 새로고침 (일정 상태 변경 시 공통 호출)
+    /// </summary>
+    private void InvalidateAndRefreshCalendar()
+    {
+        // 현재 월의 캐시를 무효화하여 다음 로드 시 서버에서 최신 데이터를 가져옴
+        var now = DateTime.Now;
+        CalendarDataService.InvalidateMonth(now.Year, now.Month);
+        // 인접 월도 무효화 (일정이 이전/다음 달에 걸칠 수 있음)
+        var prevMonth = now.AddMonths(-1);
+        var nextMonth = now.AddMonths(1);
+        CalendarDataService.InvalidateMonth(prevMonth.Year, prevMonth.Month);
+        CalendarDataService.InvalidateMonth(nextMonth.Year, nextMonth.Month);
+
         CalendarView.RefreshCalendar();
     }
 
@@ -343,8 +397,12 @@ public partial class MainView : UserControl
 
     public async Task RefreshUserRoleAsync()
     {
-        _viewModel.RefreshUserRole();
-        await InitializeCurrentTabAsync();
+        // LoadUserRegionAsync와 InitializeCurrentTabAsync를 병렬 실행
+        // 둘 다 QueryHelper.GetOrgDataAsync()를 사용하므로 동일한 Preload 캐시를 공유
+        var regionTask = _viewModel.RefreshUserRoleAndGetRegionTask();
+        var tabTask = InitializeCurrentTabAsync();
+        var notificationTask = _viewModel.LoadUnreadNotificationCountAsync();
+        await Task.WhenAll(regionTask, tabTask, notificationTask);
     }
 
     public void RefreshUserRole()
@@ -352,9 +410,48 @@ public partial class MainView : UserControl
         _ = RefreshUserRoleAsync();
     }
 
+    /// <summary>
+    /// 딥링크/푸시 알림 네비게이션 처리
+    /// Android에서 알림 탭 → DeepLinkService → 여기로 전달
+    /// </summary>
+    private void OnDeepLinkNavigationRequested(DeepLinkArgs args)
+    {
+        // UI 스레드에서 실행
+        Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+        {
+            try
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainView] DeepLink navigation: tab={args.TargetTab}, type={args.Type}");
+
+                // 탭 전환
+                _viewModel.SelectTabCommand.Execute(args.TargetTab);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[MainView] DeepLink navigation error: {ex.Message}");
+            }
+        });
+    }
+
+    /// <summary>
+    /// 대기 중인 딥링크 처리 (cold start 시 MainView 초기화 후 호출)
+    /// </summary>
+    public void ProcessPendingDeepLink()
+    {
+        var pending = DeepLinkService.ConsumePending();
+        if (pending != null)
+        {
+            OnDeepLinkNavigationRequested(pending);
+        }
+    }
+
     private async Task InitializeCurrentTabAsync()
     {
-        if (_viewModel.IsCalendarSelected)
+        if (_viewModel.IsHomeSelected)
+        {
+            HomeView.OnTabEntered();
+        }
+        else if (_viewModel.IsCalendarSelected)
         {
             await CalendarView.OnTabEnteredAsync();
         }
@@ -393,15 +490,11 @@ public partial class MainView : UserControl
             await AnimateDrawer(_viewModel.IsDrawerOpen);
         }
 
-        if (e.PropertyName == nameof(MainViewModel.IsScheduleSelected) && _viewModel.IsScheduleSelected)
-        {
-            ScheduleListView.ForceInitialize();
-        }
-
-        if (e.PropertyName == nameof(MainViewModel.IsManagerSelected) && _viewModel.IsManagerSelected)
-        {
-            ManagerView.ForceInitialize();
-        }
+        // 주의: ScheduleListView.ForceInitialize()와 ManagerView.ForceInitialize()는
+        // OnTabChanged()에서 이미 호출되므로 여기서 중복 호출하지 않음.
+        // SelectTab() → IsScheduleSelected = true (PropertyChanged) → 여기서 호출 1번
+        // SelectTab() → TabChanged?.Invoke() → OnTabChanged() → 호출 2번
+        // → 중복 호출로 네트워크 요청 2배, ViewModel 재생성 2배 발생했던 버그.
     }
 
     private async Task AnimateDrawer(bool open)

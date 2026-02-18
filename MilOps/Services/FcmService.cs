@@ -100,7 +100,7 @@ public static class FcmService
                         Id = Guid.NewGuid(),
                         UserId = userId,
                         FcmToken = token,
-                        DeviceType = "android",
+                        DeviceType = DeviceType,
                         DeviceName = GetDeviceName(),
                         IsActive = true,
                         LastUsedAt = DateTime.UtcNow,
@@ -156,6 +156,12 @@ public static class FcmService
     /// 디바이스 이름 가져오기 (플랫폼별 구현)
     /// </summary>
     public static Func<string>? DeviceNameProvider { get; set; }
+
+    /// <summary>
+    /// 디바이스 타입 (android, desktop 등 — 플랫폼별 설정)
+    /// 기본값은 "android" (하위 호환성)
+    /// </summary>
+    public static string DeviceType { get; set; } = "android";
 
     private static string GetDeviceName()
     {

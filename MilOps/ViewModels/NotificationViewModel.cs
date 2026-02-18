@@ -55,20 +55,70 @@ public partial class NotificationViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// 알림 목록 로드
+    /// 알림 목록 로드 (스마트 업데이트: 변경분만 반영)
     /// </summary>
     public async Task LoadNotificationsAsync()
     {
-        IsLoading = true;
+        // 첫 로드 시에만 로딩 표시 (이미 데이터가 있으면 백그라운드 갱신)
+        bool showLoading = !Notifications.Any();
+        if (showLoading) IsLoading = true;
 
         try
         {
             var notifications = await NotificationService.GetNotificationsAsync();
 
-            Notifications.Clear();
-            foreach (var notification in notifications)
+            // 기존 데이터가 없으면 한 번에 교체
+            if (!Notifications.Any())
             {
-                Notifications.Add(notification);
+                foreach (var notification in notifications)
+                {
+                    Notifications.Add(notification);
+                }
+            }
+            else
+            {
+                // 스마트 업데이트: ID 기반으로 변경분만 반영
+                var newIds = notifications.Select(n => n.Id).ToHashSet();
+                var existingIds = Notifications.Select(n => n.Id).ToHashSet();
+
+                // 삭제된 항목 제거 (역순으로 순회)
+                for (int i = Notifications.Count - 1; i >= 0; i--)
+                {
+                    if (!newIds.Contains(Notifications[i].Id))
+                    {
+                        Notifications.RemoveAt(i);
+                    }
+                }
+
+                // 새 항목 추가 및 기존 항목 업데이트
+                for (int i = 0; i < notifications.Count; i++)
+                {
+                    var newItem = notifications[i];
+                    if (i < Notifications.Count)
+                    {
+                        if (Notifications[i].Id != newItem.Id)
+                        {
+                            // 위치가 바뀐 경우 삽입
+                            Notifications.Insert(i, newItem);
+                        }
+                        else if (Notifications[i].IsRead != newItem.IsRead)
+                        {
+                            // 읽음 상태 변경 시 교체
+                            Notifications[i] = newItem;
+                        }
+                    }
+                    else
+                    {
+                        // 새 항목 추가
+                        Notifications.Add(newItem);
+                    }
+                }
+
+                // 길이 초과분 제거
+                while (Notifications.Count > notifications.Count)
+                {
+                    Notifications.RemoveAt(Notifications.Count - 1);
+                }
             }
 
             HasNotifications = Notifications.Any();
@@ -122,6 +172,9 @@ public partial class NotificationViewModel : ViewModelBase
                 {
                     Notifications[index] = notification;
                 }
+
+                // 헤더 뱃지 갱신 이벤트 발생 (1개 읽음)
+                NotificationService.RaiseUnreadCountChanged(-1);
             }
         }
 
@@ -150,17 +203,27 @@ public partial class NotificationViewModel : ViewModelBase
 
         try
         {
+            var previousUnread = UnreadCount;
             var success = await NotificationService.MarkAllAsReadAsync();
             if (success)
             {
-                foreach (var notification in Notifications)
+                // UI 즉시 반영: 전체 reload 대신 로컬 상태만 업데이트
+                for (int i = 0; i < Notifications.Count; i++)
                 {
-                    notification.IsRead = true;
+                    if (!Notifications[i].IsRead)
+                    {
+                        var updated = Notifications[i];
+                        updated.IsRead = true;
+                        Notifications[i] = updated; // 컬렉션 변경 알림 트리거
+                    }
                 }
                 UnreadCount = 0;
 
-                // UI 갱신
-                await LoadNotificationsAsync();
+                // 헤더 뱃지 갱신 이벤트 발생 (전체 읽음 → 0으로 리셋)
+                if (previousUnread > 0)
+                {
+                    NotificationService.RaiseUnreadCountChanged(-previousUnread);
+                }
             }
         }
         catch (Exception ex)

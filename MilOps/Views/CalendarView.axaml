@@ -83,10 +83,10 @@
 
     <!-- 날짜 그리드 - ItemsControl + UniformGrid 사용 (동적 바인딩) -->
     <Border Grid.Row="3" Margin="8,0,8,8" CornerRadius="16" ClipToBounds="True">
-      <ItemsControl ItemsSource="{Binding Days}" Background="#FFFFFF">
+      <ItemsControl ItemsSource="{Binding Days}" Background="Transparent">
         <ItemsControl.ItemsPanel>
           <ItemsPanelTemplate>
-            <UniformGrid Rows="6" Columns="7"/>
+            <UniformGrid Rows="{Binding CalendarRows}" Columns="7"/>
           </ItemsPanelTemplate>
         </ItemsControl.ItemsPanel>
         <ItemsControl.ItemTemplate>
@@ -110,24 +110,30 @@
                   <!-- 일정 점 표시 영역 -->
                   <Grid Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                         IsVisible="{Binding HasSchedules}" Margin="1">
-                    <!-- 최종관리자: 시도/사단별 색상 뱃지 (예약 개수 표시) - WrapPanel로 자동 줄바꿈 -->
-                    <ItemsControl ItemsSource="{Binding GroupBadges}" IsVisible="{Binding IsSuperAdmin}"
-                                  HorizontalAlignment="Center" VerticalAlignment="Center">
-                      <ItemsControl.ItemsPanel>
-                        <ItemsPanelTemplate>
-                          <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center"/>
-                        </ItemsPanelTemplate>
-                      </ItemsControl.ItemsPanel>
-                      <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="vm:GroupBadgeItem">
-                          <Border MinWidth="14" Height="14" CornerRadius="7" Background="{Binding Color}"
-                                  Padding="2,0" Margin="1">
-                            <TextBlock Text="{Binding Count}" FontSize="9" Foreground="White"
-                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                          </Border>
-                        </DataTemplate>
-                      </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                    <!-- 최종관리자: 고정 뱃지 슬롯 (중첩 ItemsControl 제거 → 프레임 드랍 해결) -->
+                    <WrapPanel Orientation="Horizontal" HorizontalAlignment="Center" VerticalAlignment="Center"
+                               IsVisible="{Binding IsSuperAdmin}">
+                      <Border MinWidth="14" Height="14" CornerRadius="7" Background="{Binding Badge1Color}"
+                              Padding="2,0" Margin="1" IsVisible="{Binding Badge1Visible}">
+                        <TextBlock Text="{Binding Badge1Text}" FontSize="9" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      </Border>
+                      <Border MinWidth="14" Height="14" CornerRadius="7" Background="{Binding Badge2Color}"
+                              Padding="2,0" Margin="1" IsVisible="{Binding Badge2Visible}">
+                        <TextBlock Text="{Binding Badge2Text}" FontSize="9" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      </Border>
+                      <Border MinWidth="14" Height="14" CornerRadius="7" Background="{Binding Badge3Color}"
+                              Padding="2,0" Margin="1" IsVisible="{Binding Badge3Visible}">
+                        <TextBlock Text="{Binding Badge3Text}" FontSize="9" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      </Border>
+                      <Border MinWidth="14" Height="14" CornerRadius="7" Background="{Binding Badge4Color}"
+                              Padding="2,0" Margin="1" IsVisible="{Binding Badge4Visible}">
+                        <TextBlock Text="{Binding Badge4Text}" FontSize="9" Foreground="White"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                      </Border>
+                    </WrapPanel>
                     <!-- 일반 사용자: 확정/예약 점 -->
                     <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsSuperAdmin}"
                                 HorizontalAlignment="Center" VerticalAlignment="Center">
@@ -144,6 +150,12 @@
         </ItemsControl.ItemTemplate>
       </ItemsControl>
     </Border>
+
+    <!-- 워터마크 (최상단 레이어, IsHitTestVisible=False로 터치 통과) -->
+    <Image Grid.RowSpan="4" Source="{StaticResource Mark31WatermarkSvg}"
+           Width="240" Height="280" 
+           HorizontalAlignment="Center" VerticalAlignment="Center"
+           IsHitTestVisible="False"/>
 
     <!-- 로딩 오버레이 -->
     <controls:LoadingOverlay Grid.RowSpan="4" IsVisible="{Binding IsLoading}"/>

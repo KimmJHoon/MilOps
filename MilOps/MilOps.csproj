@@ -31,4 +31,8 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="..\MilOps_유저_매뉴얼.pdf" LogicalName="MilOps_유저_매뉴얼.pdf" />
+  </ItemGroup>
 </Project>

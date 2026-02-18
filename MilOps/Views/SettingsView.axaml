@@ -6,5 +6,11 @@
       <TextBlock Text="설정 화면" FontSize="28" Foreground="#1C1C1E" HorizontalAlignment="Center"/>
       <TextBlock Text="앱 설정이 표시될 영역입니다" FontSize="14" Foreground="#8E8E93" HorizontalAlignment="Center"/>
     </StackPanel>
+
+    <!-- 워터마크 (최상단 레이어, IsHitTestVisible=False로 터치 통과) -->
+    <Image Source="{StaticResource Mark31WatermarkSvg}"
+           Width="240" Height="280"
+           HorizontalAlignment="Center" VerticalAlignment="Center"
+           IsHitTestVisible="False"/>
   </Grid>
 </UserControl>
