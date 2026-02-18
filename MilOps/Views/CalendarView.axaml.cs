@@ -80,6 +80,9 @@ public partial class CalendarView : UserControl
 
         if (userChanged || !_isInitialized)
         {
+            var totalSw = System.Diagnostics.Stopwatch.StartNew();
+            System.Diagnostics.Debug.WriteLine($"[PERF][CalendarInit] 초기화 시작 (userChanged={userChanged}, isInit={_isInitialized})");
+
             // 캐시 초기화 (사용자 변경 시에만)
             if (userChanged)
             {
@@ -88,19 +91,28 @@ public partial class CalendarView : UserControl
             _lastUserId = currentUserId;
 
             // 필터 초기화 (백그라운드)
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             await _viewModel.InitializeFiltersAsync();
+            System.Diagnostics.Debug.WriteLine($"[PERF][CalendarInit] 필터 초기화: {sw.ElapsedMilliseconds}ms");
 
             // 이미 Preload로 로딩 중이거나 데이터가 있으면 다시 로드하지 않음
             if (!CalendarDataService.IsLoading && _viewModel.Days.Count > 0 && _viewModel.Days.Any(d => d.IsCurrentMonth))
             {
-                // Data already preloaded
+                System.Diagnostics.Debug.WriteLine($"[PERF][CalendarInit] Preload 데이터 사용 (Days={_viewModel.Days.Count}개)");
             }
             else if (!CalendarDataService.IsLoading)
             {
+                sw.Restart();
                 await _viewModel.LoadSchedulesAsync();
+                System.Diagnostics.Debug.WriteLine($"[PERF][CalendarInit] LoadSchedulesAsync: {sw.ElapsedMilliseconds}ms");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"[PERF][CalendarInit] Preload 진행 중 - 대기");
             }
 
             _isInitialized = true;
+            System.Diagnostics.Debug.WriteLine($"[PERF][CalendarInit] ===== 초기화 총 소요: {totalSw.ElapsedMilliseconds}ms =====");
         }
     }
 

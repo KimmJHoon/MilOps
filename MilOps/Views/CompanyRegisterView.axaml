@@ -129,6 +129,12 @@
       </ScrollViewer>
     </Grid>
 
+    <!-- 워터마크 (최상단 레이어, IsHitTestVisible=False로 터치 통과) -->
+    <Image Source="{StaticResource Mark31WatermarkSvg}"
+           Width="240" Height="280"
+           HorizontalAlignment="Center" VerticalAlignment="Center"
+           IsHitTestVisible="False"/>
+
     <!-- 로딩 오버레이 -->
     <controls:LoadingOverlay IsVisible="{Binding IsLoading}"/>
 
@@ -235,6 +241,86 @@
           </Grid>
         </StackPanel>
       </ScrollViewer>
+    </Border>
+    <!-- 삭제 확인 모달 오버레이 -->
+    <Border Background="#40000000" IsVisible="{Binding IsDeleteConfirmVisible}"/>
+
+    <!-- 삭제 확인 모달 -->
+    <Border Background="#FFFFFF"
+            CornerRadius="12"
+            Padding="20"
+            Margin="30"
+            MaxWidth="320"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            IsVisible="{Binding IsDeleteConfirmVisible}"
+            BoxShadow="0 4 12 #40000000">
+      <StackPanel Spacing="16">
+        <!-- 아이콘 -->
+        <TextBlock Text="&#xe872;" FontFamily="{StaticResource MaterialIcons}"
+                   FontSize="40" Foreground="#F44336"
+                   HorizontalAlignment="Center"/>
+        <!-- 제목 -->
+        <TextBlock Text="업체 삭제" FontSize="16" Foreground="#1C1C1E"
+                   HorizontalAlignment="Center"/>
+        <!-- 메시지 -->
+        <StackPanel Spacing="4" HorizontalAlignment="Center">
+          <TextBlock Text="{Binding DeleteConfirmCompanyName}"
+                     FontSize="14" Foreground="#2196F3"
+                     HorizontalAlignment="Center"/>
+          <TextBlock Text="이 업체를 삭제하시겠습니까?"
+                     FontSize="13" Foreground="#8E8E93"
+                     HorizontalAlignment="Center"/>
+        </StackPanel>
+        <!-- 버튼 -->
+        <Grid ColumnDefinitions="*,*" Margin="0,4,0,0">
+          <Button Grid.Column="0" Command="{Binding CancelDeleteCommand}"
+                  Background="#E5E5EA" Margin="0,0,6,0" HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center" Padding="12,10" CornerRadius="8">
+            <TextBlock Text="취소" Foreground="#1C1C1E" FontSize="14"/>
+          </Button>
+          <Button Grid.Column="1" Command="{Binding ConfirmDeleteCommand}"
+                  Background="#F44336" Margin="6,0,0,0" HorizontalAlignment="Stretch"
+                  HorizontalContentAlignment="Center" Padding="12,10" CornerRadius="8">
+            <TextBlock Text="삭제" Foreground="White" FontSize="14"/>
+          </Button>
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <!-- 삭제 불가 에러 모달 오버레이 -->
+    <Border Background="#40000000" IsVisible="{Binding IsDeleteErrorVisible}"/>
+
+    <!-- 삭제 불가 에러 모달 -->
+    <Border Background="#FFFFFF"
+            CornerRadius="12"
+            Padding="20"
+            Margin="30"
+            MaxWidth="320"
+            VerticalAlignment="Center"
+            HorizontalAlignment="Center"
+            IsVisible="{Binding IsDeleteErrorVisible}"
+            BoxShadow="0 4 12 #40000000">
+      <StackPanel Spacing="16">
+        <!-- 아이콘 -->
+        <TextBlock Text="&#xe002;" FontFamily="{StaticResource MaterialIcons}"
+                   FontSize="40" Foreground="#FF9800"
+                   HorizontalAlignment="Center"/>
+        <!-- 제목 -->
+        <TextBlock Text="삭제 불가" FontSize="16" Foreground="#1C1C1E"
+                   HorizontalAlignment="Center"/>
+        <!-- 메시지 -->
+        <TextBlock Text="{Binding DeleteErrorMessage}"
+                   FontSize="13" Foreground="#8E8E93"
+                   HorizontalAlignment="Center" TextWrapping="Wrap"
+                   TextAlignment="Center"/>
+        <!-- 확인 버튼 -->
+        <Button Command="{Binding CloseDeleteErrorCommand}"
+                Background="#FF9800" HorizontalAlignment="Stretch"
+                HorizontalContentAlignment="Center" Padding="12,10" CornerRadius="8">
+          <TextBlock Text="확인" Foreground="White" FontSize="14"/>
+        </Button>
+      </StackPanel>
     </Border>
   </Grid>
 </UserControl>

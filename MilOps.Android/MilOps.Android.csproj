@@ -8,8 +8,8 @@
     <!-- 앱 정보 -->
     <ApplicationId>com.milops.schedule</ApplicationId>
     <ApplicationTitle>군-지자체 일정관리</ApplicationTitle>
-    <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <ApplicationVersion>4</ApplicationVersion>
+    <ApplicationDisplayVersion>1.0.4</ApplicationDisplayVersion>
 
     <!-- 빌드 설정 -->
     <AndroidPackageFormat>apk</AndroidPackageFormat>

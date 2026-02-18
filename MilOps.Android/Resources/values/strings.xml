@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">군-지자체 일정관리</string>
+    <string name="app_name">동원ON</string>
     <string name="splash_subtitle">MilOps</string>
 </resources>

@@ -38,23 +38,29 @@ public class MainActivity : AvaloniaMainActivity<App>
         {
             _instance = this;
 
-            // Android Assets에서 .env 파일 읽어서 SupabaseConfig에 설정
-            LoadSupabaseConfig();
+            // Supabase config: Splash에서 이미 로드된 경우 스킵 (중복 파일 I/O 제거)
+            if (string.IsNullOrEmpty(SupabaseConfig.Url))
+            {
+                LoadSupabaseConfig();
+            }
 
-            // Firebase 초기화
-            InitializeFirebase();
-
-            // 앱 재시작 서비스 설정
+            // 앱 재시작 서비스 설정 (가벼운 람다 등록만, 메인 스레드 블로킹 없음)
             SetupAppRestartService();
+            SetupPdfViewerService();
 
+            // ★ base.OnCreate() 최우선 — Avalonia Surface 생성을 최대한 빨리 시작
             base.OnCreate(savedInstanceState);
 
             // 시스템 뒤로가기 버튼 핸들러 등록 (API 33+ 대응)
             OnBackPressedDispatcher.AddCallback(this, new BackPressedCallback(this));
 
-            // Android 13+ 알림 권한 요청
-            RequestNotificationPermission();
+            // ★ Firebase 초기화를 base.OnCreate() 이후로 지연
+            // FirebaseApp.InitializeApp()은 메인 스레드 필수이나, Avalonia Surface 생성 이후에
+            // 호출하면 첫 프레임 렌더링과 겹치지 않아 Choreographer 프레임 드랍 감소
+            InitializeFirebaseDeferred();
 
+            // 알림 탭으로 앱이 열린 경우 딥링크 처리 (cold start)
+            HandleNotificationIntent(Intent);
         }
         catch (Exception ex)
         {
@@ -62,6 +68,54 @@ public class MainActivity : AvaloniaMainActivity<App>
             Log.Error(TAG, $"StackTrace: {ex.StackTrace}");
             throw;
         }
+    }
+
+    /// <summary>
+    /// 앱이 이미 실행 중일 때 알림 탭으로 인텐트 수신 (LaunchMode.SingleTop)
+    /// </summary>
+    protected override void OnNewIntent(Intent? intent)
+    {
+        base.OnNewIntent(intent);
+        if (intent != null)
+        {
+            HandleNotificationIntent(intent);
+        }
+    }
+
+    /// <summary>
+    /// 알림 인텐트에서 딥링크 정보 추출 → DeepLinkService로 전달
+    /// </summary>
+    private void HandleNotificationIntent(Intent? intent)
+    {
+        if (intent == null) return;
+
+        var targetTab = intent.GetStringExtra("target_tab");
+        var notificationType = intent.GetStringExtra("notification_type");
+
+        if (!string.IsNullOrEmpty(targetTab))
+        {
+            Log.Info(TAG, $"Notification intent: tab={targetTab}, type={notificationType}");
+            DeepLinkService.RequestNavigation(targetTab, notificationType);
+
+            // 처리 후 extras 제거 (중복 처리 방지)
+            intent.RemoveExtra("target_tab");
+            intent.RemoveExtra("notification_type");
+        }
+    }
+
+    /// <summary>
+    /// Firebase 초기화를 다음 메인 루퍼 사이클로 지연 (첫 프레임 렌더링 후 실행)
+    /// → Choreographer 프레임 드랍 감소
+    /// </summary>
+    private void InitializeFirebaseDeferred()
+    {
+        // 다음 메인 루퍼 사이클에 Firebase 초기화 예약 → 첫 프레임 렌더링 방해 안 함
+        new Handler(Looper.MainLooper!).Post(() =>
+        {
+            InitializeFirebase();
+            // 알림 권한도 Firebase 이후에 요청 (UI 표시 완료 후)
+            RequestNotificationPermission();
+        });
     }
 
     /// <summary>
@@ -163,6 +217,51 @@ public class MainActivity : AvaloniaMainActivity<App>
         FcmService.DeviceNameProvider = () =>
         {
             return Build.Model ?? "Android Device";
+        };
+    }
+
+    /// <summary>
+    /// PDF 뷰어 서비스 설정 — EmbeddedResource PDF를 Android 기본 뷰어로 열기
+    /// </summary>
+    private void SetupPdfViewerService()
+    {
+        PdfViewerService.OpenPdfFromAssets = (resourceName) =>
+        {
+            try
+            {
+                // 1. EmbeddedResource에서 읽기
+                var assembly = typeof(PdfViewerService).Assembly;
+                using var stream = assembly.GetManifestResourceStream(resourceName);
+                if (stream == null)
+                {
+                    Log.Warn(TAG, $"PDF resource not found: {resourceName}");
+                    return;
+                }
+
+                // 2. 캐시 디렉토리에 복사
+                var cacheDir = CacheDir;
+                if (cacheDir == null) return;
+
+                var file = new Java.IO.File(cacheDir, resourceName);
+                using (var output = System.IO.File.Create(file.AbsolutePath))
+                {
+                    stream.CopyTo(output);
+                }
+
+                // 3. FileProvider URI 생성
+                var uri = AndroidX.Core.Content.FileProvider.GetUriForFile(
+                    this, $"{PackageName}.fileprovider", file);
+
+                // 4. Intent로 PDF 뷰어 열기
+                var intent = new Intent(Intent.ActionView);
+                intent.SetDataAndType(uri, "application/pdf");
+                intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.NewTask);
+                StartActivity(intent);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(TAG, $"PDF open error: {ex.Message}");
+            }
         };
     }
 

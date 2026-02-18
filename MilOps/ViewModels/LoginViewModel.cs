@@ -128,6 +128,9 @@ public partial class LoginViewModel : ViewModelBase
 
         System.Diagnostics.Debug.WriteLine($"[LoginViewModel] [Preload] Starting data preload for {currentUser.LoginId}");
 
+        // 조직 데이터 미리 로드 (ManagerTab + MainViewModel 공유 캐시)
+        QueryHelper.PreloadOrgData();
+
         // 일정 목록 미리 로드 (fire-and-forget)
         ScheduleDataService.LoadSchedulesInBackground(currentUser);
 

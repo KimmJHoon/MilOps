@@ -5,6 +5,7 @@ using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -137,6 +138,9 @@ public static class ScheduleDataService
     /// </summary>
     private static async Task<ScheduleDataLoadedEventArgs> LoadSchedulesViaRpcAsync(User currentUser)
     {
+        var totalSw = Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
+
         if (!SupabaseService.IsInitialized)
         {
             return new ScheduleDataLoadedEventArgs { Schedules = new List<Schedule>() };
@@ -150,11 +154,15 @@ public static class ScheduleDataService
         };
 
         // RPC 호출 (단일 요청으로 모든 데이터)
+        sw.Restart();
         var response = await SupabaseService.Client.Rpc("get_schedule_list", rpcParams);
+        Debug.WriteLine($"[PERF][ScheduleData] RPC 네트워크 호출: {sw.ElapsedMilliseconds}ms");
 
         var rawContent = response.Content ?? "null";
+        Debug.WriteLine($"[PERF][ScheduleData] 응답 크기: {rawContent.Length} bytes");
 
         // JSON 파싱 - Supabase RPC 응답이 wrapper로 감싸져 있을 수 있음
+        sw.Restart();
         var jsonContent = rawContent;
         try
         {
@@ -178,21 +186,29 @@ public static class ScheduleDataService
         }
         catch (Exception parseEx)
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleDataService] [BG] JSON structure check failed: {parseEx.Message}");
+            Debug.WriteLine($"[ScheduleDataService] [BG] JSON structure check failed: {parseEx.Message}");
         }
 
         var json = JObject.Parse(jsonContent ?? "{}");
+        Debug.WriteLine($"[PERF][ScheduleData] JSON 파싱: {sw.ElapsedMilliseconds}ms");
 
         // 캐시 데이터 업데이트
+        sw.Restart();
         UpdateCacheFromRpcResponse(json);
+        Debug.WriteLine($"[PERF][ScheduleData] 캐시 업데이트: {sw.ElapsedMilliseconds}ms");
 
         // 일정 파싱
+        sw.Restart();
         var schedules = ParseSchedulesFromJson(json["schedules"]);
+        Debug.WriteLine($"[PERF][ScheduleData] 일정 파싱 ({schedules.Count}건): {sw.ElapsedMilliseconds}ms");
 
         // 역할별 클라이언트 필터링 (middle_military, middle_local 등)
+        sw.Restart();
         schedules = FilterSchedulesByRole(schedules, currentUser);
+        Debug.WriteLine($"[PERF][ScheduleData] 역할 필터링 (→{schedules.Count}건): {sw.ElapsedMilliseconds}ms");
 
         // 상태별 카운트 계산
+        sw.Restart();
         var statusCounts = new Dictionary<string, int>
         {
             ["all"] = schedules.Count,
@@ -204,6 +220,10 @@ public static class ScheduleDataService
 
         // ScheduleListItem 생성
         var items = schedules.Select(s => CreateScheduleListItem(s, currentUser)).ToList();
+        Debug.WriteLine($"[PERF][ScheduleData] 카운트+ListItem 생성: {sw.ElapsedMilliseconds}ms");
+
+        totalSw.Stop();
+        Debug.WriteLine($"[PERF][ScheduleData] ===== 총 소요: {totalSw.ElapsedMilliseconds}ms =====");
 
         return new ScheduleDataLoadedEventArgs
         {
@@ -351,7 +371,8 @@ public static class ScheduleDataService
                     LocalConfirmed = item["local_confirmed"]?.ToObject<bool>() ?? false,
                     MilitaryConfirmed = item["military_confirmed"]?.ToObject<bool>() ?? false,
                     CreatedBy = item["created_by"]?.ToObject<Guid>() ?? Guid.Empty,
-                    CreatedAt = item["created_at"]?.ToObject<DateTime>() ?? DateTime.MinValue
+                    CreatedAt = item["created_at"]?.ToObject<DateTime>() ?? DateTime.MinValue,
+                    UpdatedAt = item["updated_at"]?.ToObject<DateTime>() ?? DateTime.MinValue
                 };
 
                 // 날짜/시간 파싱
@@ -481,7 +502,9 @@ public static class ScheduleDataService
         var item = new ScheduleListItem
         {
             Schedule = schedule,
-            CompanyName = _companyNames.GetValueOrDefault(schedule.CompanyId, "알 수 없는 업체"),
+            CompanyName = schedule.CompanyId == Guid.Empty
+                ? "업체 미배정"
+                : _companyNames.GetValueOrDefault(schedule.CompanyId, "알 수 없는 업체"),
             BattalionName = GetBattalionNameFromUser(schedule.MilitaryUserId),
             DistrictName = GetDistrictNameFromUser(schedule.LocalUserId),
             LocalUserName = _userNames.GetValueOrDefault(schedule.LocalUserId, ""),

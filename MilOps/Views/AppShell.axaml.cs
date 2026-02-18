@@ -54,6 +54,13 @@ public partial class AppShell : UserControl
 
             if (restored)
             {
+                // 세션 복원 성공 → Preload 즉시 시작 (UI 전환 전)
+                // LoginViewModel.PreloadDataAfterLogin()과 동일한 프리페치를 자동 로그인 경로에도 적용
+                System.Diagnostics.Debug.WriteLine("[PERF][AppShell] 세션 복원 성공 → Preload 시작");
+                QueryHelper.PreloadOrgData();  // 파일 캐시 즉시 로드 + 서버 갱신 (stale-while-revalidate)
+                ScheduleDataService.LoadSchedulesInBackground(AuthService.CurrentUser!);
+                CalendarDataService.PreloadCurrentMonth();
+
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     OnLoginSuccess();
@@ -82,6 +89,10 @@ public partial class AppShell : UserControl
 
     private async void OnLoginSuccess()
     {
+        var totalSw = System.Diagnostics.Stopwatch.StartNew();
+        System.Diagnostics.Debug.WriteLine("[PERF][AppShell] 로그인 성공 → UI 전환 시작");
+
+        // FCM 토큰 저장은 별도 스레드에서 실행
         _ = Task.Run(async () =>
         {
             try
@@ -94,14 +105,25 @@ public partial class AppShell : UserControl
             }
         });
 
-        CalendarDataService.PreloadCurrentMonth();
-        ScheduleDataService.PreloadCache();
+        // 데이터 Preload는 LoginViewModel.PreloadDataAfterLogin()에서 이미 수행
 
         LoginViewControl.IsVisible = false;
         MainViewControl.IsVisible = true;
+        System.Diagnostics.Debug.WriteLine($"[PERF][AppShell] MainView.IsVisible=true: {totalSw.ElapsedMilliseconds}ms");
 
-        await Dispatcher.UIThread.InvokeAsync(() => { }, DispatcherPriority.Loaded);
+        // Layout 대기 제거: DispatcherPriority.Render/Loaded 대기 모두 UI 스레드가 컨트롤 초기화로
+        // 바쁠 때는 전체 초기화 완료까지 블로킹됨 (4,700ms+). 대신 비동기로 즉시 진행.
+        // RefreshUserRoleAsync()는 UI visible 설정 후 바로 실행해도 안전함.
+        // (ObservableProperty 바인딩은 다음 프레임에서 자동 반영)
+
+        // RefreshUserRole → 데이터 로드는 별도 스레드에서 처리됨
+        var sw = System.Diagnostics.Stopwatch.StartNew();
         await MainViewControl.RefreshUserRoleAsync();
+        System.Diagnostics.Debug.WriteLine($"[PERF][AppShell] RefreshUserRoleAsync: {sw.ElapsedMilliseconds}ms");
+        System.Diagnostics.Debug.WriteLine($"[PERF][AppShell] ===== 로그인→메인 전환 총 소요: {totalSw.ElapsedMilliseconds}ms =====");
+
+        // 대기 중인 딥링크 처리 (알림 탭으로 앱이 cold start된 경우)
+        MainViewControl.ProcessPendingDeepLink();
     }
 
     private void OnLogoutRequested()

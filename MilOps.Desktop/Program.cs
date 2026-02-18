@@ -18,6 +18,7 @@ sealed class Program
     {
         _args = args;
         SetupAppRestartService();
+        SetupFcmServiceForDesktop();
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 
@@ -27,6 +28,26 @@ sealed class Program
             .UsePlatformDetect()
             .WithInterFont()
             .LogToTrace();
+
+    /// <summary>
+    /// Desktop용 FcmService 설정
+    /// - DeviceType을 "desktop"으로 설정
+    /// - DeviceNameProvider를 PC 이름으로 설정
+    /// - TokenProvider를 머신 고유 ID 기반으로 설정 (FCM 토큰 대용)
+    /// </summary>
+    private static void SetupFcmServiceForDesktop()
+    {
+        FcmService.DeviceType = "desktop";
+        FcmService.DeviceNameProvider = () => Environment.MachineName ?? "Desktop";
+
+        // Desktop은 FCM 토큰이 없으므로 머신 고유 식별자를 토큰 대용으로 사용
+        // "desktop_{MachineName}_{UserName}" 형식으로 고유 토큰 생성
+        var desktopToken = $"desktop_{Environment.MachineName}_{Environment.UserName}";
+        FcmService.CurrentToken = desktopToken;
+        FcmService.TokenProvider = () => System.Threading.Tasks.Task.FromResult<string?>(desktopToken);
+
+        Debug.WriteLine($"[Program] FcmService configured for Desktop: token={desktopToken}");
+    }
 
     private static void SetupAppRestartService()
     {

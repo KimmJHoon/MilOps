@@ -72,6 +72,9 @@ public partial class ChatRoomViewModel : ViewModelBase
         PartnerName = partner.PartnerName;
         PartnerRoleDisplay = partner.PartnerRoleDisplayName;
 
+        // 대화방 진입 시 읽지 않은 메시지 뱃지 즉시 제거 (Optimistic UI)
+        partner.UnreadCount = 0;
+
         await LoadMessagesAsync();
 
         // 읽음 처리 전송

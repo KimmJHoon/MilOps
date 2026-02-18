@@ -61,7 +61,17 @@ public class MilOpsFirebaseService : FirebaseMessagingService
         {
             var notification = message.GetNotification();
             Log.Info(TAG, $"Notification: {notification.Title} - {notification.Body}");
-            ShowNotification(notification.Title, notification.Body);
+
+            // data payload에서 type 가져와서 targetTab 결정
+            string? targetTab = "notification";
+            string? notifType = null;
+            if (message.Data.TryGetValue("type", out var dataType))
+            {
+                notifType = dataType;
+                if (dataType == "chat_message")
+                    targetTab = "chat";
+            }
+            ShowNotification(notification.Title, notification.Body, targetTab, notifType);
         }
     }
 
@@ -91,8 +101,8 @@ public class MilOpsFirebaseService : FirebaseMessagingService
                     {
                         ShowNotification(
                             "새 일정 배정",
-                            $"{companyName} 방문 일정이 배정되었습니다."
-                        );
+                            $"{companyName} 방문 일정이 배정되었습니다.",
+                            "notification", messageType);
                     }
                     break;
 
@@ -101,7 +111,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
                     if (showNotification && data.TryGetValue("title", out var title) &&
                         data.TryGetValue("status", out var status))
                     {
-                        ShowNotification(title, $"일정 상태: {status}");
+                        ShowNotification(title, $"일정 상태: {status}", "notification", messageType);
                     }
                     break;
 
@@ -112,8 +122,8 @@ public class MilOpsFirebaseService : FirebaseMessagingService
                     {
                         ShowNotification(
                             "일정 확정 필요",
-                            $"내일({date}) {company} 방문 일정을 확정해주세요."
-                        );
+                            $"내일({date}) {company} 방문 일정을 확정해주세요.",
+                            "notification", messageType);
                     }
                     break;
 
@@ -122,7 +132,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
                     if (showNotification && data.TryGetValue("title", out var inputTitle) &&
                         data.TryGetValue("body", out var inputBody))
                     {
-                        ShowNotification(inputTitle, inputBody);
+                        ShowNotification(inputTitle, inputBody, "notification", messageType);
                     }
                     break;
 
@@ -131,7 +141,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
                     if (showNotification && data.TryGetValue("title", out var reservedTitle) &&
                         data.TryGetValue("body", out var reservedBody))
                     {
-                        ShowNotification(reservedTitle, reservedBody);
+                        ShowNotification(reservedTitle, reservedBody, "notification", messageType);
                     }
                     break;
 
@@ -140,7 +150,20 @@ public class MilOpsFirebaseService : FirebaseMessagingService
                     if (showNotification && data.TryGetValue("title", out var confirmedTitle) &&
                         data.TryGetValue("body", out var confirmedBody))
                     {
-                        ShowNotification(confirmedTitle, confirmedBody);
+                        ShowNotification(confirmedTitle, confirmedBody, "notification", messageType);
+                    }
+                    break;
+
+                case "chat_message":
+                    // 채팅 메시지 수신
+                    if (showNotification)
+                    {
+                        data.TryGetValue("title", out var chatTitle);
+                        data.TryGetValue("body", out var chatBody);
+                        ShowNotification(
+                            chatTitle ?? "새 메시지",
+                            chatBody ?? "",
+                            "chat", messageType);
                     }
                     break;
 
@@ -149,7 +172,7 @@ public class MilOpsFirebaseService : FirebaseMessagingService
                     if (showNotification && data.TryGetValue("title", out var defaultTitle) &&
                         data.TryGetValue("body", out var body))
                     {
-                        ShowNotification(defaultTitle, body);
+                        ShowNotification(defaultTitle, body, "notification", messageType);
                     }
                     break;
             }
@@ -166,7 +189,11 @@ public class MilOpsFirebaseService : FirebaseMessagingService
     /// <summary>
     /// 로컬 알림 표시
     /// </summary>
-    private void ShowNotification(string? title, string? body)
+    /// <param name="title">알림 제목</param>
+    /// <param name="body">알림 내용</param>
+    /// <param name="targetTab">클릭 시 이동할 탭 ("chat", "notification", "calendar" 등)</param>
+    /// <param name="notificationType">알림 유형 ("chat_message", "schedule_confirmed" 등)</param>
+    private void ShowNotification(string? title, string? body, string? targetTab = null, string? notificationType = null)
     {
         if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(body))
             return;
@@ -177,9 +204,19 @@ public class MilOpsFirebaseService : FirebaseMessagingService
         // 알림 채널 생성 (Android 8.0+)
         CreateNotificationChannel(channelId);
 
-        // 알림 클릭 시 앱 실행 인텐트
+        // 알림 클릭 시 앱 실행 인텐트 (딥링크 정보 포함)
         var intent = new Intent(this, typeof(MainActivity));
-        intent.AddFlags(ActivityFlags.ClearTop);
+        intent.AddFlags(ActivityFlags.ClearTop | ActivityFlags.SingleTop);
+
+        // 딥링크 정보를 Intent extras로 전달
+        if (!string.IsNullOrEmpty(targetTab))
+        {
+            intent.PutExtra("target_tab", targetTab);
+        }
+        if (!string.IsNullOrEmpty(notificationType))
+        {
+            intent.PutExtra("notification_type", notificationType);
+        }
 
         var pendingIntentFlags = PendingIntentFlags.UpdateCurrent;
         if (Build.VERSION.SdkInt >= BuildVersionCodes.S)
@@ -187,8 +224,9 @@ public class MilOpsFirebaseService : FirebaseMessagingService
             pendingIntentFlags |= PendingIntentFlags.Immutable;
         }
 
+        // notificationId를 requestCode로 사용하여 각 알림이 고유한 PendingIntent를 가짐
         var pendingIntent = PendingIntent.GetActivity(
-            this, 0, intent, pendingIntentFlags);
+            this, notificationId, intent, pendingIntentFlags);
 
         // 알림 빌드
         var notificationBuilder = new Notification.Builder(this, channelId)

@@ -2,6 +2,7 @@ using MilOps.Models;
 using MilOps.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -29,6 +30,10 @@ public static class CalendarDataService
     private static readonly Dictionary<(int Year, int Month, Guid? RegionId, Guid? DivisionId, Guid? DistrictId, Guid? BattalionId), CalendarDataLoadedEventArgs> _monthlyCache = new();
     private static readonly object _cacheLock = new();
     private const int MaxCacheMonths = 5;  // 최대 캐시 유지 개월 수
+
+    // 진행 중인 요청 추적 (중복 RPC 호출 방지)
+    private static readonly Dictionary<(int Year, int Month, Guid? RegionId, Guid? DivisionId, Guid? DistrictId, Guid? BattalionId), Task<CalendarDataLoadedEventArgs>> _pendingRequests = new();
+    private static readonly object _pendingLock = new();
 
     /// <summary>
     /// 로그인 직후 캘린더 데이터 미리 로드 시작 (Preload)
@@ -72,6 +77,16 @@ public static class CalendarDataService
             }
         }
 
+        // 이미 동일 요청이 진행 중이면 중복 호출 방지
+        lock (_pendingLock)
+        {
+            if (_pendingRequests.ContainsKey(cacheKey))
+            {
+                Debug.WriteLine($"[PERF][CalendarData] 중복 요청 스킵: {year}-{month}");
+                return;
+            }
+        }
+
         // 백그라운드 스레드에서 실행 (fire-and-forget)
         _ = Task.Run(async () =>
         {
@@ -81,7 +96,15 @@ public static class CalendarDataService
                 // Optimistic UI: 캐시가 없을 때만 로딩 상태 표시
                 LoadingStateChanged?.Invoke(true);
 
-                var result = await LoadSchedulesInternalAsync(year, month, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId);
+                var task = LoadSchedulesInternalAsync(year, month, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId);
+
+                // 진행 중 등록
+                lock (_pendingLock)
+                {
+                    _pendingRequests[cacheKey] = task;
+                }
+
+                var result = await task;
 
                 // 캐시에 저장
                 lock (_cacheLock)
@@ -93,8 +116,12 @@ public static class CalendarDataService
                 // 이벤트 발생 → ViewModel이 UI 스레드에서 처리
                 DataLoaded?.Invoke(result);
 
-                // 인접 월 미리 로드 (백그라운드에서)
-                _ = PreloadAdjacentMonthsAsync(year, month, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId);
+                // 인접 월 미리 로드 (3초 지연 → 로그인 직후 다른 쿼리와의 HTTP 연결 경합 방지)
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+                    await PreloadAdjacentMonthsAsync(year, month, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId);
+                });
             }
             catch (Exception ex)
             {
@@ -102,6 +129,10 @@ public static class CalendarDataService
             }
             finally
             {
+                lock (_pendingLock)
+                {
+                    _pendingRequests.Remove(cacheKey);
+                }
                 IsLoading = false;
                 LoadingStateChanged?.Invoke(false);
             }
@@ -166,12 +197,40 @@ public static class CalendarDataService
         Guid? selectedDistrictId, Guid? selectedBattalionId)
     {
         var cacheKey = (year, month, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId);
-        var result = await LoadSchedulesInternalAsync(year, month, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId);
 
-        lock (_cacheLock)
+        // 이미 진행 중이면 스킵
+        lock (_pendingLock)
         {
-            _monthlyCache[cacheKey] = result;
-            TrimCache();
+            if (_pendingRequests.ContainsKey(cacheKey))
+            {
+                Debug.WriteLine($"[PERF][CalendarData] Prefetch 중복 스킵: {year}-{month}");
+                return;
+            }
+        }
+
+        var task = LoadSchedulesInternalAsync(year, month, selectedRegionId, selectedDivisionId, selectedDistrictId, selectedBattalionId);
+
+        lock (_pendingLock)
+        {
+            _pendingRequests[cacheKey] = task;
+        }
+
+        try
+        {
+            var result = await task;
+
+            lock (_cacheLock)
+            {
+                _monthlyCache[cacheKey] = result;
+                TrimCache();
+            }
+        }
+        finally
+        {
+            lock (_pendingLock)
+            {
+                _pendingRequests.Remove(cacheKey);
+            }
         }
     }
 
@@ -196,6 +255,10 @@ public static class CalendarDataService
         lock (_cacheLock)
         {
             _monthlyCache.Clear();
+        }
+        lock (_pendingLock)
+        {
+            _pendingRequests.Clear();
         }
     }
 
@@ -243,17 +306,7 @@ public static class CalendarDataService
         var monthEnd = monthStart.AddMonths(1).AddDays(-1);
 
         // RPC 파라미터 설정
-        var roleString = role switch
-        {
-            UserRole.UserLocal => "user_local",
-            UserRole.UserMilitary => "user_military",
-            UserRole.MiddleLocal => "middle_local",
-            UserRole.MiddleMilitary => "middle_military",
-            UserRole.ViewerMilitary => "viewer_military",
-            UserRole.SuperAdminMois => "super_admin_mois",
-            UserRole.SuperAdminArmy => "super_admin_army",
-            _ => "user_local"
-        };
+        var roleString = role.ToRoleString();
 
         // 기본 파라미터 (8개 모두 명시적으로 전달 - SQL 함수 시그니처와 일치)
         var rpcParams = new Dictionary<string, object?>
@@ -310,20 +363,22 @@ public static class CalendarDataService
         }
 
         // RPC 호출 (네트워크 I/O)
+        var totalSw = Stopwatch.StartNew();
+        var sw = Stopwatch.StartNew();
         var response = await SupabaseService.Client.Rpc("get_calendar_schedules", rpcParams);
+        Debug.WriteLine($"[PERF][CalendarData] RPC 네트워크 호출: {sw.ElapsedMilliseconds}ms");
 
         var rawContent = response.Content ?? "null";
+        Debug.WriteLine($"[PERF][CalendarData] 응답 크기: {rawContent.Length} bytes");
 
         // JSON 파싱 (CPU 작업)
-        // Supabase RPC 응답이 배열이 아닌 객체로 감싸져 있을 수 있음
+        sw.Restart();
         var jsonContent = rawContent;
         try
         {
-            // 응답이 객체인지 확인 (body, message, data 등의 wrapper가 있을 수 있음)
             var jsonObj = Newtonsoft.Json.Linq.JToken.Parse(jsonContent);
             if (jsonObj is Newtonsoft.Json.Linq.JObject jObj)
             {
-                // 가능한 wrapper 속성들 확인
                 if (jObj.ContainsKey("body"))
                 {
                     jsonContent = jObj["body"]?.ToString() ?? "[]";
@@ -340,12 +395,23 @@ public static class CalendarDataService
         }
         catch (Exception parseEx)
         {
-            System.Diagnostics.Debug.WriteLine($"[CalendarDataService] [BG] JSON structure check failed: {parseEx.Message}");
+            Debug.WriteLine($"[CalendarDataService] [BG] JSON structure check failed: {parseEx.Message}");
         }
 
         var dtos = Newtonsoft.Json.JsonConvert.DeserializeObject<List<CalendarScheduleDto>>(jsonContent ?? "[]")
                    ?? new List<CalendarScheduleDto>();
+        Debug.WriteLine($"[PERF][CalendarData] JSON 파싱+역직렬화 ({dtos.Count}건): {sw.ElapsedMilliseconds}ms, role={roleString}");
+        // user_local 디버그: 첫 3개 DTO의 company_name 확인
+        if (roleString == "user_local" && dtos.Count > 0)
+        {
+            foreach (var dto in dtos.Take(3))
+            {
+                Debug.WriteLine($"[CalendarData][user_local] DTO: Id={dto.Id}, Status={dto.Status}, " +
+                    $"CompanyName={dto.CompanyName ?? "NULL"}, ReservedDate={dto.ReservedDate}");
+            }
+        }
 
+        sw.Restart();
         var schedules = dtos.Select(dto => dto.ToScheduleWithNavigation()).ToList();
 
         // 날짜별로 그룹핑
@@ -353,21 +419,21 @@ public static class CalendarDataService
             .Where(s => s.ReservedDate.HasValue)
             .GroupBy(s => s.ReservedDate!.Value.Date)
             .ToDictionary(g => g.Key, g => g.ToList());
+        Debug.WriteLine($"[PERF][CalendarData] DTO변환+GroupBy: {sw.ElapsedMilliseconds}ms");
 
         // CalendarDayData 생성 (42개)
+        sw.Restart();
         var days = new List<CalendarDayData>();
         var firstDay = new DateTime(year, month, 1);
         var daysInMonth = DateTime.DaysInMonth(year, month);
         int startDayOfWeek = (int)firstDay.DayOfWeek;
         var today = DateTime.Today;
 
-        // 이전 달 빈 칸
         for (int i = 0; i < startDayOfWeek; i++)
         {
             days.Add(new CalendarDayData { Day = 0, IsCurrentMonth = false });
         }
 
-        // 현재 달
         for (int day = 1; day <= daysInMonth; day++)
         {
             var date = new DateTime(year, month, day);
@@ -389,26 +455,28 @@ public static class CalendarDataService
                 dayData.HasConfirmedSchedule = daySchedules.Any(s => s.Status == "confirmed");
                 dayData.HasReservedSchedule = daySchedules.Any(s => s.Status == "reserved");
 
-                // 그룹 뱃지 생성 (최종관리자 + 중간관리자용)
-                // 일반 사용자(user_local, user_military)는 뱃지 대신 확정/예약 점 표시
-                if (role == UserRole.SuperAdminMois || role == UserRole.SuperAdminArmy ||
-                    role == UserRole.MiddleLocal || role == UserRole.MiddleMilitary ||
-                    role == UserRole.ViewerMilitary)
+                if (role.ShowsGroupBadges())
                 {
-                    dayData.IsSuperAdmin = true;  // 뱃지 표시용 플래그 (최종관리자 + 중간관리자)
+                    dayData.IsSuperAdmin = true;
                     dayData.GroupBadges = CreateGroupBadges(daySchedules, role);
                 }
-                // 일반 사용자는 IsSuperAdmin = false (기본값)로 유지 → 확정/예약 점 표시
             }
 
             days.Add(dayData);
         }
 
-        // 다음 달 빈 칸 (42칸 채우기)
-        while (days.Count < 42)
+        // 필요한 행 수 계산 (동적: 4~6행)
+        int totalCells = startDayOfWeek + daysInMonth;
+        int rows = (int)Math.Ceiling(totalCells / 7.0);
+        int totalSlots = rows * 7;
+        while (days.Count < totalSlots)
         {
             days.Add(new CalendarDayData { Day = 0, IsCurrentMonth = false });
         }
+        Debug.WriteLine($"[PERF][CalendarData] CalendarDay 생성+뱃지: {sw.ElapsedMilliseconds}ms");
+
+        totalSw.Stop();
+        Debug.WriteLine($"[PERF][CalendarData] ===== 총 소요: {totalSw.ElapsedMilliseconds}ms =====");
 
         return new CalendarDataLoadedEventArgs
         {
@@ -513,7 +581,7 @@ public static class CalendarDataService
                 });
             }
         }
-        else if (role == UserRole.MiddleMilitary || role == UserRole.ViewerMilitary)
+        else if (role.IsMilitaryManager())
         {
             // 사단/여단 관리자: 대대별 그룹핑
             var allGroups = schedules

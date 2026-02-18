@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using Supabase.Gotrue;
 using Supabase.Gotrue.Exceptions;
@@ -38,32 +39,68 @@ public static class AuthService
     /// </summary>
     public static async Task<(bool success, string? errorMessage)> LoginAsync(string loginId, string password)
     {
+        var totalSw = Stopwatch.StartNew();
         try
         {
-            // 1. login_id로 사용자 전체 정보 조회 (로그인 전이므로 anon key로 접근)
-            var userInfo = await SupabaseService.GetUserByLoginIdAsync(loginId);
-            if (userInfo == null || string.IsNullOrEmpty(userInfo.Email))
+            var sw = Stopwatch.StartNew();
+
+            // 1. 캐시된 email 확인 → 있으면 GetUserByLoginId 스킵 (856ms 절감)
+            string? cachedEmail = null;
+            var (_, _, cachedLoginId, email) = await SessionStorageService.LoadSessionAsync();
+            if (cachedLoginId == loginId && !string.IsNullOrEmpty(email))
             {
-                System.Diagnostics.Debug.WriteLine("[AuthService] LoginAsync: User not found");
-                return (false, "존재하지 않는 아이디입니다");
+                cachedEmail = email;
+                Debug.WriteLine($"[PERF][Auth] 캐시된 email 사용 (GetUserByLoginId 스킵): {sw.ElapsedMilliseconds}ms");
             }
-            // 2. Supabase Auth로 로그인
-            var session = await SupabaseService.Client.Auth.SignIn(userInfo.Email, password);
+
+            // 2. 캐시 없으면 서버 조회
+            UserModel? userInfo = null;
+            if (cachedEmail == null)
+            {
+                sw.Restart();
+                userInfo = await SupabaseService.GetUserByLoginIdAsync(loginId);
+                Debug.WriteLine($"[PERF][Auth] GetUserByLoginId: {sw.ElapsedMilliseconds}ms");
+                if (userInfo == null || string.IsNullOrEmpty(userInfo.Email))
+                {
+                    Debug.WriteLine("[AuthService] LoginAsync: User not found");
+                    return (false, "존재하지 않는 아이디입니다");
+                }
+                cachedEmail = userInfo.Email;
+            }
+
+            // 3. Supabase Auth로 로그인
+            sw.Restart();
+            var session = await SupabaseService.Client.Auth.SignIn(cachedEmail, password);
+            Debug.WriteLine($"[PERF][Auth] Auth.SignIn: {sw.ElapsedMilliseconds}ms");
             if (session?.User == null)
             {
-                System.Diagnostics.Debug.WriteLine("[AuthService] LoginAsync: Sign in failed - no session");
+                Debug.WriteLine("[AuthService] LoginAsync: Sign in failed - no session");
                 return (false, "로그인에 실패했습니다");
             }
-            // 3. 이미 조회한 사용자 정보 사용 (RLS 정책 우회)
+
+            // 4. 사용자 정보 조회 (캐시 히트 시에만 필요)
+            if (userInfo == null)
+            {
+                userInfo = await SupabaseService.GetUserByLoginIdAsync(loginId);
+                if (userInfo == null)
+                {
+                    return (false, "사용자 정보를 불러올 수 없습니다");
+                }
+            }
+
             CurrentUser = userInfo;
             CurrentUserRole = ParseRole(userInfo.Role);
 
-            // 4. 세션 토큰 저장 (자동 로그인용)
+            // 5. 세션 토큰 + email 캐시 저장
+            sw.Restart();
             if (session.AccessToken != null && session.RefreshToken != null)
             {
-                await SessionStorageService.SaveSessionAsync(session.AccessToken, session.RefreshToken, loginId);
+                await SessionStorageService.SaveSessionAsync(session.AccessToken, session.RefreshToken, loginId, cachedEmail);
             }
+            Debug.WriteLine($"[PERF][Auth] 세션 저장: {sw.ElapsedMilliseconds}ms");
 
+            totalSw.Stop();
+            Debug.WriteLine($"[PERF][Auth] ===== 로그인 총 소요: {totalSw.ElapsedMilliseconds}ms =====");
             return (true, null);
         }
         catch (GotrueException ex)
@@ -108,12 +145,13 @@ public static class AuthService
             var attrs = new UserAttributes { Password = newPassword };
             await SupabaseService.Client.Auth.Update(attrs);
 
-            // 3. 세션 토큰 갱신
+            // 3. 세션 토큰 갱신 — 기존 cachedEmail 보존
             var session = SupabaseService.Client.Auth.CurrentSession;
             if (session?.AccessToken != null && session.RefreshToken != null && CurrentUser.LoginId != null)
             {
+                var (_, _, _, existingEmail) = await SessionStorageService.LoadSessionAsync();
                 await SessionStorageService.SaveSessionAsync(
-                    session.AccessToken, session.RefreshToken, CurrentUser.LoginId);
+                    session.AccessToken, session.RefreshToken, CurrentUser.LoginId, existingEmail);
             }
 
             return (true, null);
@@ -173,10 +211,11 @@ public static class AuthService
             string? accessToken = null;
             string? refreshToken = null;
             string? loginId = null;
+            string? cachedEmail = null;
 
             try
             {
-                (accessToken, refreshToken, loginId) = await SessionStorageService.LoadSessionAsync();
+                (accessToken, refreshToken, loginId, cachedEmail) = await SessionStorageService.LoadSessionAsync();
             }
             catch (Exception loadEx)
             {
@@ -201,10 +240,10 @@ public static class AuthService
                     return false;
                 }
 
-                // 3. 새 토큰 저장 (리프레시된 경우)
+                // 3. 새 토큰 저장 (리프레시된 경우) — 기존 cachedEmail 보존
                 if (session.AccessToken != null && session.RefreshToken != null)
                 {
-                    await SessionStorageService.SaveSessionAsync(session.AccessToken, session.RefreshToken, loginId);
+                    await SessionStorageService.SaveSessionAsync(session.AccessToken, session.RefreshToken, loginId, cachedEmail);
                 }
             }
             catch (Exception ex)
