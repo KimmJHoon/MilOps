@@ -6,6 +6,7 @@ using MilOps.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -86,6 +87,34 @@ public partial class ScheduleCreateViewModel : ViewModelBase
     [ObservableProperty]
     private bool _hasMilitaryUser = false;
 
+    // 업체 전체 목록 팝업
+    [ObservableProperty]
+    private bool _showCompanyListPopup = false;
+
+    [ObservableProperty]
+    private ObservableCollection<CompanyMatchItem> _allCompanyList = new();
+
+    [ObservableProperty]
+    private string _companyListFilter = "전체"; // 전체, 매칭, 미매칭
+
+    [ObservableProperty]
+    private bool _isFilterAll = true;
+
+    [ObservableProperty]
+    private bool _isFilterMatched = false;
+
+    [ObservableProperty]
+    private bool _isFilterUnmatched = false;
+
+    [ObservableProperty]
+    private int _totalCompanyCount = 0;
+
+    [ObservableProperty]
+    private int _matchedCompanyCount = 0;
+
+    [ObservableProperty]
+    private int _unmatchedCompanyCount = 0;
+
     // 에러/성공 메시지
     [ObservableProperty]
     private string _errorMessage = "";
@@ -108,6 +137,7 @@ public partial class ScheduleCreateViewModel : ViewModelBase
     private List<Company> _allCompanies = new();
     private List<User> _allUsers = new();
     private List<DistrictBattalionMapping> _districtBattalionMappings = new();
+    private HashSet<Guid> _matchedCompanyIds = new();
 
     // 선택된 담당자
     private User? _selectedLocalUser;
@@ -159,38 +189,41 @@ public partial class ScheduleCreateViewModel : ViewModelBase
 
         try
         {
-            var client = SupabaseService.Client;
-            if (client == null)
-            {
-                return;
-            }
-
             var currentUser = AuthService.CurrentUser;
             if (currentUser == null)
             {
                 return;
             }
 
-            // 모든 데이터 병렬 로드 (QueryHelper 사용)
-            var regionsTask = QueryHelper.GetActiveTask<Region>();
-            var districtsTask = QueryHelper.GetActiveTask<District>();
-            var battalionsTask = QueryHelper.GetActiveTask<Battalion>();
-            var companiesTask = QueryHelper.GetActiveTask<Company>();
-            var usersTask = QueryHelper.GetActiveTask<User>();
-            var divisionsTask = QueryHelper.GetAllTask<Division>();
+            var sw = Stopwatch.StartNew();
 
-            await Task.WhenAll(regionsTask, districtsTask, battalionsTask, companiesTask, usersTask, divisionsTask);
+            // OrgCache + BizCache 병렬 조회 (로그인 시 Preload → 캐시 HIT 즉시 반환, HTTP 0회)
+            var orgTask = QueryHelper.GetOrgDataAsync();
+            var bizTask = QueryHelper.GetBizDataAsync();
 
-            _allRegions = regionsTask.Result;
-            _allDistricts = districtsTask.Result;
-            _allBattalions = battalionsTask.Result;
-            _allCompanies = companiesTask.Result;
-            _allUsers = usersTask.Result;
+            await Task.WhenAll(orgTask, bizTask);
+
+            var elapsed = sw.ElapsedMilliseconds;
+
+            // OrgCache 결과
+            var (regions, districts, divisions, brigades, battalions) = orgTask.Result;
+            _allRegions = regions;
+            _allDistricts = districts;
+            _allBattalions = battalions;
+
+            // BizCache 결과
+            var (companies, users, matchedCompanyIds) = bizTask.Result;
+            _allCompanies = companies;
+            _allUsers = users;
+            _matchedCompanyIds = matchedCompanyIds;
+
+            Debug.WriteLine($"[PERF][ScheduleCreate] OrgCache+BizCache: {elapsed}ms " +
+                $"(Company={_allCompanies.Count}, User={_allUsers.Count}, MatchedIds={_matchedCompanyIds.Count})");
 
             // 현재 사용자의 Division 표시
             if (currentUser.DivisionId.HasValue)
             {
-                var division = divisionsTask.Result.FirstOrDefault(d => d.Id == currentUser.DivisionId.Value);
+                var division = divisions.FirstOrDefault(d => d.Id == currentUser.DivisionId.Value);
                 if (division != null)
                 {
                     CurrentUserDisplay = $"👤 {currentUser.FullDisplayName} ({division.Name} 사단담당자)";
@@ -222,7 +255,7 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[ScheduleCreateViewModel] LoadDataAsync error: {ex.Message}\n{ex.StackTrace}");
+            Debug.WriteLine($"[ScheduleCreateViewModel] LoadDataAsync error: {ex.Message}\n{ex.StackTrace}");
             ErrorMessage = "데이터 로드 중 오류가 발생했습니다.";
         }
         finally
@@ -359,6 +392,77 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         SearchedCompanies.Clear();
         ShowCompanySearchResults = false;
         UpdateAutoInfo();
+    }
+
+    [RelayCommand]
+    private void OpenCompanyList()
+    {
+        if (SelectedDistrict == null) return;
+
+        CompanyListFilter = "전체";
+        LoadCompanyList();
+        ShowCompanyListPopup = true;
+    }
+
+    [RelayCommand]
+    private void CloseCompanyList()
+    {
+        ShowCompanyListPopup = false;
+    }
+
+    [RelayCommand]
+    private void SetCompanyListFilter(string filter)
+    {
+        CompanyListFilter = filter;
+        IsFilterAll = filter == "전체";
+        IsFilterMatched = filter == "매칭";
+        IsFilterUnmatched = filter == "미매칭";
+        LoadCompanyList();
+    }
+
+    [RelayCommand]
+    private void SelectCompanyFromList(CompanyMatchItem item)
+    {
+        if (item?.Company == null) return;
+        SelectedCompany = item.Company;
+        ShowCompanySearchResults = false;
+        ShowCompanyListPopup = false;
+    }
+
+    private void LoadCompanyList()
+    {
+        AllCompanyList.Clear();
+
+        if (SelectedDistrict == null) return;
+
+        // 선택된 구/군의 모든 업체
+        var districtCompanies = _allCompanies
+            .Where(c => c.DistrictId == SelectedDistrict.Id)
+            .OrderBy(c => c.Name)
+            .ToList();
+
+        var items = districtCompanies.Select(c => new CompanyMatchItem
+        {
+            Company = c,
+            IsMatched = _matchedCompanyIds.Contains(c.Id)
+        }).ToList();
+
+        // 필터 적용
+        var filtered = CompanyListFilter switch
+        {
+            "매칭" => items.Where(i => i.IsMatched).ToList(),
+            "미매칭" => items.Where(i => !i.IsMatched).ToList(),
+            _ => items
+        };
+
+        foreach (var item in filtered)
+        {
+            AllCompanyList.Add(item);
+        }
+
+        TotalCompanyCount = items.Count;
+        MatchedCompanyCount = items.Count(i => i.IsMatched);
+        UnmatchedCompanyCount = items.Count(i => !i.IsMatched);
     }
 
     private void UpdateLocalUser()
@@ -528,6 +632,9 @@ public partial class ScheduleCreateViewModel : ViewModelBase
                     $"{company.Name} 방문 일정이 배정되었습니다.", newSchedule.Id);
             });
 
+            // BizCache 무효화 (MatchedCompanyIds 갱신 필요)
+            QueryHelper.InvalidateBizCache();
+
             // 이벤트 발생
             ScheduleCreated?.Invoke(this, EventArgs.Empty);
 
@@ -561,6 +668,7 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         Districts.Clear();
         SearchedCompanies.Clear();
         ShowCompanySearchResults = false;
+        ShowCompanyListPopup = false;
         CompanySearchPlaceholder = "구/군을 먼저 선택하세요";
         _selectedLocalUser = null;
         _selectedMilitaryUser = null;
@@ -574,4 +682,15 @@ public partial class ScheduleCreateViewModel : ViewModelBase
         CanCreate = false;
         ErrorMessage = "";
     }
+}
+
+/// <summary>
+/// 업체 전체 목록 아이템 (매칭 여부 포함)
+/// </summary>
+public class CompanyMatchItem
+{
+    public Company Company { get; set; } = null!;
+    public bool IsMatched { get; set; }
+    public string MatchStatusText => IsMatched ? "매칭" : "미매칭";
+    public string MatchStatusColor => IsMatched ? "#4CAF50" : "#FF9800";
 }

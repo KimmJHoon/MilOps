@@ -133,9 +133,6 @@ public partial class CompanyRegisterViewModel : ViewModelBase
     {
         try
         {
-            var client = SupabaseService.Client;
-            if (client == null) return;
-
             // 현재 사용자의 region_id 가져오기
             var currentUser = AuthService.CurrentUser;
 
@@ -145,12 +142,15 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                 return;
             }
 
-            // Region 로드 (현재 사용자의 지역만)
-            _allRegions = await QueryHelper.GetByFilterAsync<Region>("id", currentUser.RegionId.ToString()!);
+            // OrgCache에서 즉시 반환 (로그인 시 Preload 완료, HTTP 0회)
+            var (regions, districts, _, _, _) = await QueryHelper.GetOrgDataAsync();
+
+            // 현재 사용자의 Region만 필터링
+            _allRegions = regions.Where(r => r.Id == currentUser.RegionId.Value).ToList();
             _regionNames = _allRegions.ToDictionary(r => r.Id, r => r.Name);
 
-            // District 로드 (해당 Region의 시군구만)
-            _allDistricts = await QueryHelper.GetByFilterAsync<District>("region_id", currentUser.RegionId.ToString()!);
+            // 해당 Region의 District만 필터링
+            _allDistricts = districts.Where(d => d.RegionId == currentUser.RegionId.Value).ToList();
             _districtNames = _allDistricts.ToDictionary(d => d.Id, d => d.Name);
 
             // UI 업데이트
@@ -195,34 +195,29 @@ public partial class CompanyRegisterViewModel : ViewModelBase
 
         try
         {
-            var client = SupabaseService.Client;
-            if (client == null) return;
-
             var currentUser = AuthService.CurrentUser;
             if (currentUser?.RegionId == null) return;
 
-            // 현재 사용자가 관리하는 지역의 업체만 로드
-            var districtIds = _allDistricts.Select(d => d.Id.ToString()).ToList();
+            // BizCache에서 업체 목록 조회 (로그인 시 Preload 완료, HTTP 0회)
+            var (allCompanies, _, _) = await QueryHelper.GetBizDataAsync();
 
-            // 모든 활성 업체 로드
-            var companiesResponse = await client.From<Company>()
-                .Filter("is_active", Supabase.Postgrest.Constants.Operator.Equals, "true")
-                .Order("created_at", Supabase.Postgrest.Constants.Ordering.Descending)
-                .Get();
+            // 현재 사용자가 관리하는 지역의 업체만 필터링
+            var districtIdSet = new HashSet<Guid>(_allDistricts.Select(d => d.Id));
 
-            // 필터링: 해당 지역 업체만
             List<Company> companies;
-            if (districtIds.Count > 0)
+            if (districtIdSet.Count > 0)
             {
-                companies = companiesResponse.Models
-                    .Where(c => !c.IsDeleted && districtIds.Contains(c.DistrictId.ToString()))
+                companies = allCompanies
+                    .Where(c => !c.IsDeleted && districtIdSet.Contains(c.DistrictId))
+                    .OrderByDescending(c => c.CreatedAt)
                     .ToList();
             }
             else
             {
                 // districtIds가 비어있으면 현재 사용자가 생성한 업체만 표시
-                companies = companiesResponse.Models
+                companies = allCompanies
                     .Where(c => !c.IsDeleted && c.CreatedBy == currentUser.Id)
+                    .OrderByDescending(c => c.CreatedAt)
                     .ToList();
             }
 
@@ -362,6 +357,9 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                 SuccessMessage = "업체가 수정되었습니다.";
             }
 
+            // BizCache 무효화 (Company 목록 변경)
+            QueryHelper.InvalidateBizCache();
+
             // 다이얼로그 닫기
             IsRegisterDialogOpen = false;
             ClearForm();
@@ -438,6 +436,9 @@ public partial class CompanyRegisterViewModel : ViewModelBase
                 .Set(c => c.IsActive, false)
                 .Update();
 #pragma warning restore CS8603
+
+            // BizCache 무효화 (Company 목록 변경)
+            QueryHelper.InvalidateBizCache();
 
             SuccessMessage = "업체가 삭제되었습니다.";
             _pendingDeleteItem = null;

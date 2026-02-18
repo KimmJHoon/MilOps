@@ -126,15 +126,24 @@
               <StackPanel Spacing="6">
                 <TextBlock Text="업체 검색" Foreground="#8E8E93" FontSize="12"/>
 
-                <!-- 선택된 업체가 없을 때: 검색 입력 -->
-                <Grid IsVisible="{Binding SelectedCompany, Converter={x:Static ObjectConverters.IsNull}}">
-                  <TextBox Text="{Binding CompanySearchText}"
+                <!-- 선택된 업체가 없을 때: 검색 입력 + 업체 추가 버튼 -->
+                <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding SelectedCompany, Converter={x:Static ObjectConverters.IsNull}}">
+                  <TextBox Grid.Column="0" Text="{Binding CompanySearchText}"
                            Watermark="{Binding CompanySearchPlaceholder}"
                            Background="#E5E5EA"
                            Foreground="#1C1C1E"
                            Padding="12"
                            CornerRadius="8"
                            IsEnabled="{Binding SelectedDistrict, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                  <Button Grid.Column="1" Command="{Binding OpenCompanyListCommand}"
+                          Background="#deb887" Padding="10,10" CornerRadius="8" Margin="6,0,0,0"
+                          VerticalAlignment="Stretch"
+                          IsEnabled="{Binding SelectedDistrict, Converter={x:Static ObjectConverters.IsNotNull}}">
+                    <StackPanel Orientation="Horizontal" Spacing="4">
+                      <TextBlock Text="&#xe145;" FontFamily="{StaticResource MaterialIcons}" FontSize="16" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                      <TextBlock Text="목록" FontSize="12" Foreground="#FFFFFF" VerticalAlignment="Center"/>
+                    </StackPanel>
+                  </Button>
                 </Grid>
 
                 <!-- 선택된 업체가 있을 때: 선택된 업체 표시 -->
@@ -264,6 +273,140 @@
                      TextWrapping="Wrap"/>
         </StackPanel>
       </ScrollViewer>
+    </Grid>
+
+    <!-- 업체 전체 목록 팝업 오버레이 -->
+    <Grid IsVisible="{Binding ShowCompanyListPopup}">
+      <!-- 반투명 배경 -->
+      <Border Background="#80000000">
+        <Button Command="{Binding CloseCompanyListCommand}" Background="Transparent"
+                HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/>
+      </Border>
+
+      <!-- 팝업 컨텐츠 -->
+      <Border Background="#FFFFFF" CornerRadius="16" Margin="16,60,16,60"
+              VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+              BoxShadow="0 4 20 #40000000">
+        <Grid RowDefinitions="Auto,Auto,Auto,*">
+          <!-- 팝업 헤더 -->
+          <Grid Grid.Row="0" ColumnDefinitions="Auto,*,Auto" Margin="16,16,16,8">
+            <TextBlock Grid.Column="0" Text="업체 전체 목록" FontSize="16" Foreground="#1C1C1E"
+                       VerticalAlignment="Center"/>
+            <TextBlock Grid.Column="1" Text="{Binding TotalCompanyCount, StringFormat='({0}개)'}"
+                       FontSize="13" Foreground="#8E8E93" VerticalAlignment="Center" Margin="6,0,0,0"/>
+            <Button Grid.Column="2" Command="{Binding CloseCompanyListCommand}"
+                    Background="Transparent" Padding="8,4">
+              <TextBlock Text="&#xe5cd;" FontFamily="{StaticResource MaterialIcons}" FontSize="20" Foreground="#8E8E93"/>
+            </Button>
+          </Grid>
+
+          <!-- 매칭 상태 요약 -->
+          <Grid Grid.Row="1" ColumnDefinitions="*,*" Margin="16,0,16,8">
+            <Border Grid.Column="0" Background="#E8F5E9" CornerRadius="8" Padding="10,6" Margin="0,0,4,0">
+              <TextBlock Foreground="#4CAF50" FontSize="12" HorizontalAlignment="Center">
+                <TextBlock.Text>
+                  <MultiBinding StringFormat="매칭 {0}개">
+                    <Binding Path="MatchedCompanyCount"/>
+                  </MultiBinding>
+                </TextBlock.Text>
+              </TextBlock>
+            </Border>
+            <Border Grid.Column="1" Background="#FFF3E0" CornerRadius="8" Padding="10,6" Margin="4,0,0,0">
+              <TextBlock Foreground="#FF9800" FontSize="12" HorizontalAlignment="Center">
+                <TextBlock.Text>
+                  <MultiBinding StringFormat="미매칭 {0}개">
+                    <Binding Path="UnmatchedCompanyCount"/>
+                  </MultiBinding>
+                </TextBlock.Text>
+              </TextBlock>
+            </Border>
+          </Grid>
+
+          <!-- 필터 버튼 -->
+          <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="6" Margin="16,0,16,10">
+            <!-- 전체 필터 -->
+            <Panel>
+              <Button Command="{Binding SetCompanyListFilterCommand}" CommandParameter="전체"
+                      Padding="12,6" CornerRadius="14"
+                      Background="#1C1C1E"
+                      IsVisible="{Binding IsFilterAll}">
+                <TextBlock Text="전체" FontSize="12" Foreground="#FFFFFF"/>
+              </Button>
+              <Button Command="{Binding SetCompanyListFilterCommand}" CommandParameter="전체"
+                      Padding="12,6" CornerRadius="14"
+                      Background="#E5E5EA"
+                      IsVisible="{Binding !IsFilterAll}">
+                <TextBlock Text="전체" FontSize="12" Foreground="#1C1C1E"/>
+              </Button>
+            </Panel>
+            <!-- 매칭 필터 -->
+            <Panel>
+              <Button Command="{Binding SetCompanyListFilterCommand}" CommandParameter="매칭"
+                      Padding="12,6" CornerRadius="14"
+                      Background="#4CAF50"
+                      IsVisible="{Binding IsFilterMatched}">
+                <TextBlock Text="매칭" FontSize="12" Foreground="#FFFFFF"/>
+              </Button>
+              <Button Command="{Binding SetCompanyListFilterCommand}" CommandParameter="매칭"
+                      Padding="12,6" CornerRadius="14"
+                      Background="#E5E5EA"
+                      IsVisible="{Binding !IsFilterMatched}">
+                <TextBlock Text="매칭" FontSize="12" Foreground="#4CAF50"/>
+              </Button>
+            </Panel>
+            <!-- 미매칭 필터 -->
+            <Panel>
+              <Button Command="{Binding SetCompanyListFilterCommand}" CommandParameter="미매칭"
+                      Padding="12,6" CornerRadius="14"
+                      Background="#FF9800"
+                      IsVisible="{Binding IsFilterUnmatched}">
+                <TextBlock Text="미매칭" FontSize="12" Foreground="#FFFFFF"/>
+              </Button>
+              <Button Command="{Binding SetCompanyListFilterCommand}" CommandParameter="미매칭"
+                      Padding="12,6" CornerRadius="14"
+                      Background="#E5E5EA"
+                      IsVisible="{Binding !IsFilterUnmatched}">
+                <TextBlock Text="미매칭" FontSize="12" Foreground="#FF9800"/>
+              </Button>
+            </Panel>
+          </StackPanel>
+
+          <!-- 업체 목록 -->
+          <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Disabled" Margin="16,0,16,16">
+            <ItemsControl ItemsSource="{Binding AllCompanyList}">
+              <ItemsControl.ItemTemplate>
+                <DataTemplate>
+                  <Button Command="{Binding $parent[ItemsControl].((vm:ScheduleCreateViewModel)DataContext).SelectCompanyFromListCommand}"
+                          CommandParameter="{Binding}"
+                          Background="Transparent"
+                          HorizontalAlignment="Stretch"
+                          HorizontalContentAlignment="Stretch"
+                          Padding="12,10"
+                          Margin="0,2"
+                          CornerRadius="8">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <StackPanel Grid.Column="0" Spacing="3">
+                        <TextBlock Text="{Binding Company.Name}" FontSize="14" Foreground="#1C1C1E"/>
+                        <TextBlock Text="{Binding Company.Address}" FontSize="11" Foreground="#8E8E93"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding Company.Products}" FontSize="11" Foreground="#AEAEB2"
+                                   TextTrimming="CharacterEllipsis"
+                                   IsVisible="{Binding Company.Products, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                      </StackPanel>
+                      <Border Grid.Column="1" CornerRadius="10" Padding="8,4"
+                              VerticalAlignment="Center"
+                              Background="{Binding MatchStatusColor}">
+                        <TextBlock Text="{Binding MatchStatusText}" FontSize="11" Foreground="#FFFFFF"/>
+                      </Border>
+                    </Grid>
+                  </Button>
+                </DataTemplate>
+              </ItemsControl.ItemTemplate>
+            </ItemsControl>
+          </ScrollViewer>
+        </Grid>
+      </Border>
     </Grid>
 
     <!-- 워터마크 (최상단 레이어, IsHitTestVisible=False로 터치 통과) -->
