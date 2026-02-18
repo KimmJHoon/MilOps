@@ -131,6 +131,9 @@ public partial class LoginViewModel : ViewModelBase
         // 조직 데이터 미리 로드 (ManagerTab + MainViewModel 공유 캐시)
         QueryHelper.PreloadOrgData();
 
+        // 업무 데이터 미리 로드 (Company + User + MatchedCompanyIds 공유 캐시)
+        QueryHelper.PreloadBizData();
+
         // 일정 목록 미리 로드 (fire-and-forget)
         ScheduleDataService.LoadSchedulesInBackground(currentUser);
 

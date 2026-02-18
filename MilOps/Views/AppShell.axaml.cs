@@ -58,6 +58,7 @@ public partial class AppShell : UserControl
                 // LoginViewModel.PreloadDataAfterLogin()과 동일한 프리페치를 자동 로그인 경로에도 적용
                 System.Diagnostics.Debug.WriteLine("[PERF][AppShell] 세션 복원 성공 → Preload 시작");
                 QueryHelper.PreloadOrgData();  // 파일 캐시 즉시 로드 + 서버 갱신 (stale-while-revalidate)
+                QueryHelper.PreloadBizData();  // Company + User + MatchedCompanyIds 공유 캐시
                 ScheduleDataService.LoadSchedulesInBackground(AuthService.CurrentUser!);
                 CalendarDataService.PreloadCurrentMonth();
 

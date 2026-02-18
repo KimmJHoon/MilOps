@@ -93,12 +93,14 @@ public class SplashActivity : Activity
         // 1. Supabase config 미리 로드 (동기, 매우 빠름 ~1ms)
         PreloadSupabaseConfig();
 
-        // 2. 파일 기반 조직 캐시 미리 메모리에 로드 → 완료 시 즉시 전환 트리거
+        // 2. 파일 기반 조직 캐시만 메모리에 로드 (Supabase Client 불필요)
+        //    서버 갱신은 로그인/세션복원 후 AppShell에서 PreloadOrgData()로 실행됨.
+        //    SplashActivity 시점에서는 SupabaseService.Client가 초기화 전이므로 서버 호출 불가.
         System.Threading.Tasks.Task.Run(() =>
         {
             try
             {
-                QueryHelper.PreloadOrgData();
+                QueryHelper.PreloadOrgDataFromFileOnly();
                 Log.Info("MilOps", "[PERF][Splash] 조직 캐시 Preload 완료");
             }
             catch (System.Exception ex)

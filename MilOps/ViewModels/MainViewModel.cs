@@ -474,8 +474,9 @@ public partial class MainViewModel : ViewModelBase
                 System.Diagnostics.Debug.WriteLine($"[MainViewModel] Cleanup error (continuing): {ex.Message}");
             }
 
-            // 2. 조직 데이터 공유 캐시 초기화
+            // 2. 공유 캐시 초기화 (조직 + 업무)
             QueryHelper.ClearOrgCache();
+            QueryHelper.ClearBizCache();
 
             // 3. 세션 저장소 클리어
             SessionStorageService.ClearSession();
