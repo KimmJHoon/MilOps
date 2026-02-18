@@ -198,6 +198,7 @@ public partial class ManagerViewModel : ViewModelBase
                         RoleDisplayName = u.RoleDisplayName,
                         IsLocalSide = u.IsLocalSide,
                         Role = u.Role,
+                        CanStartChat = canChat,
                         Affiliation = BuildAffiliation(u, regionMap, districtMap, divisionMap, brigadeMap, battalionMap)
                     })
                     .ToList();
@@ -374,6 +375,11 @@ public class UserListItem
     public string Affiliation { get; set; } = "";
     public bool IsLocalSide { get; set; }
     public string Role { get; set; } = "";
+
+    /// <summary>
+    /// 채팅 가능 여부 (아이템별로 미리 세팅 → 부모 트리 탐색 바인딩 제거)
+    /// </summary>
+    public bool CanStartChat { get; set; }
 
     /// <summary>
     /// 역할 아이콘 색상 (행정=파랑, 군=초록)
