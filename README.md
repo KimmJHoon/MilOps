@@ -89,7 +89,7 @@ MilOps/
 - [.NET 8.0 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
 
 ### Android 다운로드
-+[1.0.0 version APK 다운로드](https://github.com/KimmJHoon/MilOps/releases/latest)
++[1.0.9 version APK 다운로드](https://github.com/KimmJHoon/MilOps/releases/latest)
 
 ### Desktop 실행
 
